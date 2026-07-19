@@ -3,6 +3,7 @@
 
 #include "calculator_ui_types.h"
 #include "calculator_logic.h"
+#include "calculator_complex.h"
 #include "calculator_units.h"
 #include "graph_model.h"
 
@@ -33,6 +34,8 @@ typedef struct {
     uint8_t logic_assignment;
     unit_category_t unit_category;
     calculator_units_view_t units_view;
+    bool complex_polar;
+    bool complex_history;
     const char *favorites[6];
 } calculator_widget_state_t;
 

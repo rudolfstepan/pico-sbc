@@ -151,12 +151,14 @@ add_test(NAME calculator_symbols COMMAND calculator_symbols_tests)
 add_executable(calculator_pages_tests
     calculator/test_calculator_pages.c
     calculator/mock_lcd.c
+    ${CALCULATOR_SRC}/calculator_complex.c
     ${CALCULATOR_SRC}/calculator_keymaps.c
     ${CALCULATOR_SRC}/calculator_logic.c
     ${CALCULATOR_SRC}/calculator_units.c
     ${CALCULATOR_SRC}/calculator_pages.c
     ${CALCULATOR_SRC}/calculator_symbols.c
     ${CALCULATOR_SRC}/calculator_widgets.c
+    ${CALCULATOR_SRC}/complex_engine.c
     ${CALCULATOR_SRC}/expression_editor.c
     ${CALCULATOR_SRC}/number_formats.c
     ${CALCULATOR_SRC}/logic_engine.c
@@ -218,3 +220,21 @@ add_executable(calculator_units_tests
 target_include_directories(calculator_units_tests PRIVATE ${CALCULATOR_SRC})
 enable_project_warnings(calculator_units_tests)
 add_test(NAME calculator_units COMMAND calculator_units_tests)
+
+add_executable(complex_engine_tests
+    calculator/test_complex_engine.c
+    ${CALCULATOR_SRC}/complex_engine.c
+)
+target_include_directories(complex_engine_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(complex_engine_tests)
+add_test(NAME complex_engine COMMAND complex_engine_tests)
+
+add_executable(calculator_complex_tests
+    calculator/test_calculator_complex.c
+    ${CALCULATOR_SRC}/calculator_complex.c
+    ${CALCULATOR_SRC}/complex_engine.c
+    ${CALCULATOR_SRC}/expression_editor.c
+)
+target_include_directories(calculator_complex_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(calculator_complex_tests)
+add_test(NAME calculator_complex COMMAND calculator_complex_tests)

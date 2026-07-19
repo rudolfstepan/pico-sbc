@@ -79,6 +79,20 @@ int main(void) {
         return 1;
     }
 
+    calculator_complex_t complex;
+    calculator_complex_init(&complex);
+    expression_editor_set(&complex.editor, "polar(123456789,123.456789)");
+    calculator_complex_activate(&complex, "=", true,
+                                logic_message, sizeof logic_message);
+    calculator_page_render_complex(&complex, true, logic_message);
+    calculator_complex_activate(&complex, "HIST", true,
+                                logic_message, sizeof logic_message);
+    calculator_page_render_complex(&complex, true, logic_message);
+    if (mock_lcd_had_out_of_bounds_draw()) {
+        puts("FAIL: out-of-bounds drawing on complex pages");
+        return 1;
+    }
+
     puts("calculator page tests passed");
     return 0;
 }

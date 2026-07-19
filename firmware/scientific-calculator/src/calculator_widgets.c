@@ -116,6 +116,10 @@ void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
         strcmp(key->token, "SIGN") == 0) {
         label = state->programmer_signed ? "SIGNED" : "UNSIGNED";
     }
+    if (state->page == PAGE_COMPLEX && key->action == ACT_COMPLEX &&
+        strcmp(key->token, "VIEW") == 0) {
+        label = state->complex_polar ? "POLAR" : "CART";
+    }
     uint16_t fill = key_fill(key, pressed, state);
     bool disabled = false;
     if (state->page == PAGE_PROGRAMMER && key->action == ACT_PROG_DIGIT) {
@@ -155,9 +159,11 @@ void calculator_widget_render_keypad(calc_page_t page,
     size_t count;
     const calc_key_t *keys = page == PAGE_GRAPH
         ? calculator_graph_keymap(state->graph_view, &count)
+        : (page == PAGE_COMPLEX
+           ? calculator_complex_keymap(state->complex_history, &count)
         : (page == PAGE_FORMAT
            ? calculator_format_keymap(state->format_view, &count)
-           : calculator_keymap(page, &count));
+           : calculator_keymap(page, &count)));
     lcd_fill_rect(0, CALCULATOR_DISPLAY_HEIGHT, LCD_WIDTH,
                   LCD_HEIGHT - CALCULATOR_DISPLAY_HEIGHT, COL_BG);
     for (size_t i = 0; i < count; ++i) {
@@ -171,9 +177,11 @@ const calc_key_t *calculator_widget_hit_key(calc_page_t page,
     size_t count;
     const calc_key_t *keys = page == PAGE_GRAPH
         ? calculator_graph_keymap(state->graph_view, &count)
+        : (page == PAGE_COMPLEX
+           ? calculator_complex_keymap(state->complex_history, &count)
         : (page == PAGE_FORMAT
            ? calculator_format_keymap(state->format_view, &count)
-           : calculator_keymap(page, &count));
+           : calculator_keymap(page, &count)));
     for (size_t i = 0; i < count; ++i) {
         int left = key_x(&keys[i]);
         int top = key_y(&keys[i]);

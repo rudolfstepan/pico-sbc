@@ -11,8 +11,8 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 - `sinh`, `cosh`, `tanh`, `ln`, `log`, `exp`, `sqrt`
 - Betrag, Abrunden, Fakultaet, Kombinationen und Permutationen
 - Konstanten Pi und e
-- Acht Touch-Ebenen: `BASIC`, `SCIENTIFIC`, `PROGRAMMER`, `FORMAT`, `TOOLS`,
-  `SYMBOLS`, `LOGIC` und `UNITS`
+- Neun Touch-Ebenen: `BASIC`, `SCIENTIFIC`, `PROGRAMMER`, `FORMAT`, `TOOLS`,
+  `SYMBOLS`, `LOGIC`, `UNITS` und `COMPLEX`
 - `PROGRAMMER`-Ebene fuer exakte 64-Bit-Werte
 - Direkte Umwandlung zwischen Dezimal, Hexadezimal und Binaer
 - Bitoperationen `AND`, `OR`, `XOR`, `NOT`, Schieben und Zweierkomplement
@@ -27,6 +27,8 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
   sowie Live-Simulation fuer bis zu sechs Eingaenge
 - 68 Einheiten in zehn Kategorien sowie zwoelf physikalische Konstanten mit
   Einheit und Quellenangabe
+- Komplexer Rechner mit kartesischer und polarer Anzeige, Betrag, Phase,
+  Konjugation und eigenem verlustfreien Verlauf
 - Automatisch maximal skalierte Tastenbeschriftungen
 - Ausdruckseditor mit sichtbarem Cursor und Joystick-Navigation
 - Acht Eintraege Rechenverlauf mit erneutem Laden
@@ -44,7 +46,7 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 - K1 berechnet, K2 loescht das letzte Zeichen
 
 Die Seitentaste wechselt
-`BASIC -> SCIENTIFIC -> PROGRAMMER -> FORMAT -> TOOLS -> SYMBOLS -> LOGIC -> UNITS -> BASIC`.
+`BASIC -> SCIENTIFIC -> PROGRAMMER -> FORMAT -> TOOLS -> SYMBOLS -> LOGIC -> UNITS -> COMPLEX -> BASIC`.
 Der Graphenmodus wird von `TOOLS` aus geoeffnet. Der Joystick bewegt im
 Editor den Cursor und im Graphenmodus den sichtbaren Ausschnitt.
 Funktionen setzen automatisch eine oeffnende Klammer. Die schliessende Klammer
@@ -148,6 +150,25 @@ Exakte SI-Definitionswerte stammen aus der
 [BIPM SI Brochure](https://www.bipm.org/en/publications/si-brochure/).
 Weitere Werte folgen den
 [NIST CODATA 2022 constants](https://physics.nist.gov/cuu/Constants/index.html).
+
+## Komplexe Zahlen
+
+`COMPLEX` besitzt einen eigenen Ausdruckseditor und Ergebniszustand. Eine
+kartesische Zahl wird direkt als `3+4i` eingegeben; zwischen Zahl und `i` ist
+kein Multiplikationszeichen erforderlich. Auch Ausdruecke wie
+`(1+i)(1-i)` funktionieren durch implizite Multiplikation.
+
+- `CONJ`, `ABS` und `ARG` fuegen Konjugation, Betrag und Phase ein.
+- `POLAR` erzeugt `polar(Betrag,Winkel)`, zum Beispiel `polar(5,30)`.
+- `CART/POLAR` schaltet nur die Ergebnisdarstellung um; der gespeicherte Wert
+  bleibt unveraendert.
+- `DEG/RAD` gilt fuer `ARG`, `POLAR` und die polare Anzeige.
+- `HIST` oeffnet acht komplexe Verlaufseintraege. `PREV`, `NEXT` und `USE`
+  navigieren und laden sie; `HCLR` loescht nur den komplexen Verlauf.
+
+Nach `=` kann mit `+`, `-`, `*` oder `/` direkt am gesamten komplexen Ergebnis
+weitergerechnet werden. Parserfehler, Division durch null, ungueltige
+Polarwerte und Zahlenbereichsfehler erscheinen als getrennte Statusmeldungen.
 
 ## Erweiterte Programmer-Werkzeuge
 

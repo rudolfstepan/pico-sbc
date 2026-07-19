@@ -452,3 +452,48 @@ void calculator_page_render_units(const calculator_units_t *units,
                   COL_TEXT, COL_BG, 2);
     finish_display();
 }
+
+void calculator_page_render_complex(const calculator_complex_t *complex,
+                                    bool degrees, const char *message) {
+    char status[79];
+    char editor_text[EXPRESSION_EDITOR_CAPACITY + 2];
+    char result[64] = "--";
+    const char *expression = complex->editor.text;
+    complex_value_t shown = complex->result;
+    bool has_result = complex->has_result;
+
+    if (complex->history_view && complex->history_count) {
+        const calculator_complex_history_entry_t *entry =
+            &complex->history[complex->history_index];
+        expression = entry->expression;
+        shown = entry->result;
+        has_result = true;
+        snprintf(status, sizeof status, "COMPLEX HISTORY %u/%u  %.42s",
+                 (unsigned int)(complex->history_index + 1),
+                 (unsigned int)complex->history_count, message);
+    } else {
+        snprintf(status, sizeof status, "COMPLEX %s %s  %.49s",
+                 complex->polar_view ? "POLAR" : "CART",
+                 degrees ? "DEG" : "RAD", message);
+    }
+    if (has_result) {
+        complex_engine_format(shown, complex->polar_view, degrees,
+                              result, sizeof result);
+    }
+
+    clear_display();
+    lcd_draw_text(6, 3, status, COL_MUTED, COL_BG, 1);
+    if (complex->history_view) {
+        lcd_draw_text(6, 20, calculator_widget_tail(expression, 38),
+                      COL_TEXT, COL_BG, 2);
+    } else {
+        expression_editor_t shown_editor = complex->editor;
+        lcd_draw_text(6, 20,
+                      expression_editor_view(&shown_editor, editor_text,
+                                             sizeof editor_text, 38),
+                      COL_TEXT, COL_BG, 2);
+    }
+    lcd_draw_text(6, 53, calculator_widget_tail(result, 38),
+                  has_result ? COL_TEXT : COL_MUTED, COL_BG, 2);
+    finish_display();
+}

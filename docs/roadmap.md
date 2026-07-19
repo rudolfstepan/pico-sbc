@@ -16,8 +16,8 @@ ein Test auf dem echten LCD erfolgreich sind.
 | 4 | Permanente Speicherung | Phase 3 | Hardwaretest offen |
 | 5 | Programmer-Erweiterungen | Phase 0 | Hardwaretest offen |
 | 6 | Schaltalgebra und Gatter | Phase 5 | abgeschlossen |
-| 7 | Einheiten und Konstanten | Phase 3 | Hardwaretest offen |
-| 8 | Komplexe Zahlen | Phase 3 | geplant |
+| 7 | Einheiten und Konstanten | Phase 3 | abgeschlossen |
+| 8 | Komplexe Zahlen | Phase 3 | Hardwaretest offen |
 | 9 | Statistikmodus | Phasen 2 und 3 | geplant |
 | 10 | USB-Datenaustausch | Phasen 4 und 9 | geplant |
 
@@ -152,22 +152,29 @@ dem Pico erfolgreich geprueft.
 **Fertig, wenn:** Hin- und Rueckumwandlungen innerhalb definierter Toleranzen
 getestet sind und inkompatible Einheiten nicht kombiniert werden.
 
-Softwarestand: Zehn Kategorien, affine Temperaturumrechnung, 68 Einheiten und
+Abschlussstand: Zehn Kategorien, affine Temperaturumrechnung, 68 Einheiten und
 zwoelf Konstanten sind implementiert. Hin- und Rueckumwandlungen,
 Kategoriefehler, absoluter Nullpunkt, Touchbelegung und LCD-Grenzen werden von
-19 Host-Tests abgedeckt. Der Firmware-Build ist erfolgreich; Touchbedienung
-und Lesbarkeit auf dem Pico stehen noch aus.
+Host-Tests abgedeckt. Umrechnung, `SWAP`, Konstanten und Wertuebergabe wurden
+anschliessend auf dem Pico erfolgreich geprueft.
 
 ## Phase 8: Komplexe Zahlen
 
-- [ ] Einen komplexen Zahlentyp fuer den Rechenkern einfuehren.
-- [ ] Eingaben wie `3+4i` sowie Polarform unterstuetzen.
-- [ ] Betrag, Phase, Konjugation und Grundrechenarten implementieren.
-- [ ] Zwischen kartesischer und polarer Darstellung umschalten.
-- [ ] Komplexe Ergebnisse eindeutig von reellen Fehlerwerten unterscheiden.
+- [x] Einen komplexen Zahlentyp fuer den Rechenkern einfuehren.
+- [x] Eingaben wie `3+4i` sowie Polarform unterstuetzen.
+- [x] Betrag, Phase, Konjugation und Grundrechenarten implementieren.
+- [x] Zwischen kartesischer und polarer Darstellung umschalten.
+- [x] Komplexe Ergebnisse eindeutig von reellen Fehlerwerten unterscheiden.
 
 **Fertig, wenn:** Parser, Anzeige und Verlauf komplexe Zahlen verlustfrei
 verarbeiten und die wichtigsten Operationen durch Host-Tests abgesichert sind.
+
+Softwarestand: Ein eigener Parser unterstuetzt kartesische Zahlen, implizite
+Multiplikation, Polarkonstruktion, Grundrechenarten, Potenzen, Betrag, Phase,
+Konjugation, Real-/Imaginaerteil, Wurzel, Exponentialfunktion und Logarithmus.
+Ein acht Eintraege grosser Verlauf speichert Ausdruck und beide
+Double-Komponenten verlustfrei. Alle 21 Host-Tests und der Pico-Firmware-Build
+laufen erfolgreich; Touchbedienung und Lesbarkeit auf dem Pico stehen noch aus.
 
 ## Phase 9: Statistikmodus
 

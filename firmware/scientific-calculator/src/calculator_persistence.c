@@ -149,7 +149,7 @@ static bool graph_is_valid(const graph_model_t *graph,
 }
 
 static bool state_is_valid(const calculator_persisted_state_t *state) {
-    if (!state || state->page < PAGE_BASIC || state->page > PAGE_UNITS ||
+    if (!state || state->page < PAGE_BASIC || state->page > PAGE_COMPLEX ||
         !format_bits_valid(state->format_bits) ||
         state->fixed_fraction_bits >= state->format_bits ||
         !isfinite(state->ans) || !isfinite(state->memory_value) ||

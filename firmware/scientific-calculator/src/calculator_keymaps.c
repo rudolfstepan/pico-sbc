@@ -334,7 +334,7 @@ static const calc_key_t logic_keys[] = {
 };
 
 static const calc_key_t unit_keys[] = {
-    {"BASIC", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"COMPLEX", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
     {"<CAT", "CAT-", 1, 0, ACT_UNITS, STYLE_COMMAND},
     {"CAT>", "CAT+", 2, 0, ACT_UNITS, STYLE_COMMAND},
     {"<FROM", "FROM-", 3, 0, ACT_UNITS, STYLE_COMMAND},
@@ -369,6 +369,89 @@ static const calc_key_t unit_keys[] = {
     {"INFO", "INFO", 4, 4, ACT_UNITS, STYLE_COMMAND},
     {"RESET", "RESET", 5, 4, ACT_UNITS, STYLE_COMMAND},
 };
+
+static const calc_key_t complex_keys[] = {
+    {"BASIC", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"CART", "VIEW", 1, 0, ACT_COMPLEX, STYLE_COMMAND},
+    {"DEG", "", 2, 0, ACT_ANGLE, STYLE_COMMAND},
+    {"DEL", "DEL", 3, 0, ACT_COMPLEX, STYLE_COMMAND},
+    {"AC", "AC", 4, 0, ACT_COMPLEX, STYLE_COMMAND},
+    {"=", "=", 5, 0, ACT_COMPLEX, STYLE_EQUALS},
+
+    {"7", "7", 0, 1, ACT_COMPLEX, STYLE_NUMBER},
+    {"8", "8", 1, 1, ACT_COMPLEX, STYLE_NUMBER},
+    {"9", "9", 2, 1, ACT_COMPLEX, STYLE_NUMBER},
+    {"/", "/", 3, 1, ACT_COMPLEX, STYLE_FUNCTION},
+    {"(", "(", 4, 1, ACT_COMPLEX, STYLE_FUNCTION},
+    {")", ")", 5, 1, ACT_COMPLEX, STYLE_FUNCTION},
+
+    {"4", "4", 0, 2, ACT_COMPLEX, STYLE_NUMBER},
+    {"5", "5", 1, 2, ACT_COMPLEX, STYLE_NUMBER},
+    {"6", "6", 2, 2, ACT_COMPLEX, STYLE_NUMBER},
+    {"*", "*", 3, 2, ACT_COMPLEX, STYLE_FUNCTION},
+    {"I", "i", 4, 2, ACT_COMPLEX, STYLE_FUNCTION},
+    {"CONJ", "conj(", 5, 2, ACT_COMPLEX, STYLE_FUNCTION},
+
+    {"1", "1", 0, 3, ACT_COMPLEX, STYLE_NUMBER},
+    {"2", "2", 1, 3, ACT_COMPLEX, STYLE_NUMBER},
+    {"3", "3", 2, 3, ACT_COMPLEX, STYLE_NUMBER},
+    {"-", "-", 3, 3, ACT_COMPLEX, STYLE_FUNCTION},
+    {"ABS", "abs(", 4, 3, ACT_COMPLEX, STYLE_FUNCTION},
+    {"ARG", "arg(", 5, 3, ACT_COMPLEX, STYLE_FUNCTION},
+
+    {"0", "0", 0, 4, ACT_COMPLEX, STYLE_NUMBER},
+    {".", ".", 1, 4, ACT_COMPLEX, STYLE_NUMBER},
+    {"+", "+", 2, 4, ACT_COMPLEX, STYLE_FUNCTION},
+    {",", ",", 3, 4, ACT_COMPLEX, STYLE_FUNCTION},
+    {"POLAR", "polar(", 4, 4, ACT_COMPLEX, STYLE_FUNCTION},
+    {"HIST", "HIST", 5, 4, ACT_COMPLEX, STYLE_COMMAND},
+};
+
+static const calc_key_t complex_history_keys[] = {
+    {"BASIC", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"CART", "VIEW", 1, 0, ACT_COMPLEX, STYLE_COMMAND},
+    {"DEG", "", 2, 0, ACT_ANGLE, STYLE_COMMAND},
+    {"DEL", "DEL", 3, 0, ACT_COMPLEX, STYLE_COMMAND},
+    {"AC", "AC", 4, 0, ACT_COMPLEX, STYLE_COMMAND},
+    {"=", "=", 5, 0, ACT_COMPLEX, STYLE_EQUALS},
+
+    {"7", "7", 0, 1, ACT_COMPLEX, STYLE_NUMBER},
+    {"8", "8", 1, 1, ACT_COMPLEX, STYLE_NUMBER},
+    {"9", "9", 2, 1, ACT_COMPLEX, STYLE_NUMBER},
+    {"/", "/", 3, 1, ACT_COMPLEX, STYLE_FUNCTION},
+    {"(", "(", 4, 1, ACT_COMPLEX, STYLE_FUNCTION},
+    {")", ")", 5, 1, ACT_COMPLEX, STYLE_FUNCTION},
+
+    {"4", "4", 0, 2, ACT_COMPLEX, STYLE_NUMBER},
+    {"5", "5", 1, 2, ACT_COMPLEX, STYLE_NUMBER},
+    {"6", "6", 2, 2, ACT_COMPLEX, STYLE_NUMBER},
+    {"*", "*", 3, 2, ACT_COMPLEX, STYLE_FUNCTION},
+    {"I", "i", 4, 2, ACT_COMPLEX, STYLE_FUNCTION},
+    {"CONJ", "conj(", 5, 2, ACT_COMPLEX, STYLE_FUNCTION},
+
+    {"1", "1", 0, 3, ACT_COMPLEX, STYLE_NUMBER},
+    {"2", "2", 1, 3, ACT_COMPLEX, STYLE_NUMBER},
+    {"3", "3", 2, 3, ACT_COMPLEX, STYLE_NUMBER},
+    {"-", "-", 3, 3, ACT_COMPLEX, STYLE_FUNCTION},
+    {"ABS", "abs(", 4, 3, ACT_COMPLEX, STYLE_FUNCTION},
+    {"ARG", "arg(", 5, 3, ACT_COMPLEX, STYLE_FUNCTION},
+
+    {"BACK", "BACK", 0, 4, ACT_COMPLEX, STYLE_COMMAND},
+    {"PREV", "PREV", 1, 4, ACT_COMPLEX, STYLE_FUNCTION},
+    {"NEXT", "NEXT", 2, 4, ACT_COMPLEX, STYLE_FUNCTION},
+    {"USE", "USE", 3, 4, ACT_COMPLEX, STYLE_EQUALS},
+    {"HCLR", "HCLR", 4, 4, ACT_COMPLEX, STYLE_COMMAND},
+    {"VIEW", "VIEW", 5, 4, ACT_COMPLEX, STYLE_COMMAND},
+};
+
+const calc_key_t *calculator_complex_keymap(bool history, size_t *count) {
+    if (history) {
+        *count = sizeof complex_history_keys / sizeof complex_history_keys[0];
+        return complex_history_keys;
+    }
+    *count = sizeof complex_keys / sizeof complex_keys[0];
+    return complex_keys;
+}
 
 static const calc_key_t graph_plot_keys[] = {
     {"TOOLS", "", 0, 4, ACT_GOTO_TOOLS, STYLE_COMMAND},
@@ -487,6 +570,8 @@ const calc_key_t *calculator_keymap(calc_page_t page, size_t *count) {
         case PAGE_UNITS:
             *count = sizeof unit_keys / sizeof unit_keys[0];
             return unit_keys;
+        case PAGE_COMPLEX:
+            return calculator_complex_keymap(false, count);
         case PAGE_BASIC:
         default:
             *count = sizeof basic_keys / sizeof basic_keys[0];

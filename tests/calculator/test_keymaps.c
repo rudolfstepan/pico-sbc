@@ -38,6 +38,16 @@ int main(void) {
     CHECK(check_page(PAGE_GRAPH, 6) == 0);
     CHECK(check_page(PAGE_LOGIC, 30) == 0);
     CHECK(check_page(PAGE_UNITS, 30) == 0);
+    CHECK(check_page(PAGE_COMPLEX, 30) == 0);
+    size_t complex_history_count = 0;
+    const calc_key_t *complex_history =
+        calculator_complex_keymap(true, &complex_history_count);
+    CHECK(complex_history != NULL);
+    CHECK(complex_history_count == 30);
+    for (size_t i = 0; i < complex_history_count; ++i) {
+        CHECK(complex_history[i].col == i % 6);
+        CHECK(complex_history[i].row == i / 6);
+    }
     for (calculator_format_view_t view = FORMAT_VIEW_CONVERSIONS;
          view <= FORMAT_VIEW_IEEE64;
          view = (calculator_format_view_t)(view + 1)) {

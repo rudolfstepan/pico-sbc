@@ -9,7 +9,8 @@ calc_page_t calculator_navigation_next(calc_page_t page) {
         case PAGE_TOOLS: return PAGE_SYMBOLS;
         case PAGE_SYMBOLS: return PAGE_LOGIC;
         case PAGE_LOGIC: return PAGE_UNITS;
-        case PAGE_UNITS:
+        case PAGE_UNITS: return PAGE_COMPLEX;
+        case PAGE_COMPLEX:
         case PAGE_GRAPH:
         default:
             return PAGE_BASIC;
@@ -35,6 +36,7 @@ const char *calculator_page_message(calc_page_t page) {
         case PAGE_GRAPH: return "GRAPH";
         case PAGE_LOGIC: return "DIGITAL LOGIC";
         case PAGE_UNITS: return "UNITS AND CONSTANTS";
+        case PAGE_COMPLEX: return "COMPLEX NUMBERS";
         default: return "READY";
     }
 }

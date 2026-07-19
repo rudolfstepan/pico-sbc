@@ -1,6 +1,7 @@
 #include "calculator_ui.h"
 
 #include "calculator_engine.h"
+#include "calculator_complex.h"
 #include "calculator_graph.h"
 #include "calculator_list.h"
 #include "calculator_logic.h"
@@ -50,6 +51,7 @@ static calculator_graph_t graph;
 static calculator_symbols_t symbols;
 static calculator_logic_t logic;
 static calculator_units_t units;
+static calculator_complex_t complex;
 static bool persistence_dirty;
 static absolute_time_t persistence_deadline;
 
@@ -144,6 +146,8 @@ static calculator_widget_state_t current_widget_state(void) {
         .logic_assignment = logic.assignment,
         .unit_category = units.category,
         .units_view = units.view,
+        .complex_polar = complex.polar_view,
+        .complex_history = complex.history_view,
     };
     for (size_t i = 0; i < CALCULATOR_FAVORITE_COUNT; ++i) {
         state.favorites[i] = symbols.favorites[i];
@@ -187,6 +191,11 @@ static void render_display(void) {
     }
     if (page == PAGE_UNITS) {
         calculator_page_render_units(&units, message);
+        return;
+    }
+    if (page == PAGE_COMPLEX) {
+        calculator_page_render_complex(&complex, calc_engine_uses_degrees(),
+                                       message);
         return;
     }
     if (page == PAGE_GRAPH) return;
@@ -798,6 +807,13 @@ static void activate_units_key(const calc_key_t *key) {
     render_keypad();
 }
 
+static void activate_complex_key(const calc_key_t *key) {
+    calculator_complex_activate(&complex, key->token,
+                                calc_engine_uses_degrees(),
+                                message, sizeof message);
+    render_keypad();
+}
+
 static void activate_key(const calc_key_t *key) {
     switch (key->action) {
         case ACT_INSERT:
@@ -910,6 +926,9 @@ static void activate_key(const calc_key_t *key) {
         case ACT_UNITS:
             activate_units_key(key);
             break;
+        case ACT_COMPLEX:
+            activate_complex_key(key);
+            break;
     }
     render_display();
     mark_persistence_dirty();
@@ -927,6 +946,7 @@ void calculator_ui_init(void) {
     programmer_engine_init(&programmer);
     calculator_logic_init(&logic);
     calculator_units_init(&units);
+    calculator_complex_init(&complex);
 
     calculator_persisted_state_t persisted;
     calculator_storage_load_status_t load_status =
@@ -988,6 +1008,11 @@ void calculator_ui_task(void) {
             bool calculated = programmer_engine_equals(&programmer);
             snprintf(message, sizeof message, "%s",
                      calculated ? "OK" : "NO OPERATION");
+        } else if (page == PAGE_COMPLEX) {
+            calculator_complex_activate(&complex, "=",
+                                        calc_engine_uses_degrees(),
+                                        message, sizeof message);
+            render_keypad();
         } else if (calculator_page_accepts_evaluate(page)) {
             evaluate_expression();
         }
@@ -997,6 +1022,11 @@ void calculator_ui_task(void) {
     if (button2 && !old_button2) {
         if (page == PAGE_PROGRAMMER) {
             programmer_engine_delete(&programmer);
+        } else if (page == PAGE_COMPLEX) {
+            calculator_complex_activate(&complex, "DEL",
+                                        calc_engine_uses_degrees(),
+                                        message, sizeof message);
+            render_keypad();
         } else if (page == PAGE_LOGIC) {
             calculator_logic_activate(&logic, "DEL",
                                       message, sizeof message);
@@ -1033,6 +1063,23 @@ void calculator_ui_task(void) {
             }
             render_graph();
             mark_persistence_dirty();
+        } else if (page == PAGE_COMPLEX) {
+            if (complex.history_view &&
+                (joystick.left || joystick.right)) {
+                calculator_complex_activate(
+                    &complex, joystick.left ? "PREV" : "NEXT",
+                    calc_engine_uses_degrees(), message, sizeof message);
+            } else {
+                if (joystick.left) {
+                    expression_editor_move(&complex.editor,
+                                           EDITOR_CURSOR_LEFT);
+                }
+                if (joystick.right) {
+                    expression_editor_move(&complex.editor,
+                                           EDITOR_CURSOR_RIGHT);
+                }
+            }
+            render_display();
         } else if (page == PAGE_LOGIC) {
             const char *token = joystick.left ? "LEFT" :
                 (joystick.right ? "RIGHT" :

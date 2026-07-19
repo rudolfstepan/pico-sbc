@@ -3,6 +3,8 @@ add_executable(lafvin_scientific_calculator
     src/calculation_status.c
     src/calculator_dialog.c
     src/calculator_engine.c
+    src/calculator_complex.c
+    src/complex_engine.c
     src/calculator_graph.c
     src/calculator_keymaps.c
     src/calculator_list.c
