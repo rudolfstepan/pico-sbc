@@ -286,4 +286,8 @@ if(Python3_Interpreter_FOUND)
         COMMAND ${Python3_EXECUTABLE}
                 ${CMAKE_CURRENT_LIST_DIR}/tools/test_pico_calc_cli.py
     )
+    add_test(NAME pico_calc_gui_model
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_LIST_DIR}/tools/test_pico_calc_gui_model.py
+    )
 endif()

@@ -71,10 +71,21 @@ class CliStateTests(unittest.TestCase):
         self.assertEqual(client.commands[-2:], ["STAT ADD 1 3", "STAT ADD 2 5"])
 
     def test_import_rejects_bad_rows(self):
+        client = FakeClient()
         with self.assertRaises(ProtocolError):
-            import_state(FakeClient(), {
+            import_state(client, {
                 "statistics": {"mode": 2, "values": [[1]]},
             })
+        self.assertNotIn("STAT CLEAR", client.commands)
+
+    def test_import_rejects_non_finite_values_before_writing(self):
+        client = FakeClient()
+        with self.assertRaises(ProtocolError):
+            import_state(client, {
+                "variables": {"A": 1, "B": float("nan")},
+            })
+        self.assertFalse(any(command.startswith("SET VAR")
+                             for command in client.commands))
 
     def test_import_retries_dependent_functions(self):
         client = DependentFunctionClient()
@@ -83,6 +94,11 @@ class CliStateTests(unittest.TestCase):
         })
         self.assertEqual(client.commands.count("SET FUNC F1 f2(x)+1"), 2)
         self.assertTrue(client.f2_defined)
+
+    def test_partial_import_does_not_clear_expression(self):
+        client = FakeClient()
+        import_state(client, {"variables": {"A": 2}})
+        self.assertNotIn("SET EXPR ", client.commands)
 
 
 if __name__ == "__main__":

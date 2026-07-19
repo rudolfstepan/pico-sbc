@@ -91,6 +91,34 @@ Statistikliste. Beim Import werden Ausdruck, Variablen, Funktionen und
 Statistikdaten uebertragen. Abhaengige Benutzerfunktionen werden automatisch
 in einer gueltigen Reihenfolge wiederholt; Rekursionen werden abgelehnt.
 
+## Desktop-Anwendung
+
+`Pico Calculator Link` stellt das gleiche Protokoll als grafischen
+Geraetemanager bereit:
+
+```sh
+python -m pip install -r tools/requirements.txt
+python tools/pico_calc_gui.py
+```
+
+Die Anwendung erkennt serielle Ports und haelt die ausgewaehlte Verbindung bis
+zum Trennen offen. Alle USB-Operationen laufen in einem Hintergrund-Worker,
+damit Fenster und Eingaben auch bei einem Timeout bedienbar bleiben.
+
+- `Rechner` fuehrt wissenschaftliche Ausdruecke aus und zeigt die Sitzung.
+- `Speicher` bearbeitet A-F und F1-F3 gemeinsam.
+- `Statistik` verwaltet bis zu 32 lokale Werte oder Wertepaare und uebertraegt
+  sie gesammelt zum Rechner.
+- `Verlauf` liest die acht persistenten Eintraege und uebernimmt Ausdruecke
+  wieder in den Rechner.
+- `Protokoll` sendet einzelne Rohbefehle und protokolliert Antworten.
+- Die Geraeteleiste liest Firmware, Protokoll, Winkelmodus, Seite und
+  Datenzaehler und bietet JSON-Import/-Export.
+
+Die App verwendet nur Python, Tkinter und PySerial. Tkinter ist in den
+offiziellen Python-Paketen fuer Windows und macOS enthalten. Unter Linux muss
+gegebenenfalls das Paket `python3-tk` der Distribution installiert werden.
+
 ## Reaktionszeit
 
 Die Firmware verarbeitet pro Hauptschleife hoechstens 32 empfangene Zeichen

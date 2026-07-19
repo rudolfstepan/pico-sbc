@@ -18,7 +18,7 @@ firmware/             Anwendungen mit eigener UI und Programmlogik
 lib/board/            Gemeinsame Board-, LCD- und Touchtreiber
 tests/calculator/     Hardwareunabhaengige Unit-Tests
 tests/tools/          Tests fuer die PC-Werkzeuge
-tools/                Plattformunabhaengiges USB-Kommandozeilenwerkzeug
+tools/                USB-Kommandozeile und grafische Synchronisations-App
 docs/                 Hardware- und Architekturunterlagen
 third_party/tinyexpr/ TinyExpr als gepinntes Git-Submodul
 ```
@@ -31,6 +31,23 @@ third_party/tinyexpr/ TinyExpr als gepinntes Git-Submodul
 - Ninja oder ein anderer von CMake unterstuetzter Generator
 - Ein nativer C-Compiler fuer die Host-Tests
 - Optional Python 3.9 und PySerial fuer den USB-Datenaustausch
+
+## Pico Calculator Link
+
+Die plattformunabhaengige Desktop-App verbindet den Scientific Calculator mit
+Windows, Linux oder macOS. Sie fuehrt Ausdruecke aus, synchronisiert Variablen,
+Benutzerfunktionen und Statistiklisten und verwaltet Verlauf sowie JSON-Backups.
+
+![Pico Calculator Link](docs/images/pico-calculator-link.png)
+
+```sh
+python -m pip install -r tools/requirements.txt
+python tools/pico_calc_gui.py
+```
+
+Unter Linux muss gegebenenfalls das Tk-Paket der Distribution, zum Beispiel
+`python3-tk`, installiert werden. Das bestehende Kommandozeilenwerkzeug bleibt
+unter `tools/pico_calc_cli.py` verfuegbar.
 
 ## Repository klonen
 

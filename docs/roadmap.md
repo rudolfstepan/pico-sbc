@@ -19,7 +19,7 @@ ein Test auf dem echten LCD erfolgreich sind.
 | 7 | Einheiten und Konstanten | Phase 3 | abgeschlossen |
 | 8 | Komplexe Zahlen | Phase 3 | abgeschlossen |
 | 9 | Statistikmodus | Phasen 2 und 3 | Hardwaretest offen |
-| 10 | USB-Datenaustausch | Phasen 4 und 9 | geplant |
+| 10 | USB-Datenaustausch | Phasen 4 und 9 | Hardwaretest offen |
 
 ## Phase 0: Technische Grundlage
 
@@ -208,18 +208,22 @@ vergroesserte Datenschrift wurden auf dem Pico erfolgreich bestaetigt.
 - [x] Diagnoseausgaben und Firmwareinformationen abrufbar machen.
 - [x] Eingaben begrenzen und ungueltige Befehle ohne Absturz ablehnen.
 - [x] Ein kleines plattformunabhaengiges Kommandozeilenwerkzeug bereitstellen.
+- [x] Eine grafische Desktop-Anwendung fuer Steuerung und Synchronisation
+  bereitstellen.
 
 **Fertig, wenn:** Daten zwischen Rechner und PC in beide Richtungen uebertragen
 werden koennen, ohne Touchbedienung oder Berechnungen zu blockieren.
 
 Softwarestand: Protokollversion 1 und Firmware 1.1.0 stellen einen begrenzten
 ASCII-Zeilenparser, transaktionale Funktionsimporte, Statistiklisten sowie
-Firmware- und Diagnoseinformationen bereit. Das Python-CLI unter `tools/`
-unterstuetzt Portsuche, Einzelbefehle, Berechnung und JSON-Import/-Export. Pro
-Hauptschleife werden hoechstens 32 USB-Zeichen und ein Befehl bearbeitet; die
-Ausgabe wartet maximal 2 ms. Alle 25 Host-Tests, der RP2040-Release-Build und
-ein realer JSON-Export/-Import ueber COM3 laufen erfolgreich. Die Reaktionszeit
-bei gleichzeitiger Touchbedienung steht noch als Hardwaretest aus.
+Firmware- und Diagnoseinformationen bereit. CLI und `Pico Calculator Link`
+unter `tools/` unterstuetzen Portsuche, Einzelbefehle, Berechnung,
+Speicher-/Statistiksynchronisation und JSON-Import/-Export. Pro Hauptschleife
+werden hoechstens 32 USB-Zeichen und ein Befehl bearbeitet; die Ausgabe wartet
+maximal 2 ms. Alle 26 Host-Tests, der RP2040-Release-Build, ein realer
+JSON-Export/-Import und die GUI-Synchronisation ueber COM3 laufen erfolgreich.
+Die Reaktionszeit bei gleichzeitiger Touchbedienung steht noch als
+Hardwaretest aus.
 
 ## Arbeitsweise pro Phase
 

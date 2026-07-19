@@ -223,10 +223,14 @@ python -m pip install -r tools/requirements.txt
 python tools/pico_calc_cli.py ports
 python tools/pico_calc_cli.py --port COM5 eval "sqrt(2)"
 python tools/pico_calc_cli.py --port COM5 export calculator-state.json
+python tools/pico_calc_gui.py
 ```
 
-Die vollstaendige Befehlsreferenz, Linux-Beispiele, Grenzen und das JSON-Format
-stehen in [docs/usb-protocol.md](../../docs/usb-protocol.md).
+Die grafische Anwendung `Pico Calculator Link` bietet Rechnersteuerung,
+Synchronisation von A-F, F1-F3 und Statistiklisten, Verlauf, Rohkonsole sowie
+JSON-Sicherungen. Die vollstaendige Befehlsreferenz, Linux-Beispiele, Grenzen
+und das JSON-Format stehen in
+[docs/usb-protocol.md](../../docs/usb-protocol.md).
 
 ## Erweiterte Programmer-Werkzeuge
 

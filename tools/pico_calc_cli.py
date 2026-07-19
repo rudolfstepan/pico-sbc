@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import time
 from pathlib import Path
@@ -24,7 +25,13 @@ class SerialClient:
         self.timeout = timeout
         self.serial = None
 
-    def __enter__(self) -> "SerialClient":
+    @property
+    def connected(self) -> bool:
+        return self.serial is not None and self.serial.is_open
+
+    def open(self) -> "SerialClient":
+        if self.connected:
+            return self
         try:
             import serial
         except ImportError as error:
@@ -40,9 +47,16 @@ class SerialClient:
         self.serial.reset_input_buffer()
         return self
 
-    def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
+    def close(self) -> None:
         if self.serial is not None:
             self.serial.close()
+            self.serial = None
+
+    def __enter__(self) -> "SerialClient":
+        return self.open()
+
+    def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
+        self.close()
 
     def command(self, command: str) -> str:
         if any(ord(character) < 0x20 or ord(character) > 0x7E
@@ -120,17 +134,24 @@ def export_state(client: Any) -> dict[str, Any]:
 def import_state(client: Any, data: dict[str, Any]) -> None:
     if data.get("format") not in (None, "pico-sbc-calculator-state"):
         raise ProtocolError("Unbekanntes JSON-Format")
-    expression = str(data.get("expression", ""))
-    client.command(f"SET EXPR {expression}")
+    if "expression" in data:
+        expression = str(data["expression"])
+        client.command(f"SET EXPR {expression}")
 
     variables = data.get("variables", {})
     if not isinstance(variables, dict):
         raise ProtocolError("variables muss ein Objekt sein")
+    normalized_variables = []
     for name, value in variables.items():
         normalized = str(name).upper()
         if normalized not in tuple("ABCDEF"):
             raise ProtocolError(f"Ungueltige Variable: {name}")
-        client.command(f"SET VAR {normalized} {float(value):.17g}")
+        number = float(value)
+        if not math.isfinite(number):
+            raise ProtocolError(f"Ungueltiger Variablenwert: {name}")
+        normalized_variables.append((normalized, number))
+    for name, value in normalized_variables:
+        client.command(f"SET VAR {name} {value:.17g}")
 
     functions = data.get("functions", {})
     if not isinstance(functions, dict):
@@ -170,11 +191,17 @@ def import_state(client: Any, data: dict[str, Any]) -> None:
     values = statistics.get("values", [])
     if not isinstance(values, list) or len(values) > 32:
         raise ProtocolError("Statistikliste muss maximal 32 Zeilen enthalten")
-    client.command(f"STAT MODE {mode}")
-    client.command("STAT CLEAR")
+    normalized_rows = []
     for row in values:
         if not isinstance(row, list) or len(row) != mode:
             raise ProtocolError(f"Statistikzeile passt nicht zu Modus {mode}")
+        numbers = [float(value) for value in row]
+        if not all(math.isfinite(value) for value in numbers):
+            raise ProtocolError("Statistikwerte muessen endlich sein")
+        normalized_rows.append(numbers)
+    client.command(f"STAT MODE {mode}")
+    client.command("STAT CLEAR")
+    for row in normalized_rows:
         numbers = " ".join(f"{float(value):.17g}" for value in row)
         client.command(f"STAT ADD {numbers}")
 
