@@ -72,7 +72,7 @@ Zustand nicht.
 Typische Antworten:
 
 ```text
-OK INFO<TAB>protocol=3<TAB>firmware=1.4.0<TAB>model=scientific-calculator
+OK INFO<TAB>protocol=3<TAB>firmware=1.4.1<TAB>model=scientific-calculator
 OK DIAG<TAB>page=0<TAB>angle=DEG<TAB>history=2<TAB>stats=3<TAB>mode=1<TAB>basic=4<TAB>basic_state=STOPPED
 OK VAR<TAB>A<TAB>3.5
 OK HISTORY<TAB>0<TAB>42<TAB>6*7<TAB>42

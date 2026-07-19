@@ -1,6 +1,6 @@
 # Benutzerhandbuch: Pico Scientific Calculator
 
-Gueltig fuer Firmware `1.4.0`, USB-Protokoll `3` und das LAFVIN Pico
+Gueltig fuer Firmware `1.4.1`, USB-Protokoll `3` und das LAFVIN Pico
 Development Kit mit RP2040, ST7796U-LCD und GT911-Touchscreen.
 
 ## Inhalt
@@ -477,7 +477,8 @@ Mit Klammern wird die Reihenfolge explizit festgelegt.
 ### Wahrheitstabelle, KNF und DNF
 
 1. Ausdruck eingeben, zum Beispiel `A XOR B`.
-2. `CHECK` prueft Syntax und Gatterbaum.
+2. `CHECK` prueft Syntax und Gatterbaum und zeigt `OUT = 0/1` fuer die
+   aktuelle Eingangsbelegung.
 3. `TABLE` zeigt die Wahrheitstabelle; `UP` und `DOWN` blaettern.
 4. `DNF` oder `KNF` zeigt die vereinfachte Form.
 5. Dieselbe Taste erneut druecken, um die kanonische Form anzuzeigen.

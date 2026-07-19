@@ -8,11 +8,13 @@
 static uint16_t framebuffer[LCD_HEIGHT][LCD_WIDTH];
 static bool out_of_bounds_draw;
 static uint8_t max_text_scale;
+static char text_log[4096];
 
 void mock_lcd_reset(void) {
     memset(framebuffer, 0, sizeof framebuffer);
     out_of_bounds_draw = false;
     max_text_scale = 0;
+    text_log[0] = '\0';
 }
 
 bool mock_lcd_had_out_of_bounds_draw(void) {
@@ -26,6 +28,10 @@ uint8_t mock_lcd_max_text_scale(void) {
 uint16_t mock_lcd_pixel(int x, int y) {
     if (x < 0 || x >= LCD_WIDTH || y < 0 || y >= LCD_HEIGHT) return 0;
     return framebuffer[y][x];
+}
+
+bool mock_lcd_drew_text(const char *text) {
+    return text && strstr(text_log, text) != NULL;
 }
 
 void lcd_init(void) {}
@@ -78,6 +84,12 @@ void lcd_draw_text(int x, int y, const char *text,
     (void)foreground;
     (void)background;
     if (scale > max_text_scale) max_text_scale = scale;
+    size_t log_length = strlen(text_log);
+    if (log_length + length + 2u < sizeof text_log) {
+        memcpy(text_log + log_length, text, length);
+        text_log[log_length + length] = '\n';
+        text_log[log_length + length + 1u] = '\0';
+    }
     if (x < 0 || y < 0 || x + (int)(length * 6u * scale) > LCD_WIDTH ||
         y + 8 * scale > LCD_HEIGHT) {
         out_of_bounds_draw = true;

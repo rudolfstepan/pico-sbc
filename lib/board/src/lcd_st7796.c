@@ -106,6 +106,8 @@ static const uint8_t *font_for(char c) {
     static const uint8_t gt[5] = {0x00,0x41,0x22,0x14,0x08};
     static const uint8_t bang[5] = {0x00,0x00,0x5f,0x00,0x00};
     static const uint8_t quote[5] = {0x00,0x07,0x00,0x07,0x00};
+    static const uint8_t ampersand[5] = {0x36,0x49,0x55,0x22,0x50};
+    static const uint8_t pipe[5] = {0x00,0x00,0x7f,0x00,0x00};
 
     c = (char)toupper((unsigned char)c);
     if (c >= '0' && c <= '9') return font_digits[c - '0'];
@@ -127,6 +129,8 @@ static const uint8_t *font_for(char c) {
     if (c == '>') return gt;
     if (c == '!') return bang;
     if (c == '"') return quote;
+    if (c == '&') return ampersand;
+    if (c == '|') return pipe;
     return blank;
 }
 

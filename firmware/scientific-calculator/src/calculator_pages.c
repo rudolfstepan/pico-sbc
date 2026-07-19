@@ -294,6 +294,38 @@ static const char *logic_view_name(calculator_logic_view_t view) {
     }
 }
 
+static void format_logic_output(const calculator_logic_t *logic,
+                                char *output, size_t output_size) {
+    size_t length = 0;
+    int written = snprintf(output, output_size, "OUT");
+    if (written < 0 || (size_t)written >= output_size) return;
+    length = (size_t)written;
+    if (logic->program.variable_mask) {
+        written = snprintf(output + length, output_size - length, "(");
+        if (written < 0 || (size_t)written >= output_size - length) return;
+        length += (size_t)written;
+        bool first = true;
+        for (unsigned int variable = 0; variable < LOGIC_VARIABLE_COUNT;
+             ++variable) {
+            uint8_t bit = (uint8_t)(1u << variable);
+            if (!(logic->program.variable_mask & bit)) continue;
+            written = snprintf(output + length, output_size - length,
+                               "%s%c=%u", first ? "" : " ",
+                               (char)('A' + variable),
+                               (logic->assignment & bit) ? 1u : 0u);
+            if (written < 0 || (size_t)written >= output_size - length) return;
+            length += (size_t)written;
+            first = false;
+        }
+        written = snprintf(output + length, output_size - length, ")");
+        if (written < 0 || (size_t)written >= output_size - length) return;
+        length += (size_t)written;
+    }
+    snprintf(output + length, output_size - length, " = %u",
+             logic_engine_evaluate(&logic->program, logic->assignment)
+                ? 1u : 0u);
+}
+
 static void append_char(char *buffer, size_t capacity, size_t *length,
                         char value) {
     if (*length + 1 >= capacity) return;
@@ -408,11 +440,20 @@ void calculator_page_render_logic(const calculator_logic_t *logic,
                       expression_editor_view(&logic->editor, editor_text,
                                              sizeof editor_text, 38),
                       COL_TEXT, COL_BG, 2);
-        lcd_draw_text(6, 52,
-                      "A-F  NOT AND OR XOR NAND NOR XNOR",
-                      COL_MUTED, COL_BG, 1);
-        lcd_draw_text(6, 67, "CHECK OR SELECT TABLE / DNF / KNF / GATES",
-                      COL_MUTED, COL_BG, 1);
+        if (logic->compiled) {
+            char output[48];
+            format_logic_output(logic, output, sizeof output);
+            lcd_draw_text(6, 47, output, COL_TEXT, COL_BG, 2);
+            lcd_draw_text(6, 69, "GATES CHANGES INPUTS A-F",
+                          COL_MUTED, COL_BG, 1);
+        } else {
+            lcd_draw_text(6, 52,
+                          "A-F  NOT AND OR XOR NAND NOR XNOR",
+                          COL_MUTED, COL_BG, 1);
+            lcd_draw_text(6, 67,
+                          "CHECK OR SELECT TABLE / DNF / KNF / GATES",
+                          COL_MUTED, COL_BG, 1);
+        }
     }
     finish_display();
 }

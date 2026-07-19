@@ -140,7 +140,8 @@ Gatterkombinationen durch Host-Tests abgesichert sind.
 Abschlussstand: Der getrennte Logikkern, Editor, Wahrheitstabelle, KNF/DNF und
 die Live-Gatteransicht sind implementiert und durch Host-Tests abgesichert.
 Touchbedienung, Wahrheitstabelle und Gattereingaben wurden anschliessend auf
-dem Pico erfolgreich geprueft.
+dem Pico erfolgreich geprueft. Firmware 1.4.1 ergaenzt die fehlenden
+LCD-Zeichen fuer `&` und `|` sowie die direkte Ausgangsanzeige nach `CHECK`.
 
 ## Phase 7: Einheiten und Konstanten
 

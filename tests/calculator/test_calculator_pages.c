@@ -52,6 +52,22 @@ int main(void) {
     calculator_logic_t logic;
     char logic_message[32];
     calculator_logic_init(&logic);
+    expression_editor_set(&logic.editor, "1&1");
+    calculator_logic_activate(&logic, "CHECK", logic_message,
+                              sizeof logic_message);
+    mock_lcd_reset();
+    calculator_page_render_logic(&logic, logic_message);
+    CHECK(mock_lcd_drew_text("OUT = 1"));
+
+    calculator_logic_init(&logic);
+    expression_editor_set(&logic.editor, "0|1");
+    calculator_logic_activate(&logic, "CHECK", logic_message,
+                              sizeof logic_message);
+    mock_lcd_reset();
+    calculator_page_render_logic(&logic, logic_message);
+    CHECK(mock_lcd_drew_text("OUT = 1"));
+
+    calculator_logic_init(&logic);
     expression_editor_set(&logic.editor, "A^B^C^D^E^F");
     calculator_logic_compile(&logic, logic_message, sizeof logic_message);
     calculator_page_render_logic(&logic, logic_message);
