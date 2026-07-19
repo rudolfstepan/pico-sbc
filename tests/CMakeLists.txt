@@ -165,3 +165,16 @@ target_include_directories(calculator_pages_tests PRIVATE
 )
 enable_project_warnings(calculator_pages_tests)
 add_test(NAME calculator_pages COMMAND calculator_pages_tests)
+
+add_executable(calculator_persistence_tests
+    calculator/test_calculator_persistence.c
+    ${CALCULATOR_SRC}/calculator_persistence.c
+    ${CALCULATOR_SRC}/calculator_symbols.c
+    ${CALCULATOR_SRC}/calculation_status.c
+    ${CALCULATOR_SRC}/graph_model.c
+)
+target_include_directories(calculator_persistence_tests PRIVATE
+    ${CALCULATOR_SRC}
+)
+enable_project_warnings(calculator_persistence_tests)
+add_test(NAME calculator_persistence COMMAND calculator_persistence_tests)

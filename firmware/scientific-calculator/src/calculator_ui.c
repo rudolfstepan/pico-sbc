@@ -5,6 +5,8 @@
 #include "calculator_list.h"
 #include "calculator_navigation.h"
 #include "calculator_pages.h"
+#include "calculator_persistence.h"
+#include "calculator_storage.h"
 #include "calculator_symbols.h"
 #include "calculator_ui_types.h"
 #include "calculator_widgets.h"
@@ -22,6 +24,8 @@
 
 #define COL_BG RGB565(0, 0, 0)
 #define EXPR_MAX EXPRESSION_EDITOR_CAPACITY
+#define PERSISTENCE_DELAY_MS 3000u
+#define PERSISTENCE_RETRY_MS 10000u
 
 static expression_editor_t expression_state;
 static char result_text[32] = "0";
@@ -34,18 +38,81 @@ static unsigned int fixed_fraction_bits = 16;
 static bool just_evaluated;
 static bool touch_locked;
 
-#define HISTORY_MAX 8
-typedef struct {
-    char formula[EXPR_MAX];
-    char result[32];
-    double value;
-} history_entry_t;
+#define HISTORY_MAX CALCULATOR_PERSISTENCE_HISTORY_CAPACITY
+typedef calculator_persisted_history_entry_t history_entry_t;
 
 static history_entry_t history[HISTORY_MAX];
 static calculator_list_t history_list;
 static double memory_value;
 static calculator_graph_t graph;
 static calculator_symbols_t symbols;
+static bool persistence_dirty;
+static absolute_time_t persistence_deadline;
+
+static void render_display(void);
+static void render_graph(void);
+
+static void capture_persisted_state(calculator_persisted_state_t *state) {
+    calculator_persistence_defaults(state);
+    state->degrees = calc_engine_uses_degrees();
+    state->page = page;
+    state->format_bits = format_bits;
+    state->fixed_fraction_bits = fixed_fraction_bits;
+    state->ans = ans;
+    state->memory_value = memory_value;
+    state->programmer_base = programmer.base;
+    state->programmer_value = programmer.value;
+    state->symbols = symbols;
+    memcpy(state->history, history, sizeof history);
+    state->history_count = history_list.count;
+    state->history_index = history_list.index;
+    state->graph = graph;
+}
+
+static void apply_persisted_state(
+    const calculator_persisted_state_t *state) {
+    calc_engine_set_degrees(state->degrees);
+    page = state->page;
+    format_bits = state->format_bits;
+    fixed_fraction_bits = state->fixed_fraction_bits;
+    ans = state->ans;
+    memory_value = state->memory_value;
+    symbols = state->symbols;
+    memcpy(history, state->history, sizeof history);
+    calculator_list_set_count(&history_list, state->history_count);
+    if (state->history_count) {
+        calculator_list_select(&history_list, state->history_index);
+    }
+    programmer.value = state->programmer_value;
+    programmer.replace_input = true;
+    programmer_engine_set_base(&programmer, state->programmer_base);
+    graph = state->graph;
+    snprintf(result_text, sizeof result_text, "%.12g", ans);
+}
+
+static void mark_persistence_dirty(void) {
+    persistence_dirty = true;
+    persistence_deadline = make_timeout_time_ms(PERSISTENCE_DELAY_MS);
+}
+
+static void save_persistence_if_due(void) {
+    if (!persistence_dirty || !time_reached(persistence_deadline)) return;
+
+    calculator_persisted_state_t state;
+    capture_persisted_state(&state);
+    calculator_storage_save_status_t status = calculator_storage_save(&state);
+    if (status == CALCULATOR_STORAGE_ERROR) {
+        persistence_deadline = make_timeout_time_ms(PERSISTENCE_RETRY_MS);
+        snprintf(message, sizeof message, "SAVE ERROR");
+        if (page == PAGE_GRAPH) {
+            render_graph();
+        } else {
+            render_display();
+        }
+        return;
+    }
+    persistence_dirty = false;
+}
 
 static calculator_widget_state_t current_widget_state(void) {
     unsigned int active_mask = 0;
@@ -363,6 +430,7 @@ static void activate_memory_key(const calc_key_t *key) {
 
 static void activate_history_key(const calc_key_t *key) {
     if (strcmp(key->token, "CLEAR") == 0) {
+        memset(history, 0, sizeof history);
         calculator_list_set_count(&history_list, 0);
         snprintf(message, sizeof message, "HISTORY CLEARED");
         return;
@@ -729,6 +797,7 @@ static void activate_key(const calc_key_t *key) {
             break;
     }
     render_display();
+    mark_persistence_dirty();
 }
 
 static const calc_key_t *hit_key(uint16_t x, uint16_t y) {
@@ -738,16 +807,40 @@ static const calc_key_t *hit_key(uint16_t x, uint16_t y) {
 
 void calculator_ui_init(void) {
     lcd_fill(COL_BG);
-    calc_engine_set_degrees(true);
     expression_editor_init(&expression_state);
     calculator_list_init(&history_list);
     programmer_engine_init(&programmer);
-    calculator_symbols_init(&symbols);
-    calculator_graph_init(&graph);
-    snprintf(message, sizeof message, "%s",
-             touch_is_ready() ? "READY" : "TOUCH ERROR");
-    render_display();
-    render_keypad();
+
+    calculator_persisted_state_t persisted;
+    calculator_storage_load_status_t load_status =
+        calculator_storage_load(&persisted);
+    bool factory_reset = board_button1_pressed() && board_button2_pressed();
+    if (factory_reset) {
+        calculator_persistence_defaults(&persisted);
+        (void)calculator_storage_save(&persisted);
+        while (board_button1_pressed() || board_button2_pressed()) {
+            sleep_ms(10);
+        }
+    }
+    apply_persisted_state(&persisted);
+    if (!touch_is_ready()) {
+        snprintf(message, sizeof message, "TOUCH ERROR");
+    } else if (factory_reset) {
+        snprintf(message, sizeof message, "FACTORY RESET");
+    } else if (load_status == CALCULATOR_STORAGE_RECOVERED) {
+        snprintf(message, sizeof message, "STORAGE RECOVERED");
+        mark_persistence_dirty();
+    } else if (load_status == CALCULATOR_STORAGE_LOADED) {
+        snprintf(message, sizeof message, "STATE RESTORED");
+    } else {
+        snprintf(message, sizeof message, "READY");
+    }
+    if (page == PAGE_GRAPH) {
+        render_graph();
+    } else {
+        render_display();
+        render_keypad();
+    }
 }
 
 void calculator_ui_task(void) {
@@ -782,6 +875,7 @@ void calculator_ui_task(void) {
             evaluate_expression();
         }
         render_display();
+        mark_persistence_dirty();
     }
     if (button2 && !old_button2) {
         if (page == PAGE_PROGRAMMER) {
@@ -790,6 +884,7 @@ void calculator_ui_task(void) {
             delete_expression_char();
         }
         render_display();
+        mark_persistence_dirty();
     }
     old_button1 = button1;
     old_button2 = button2;
@@ -816,6 +911,7 @@ void calculator_ui_task(void) {
                 calculator_graph_pan(&graph, horizontal, vertical);
             }
             render_graph();
+            mark_persistence_dirty();
         } else if (calculator_page_accepts_expression(page)) {
             if (joystick.left) {
                 expression_editor_move(&expression_state, EDITOR_CURSOR_LEFT);
@@ -826,4 +922,5 @@ void calculator_ui_task(void) {
             render_display();
         }
     }
+    save_persistence_if_due();
 }

@@ -13,7 +13,7 @@ ein Test auf dem echten LCD erfolgreich sind.
 | 1 | Graph 2.0 | Phase 0 | abgeschlossen |
 | 2 | Numerische Analyse | Phase 1 | abgeschlossen |
 | 3 | Variablen und Benutzerfunktionen | Phase 2 | abgeschlossen |
-| 4 | Permanente Speicherung | Phase 3 | geplant |
+| 4 | Permanente Speicherung | Phase 3 | Hardwaretest offen |
 | 5 | Programmer-Erweiterungen | Phase 0 | geplant |
 | 6 | Einheiten und Konstanten | Phase 3 | geplant |
 | 7 | Komplexe Zahlen | Phase 3 | geplant |
@@ -87,14 +87,20 @@ Fehlerbehandlung und Touchbedienung wurden auf dem Pico erfolgreich geprueft.
 
 ## Phase 4: Permanente Speicherung
 
-- [ ] Ein versioniertes Speicherformat mit Pruefsumme definieren.
-- [ ] Winkelmodus, Speicherregister und zuletzt verwendete Seite sichern.
-- [ ] Verlauf, Benutzerfunktionen und Graphbereiche persistent speichern.
-- [ ] Schreibzugriffe zusammenfassen und Flash-Verschleiss begrenzen.
-- [ ] Werkseinstellungen und Wiederherstellung bei defekten Daten anbieten.
+- [x] Ein versioniertes Speicherformat mit Pruefsumme definieren.
+- [x] Winkelmodus, Speicherregister und zuletzt verwendete Seite sichern.
+- [x] Verlauf, Benutzerfunktionen und Graphbereiche persistent speichern.
+- [x] Schreibzugriffe zusammenfassen und Flash-Verschleiss begrenzen.
+- [x] Werkseinstellungen und Wiederherstellung bei defekten Daten anbieten.
 
 **Fertig, wenn:** Einstellungen einen Neustart ueberstehen und eine
 unterbrochene Speicherung nicht zu einem unbenutzbaren System fuehrt.
+
+Softwarestand: Das versionierte Format, CRC32, Sequenzueberlauf sowie die
+Auswahl der neuesten gueltigen Kopie werden durch Host-Tests abgedeckt. Zwei
+wechselnde 4-KiB-Flashsektoren schuetzen den vorherigen Zustand bei einem
+unterbrochenen Schreibvorgang. Der abschliessende Neustart-, Touch- und
+Werksreset-Test auf dem Pico steht noch aus.
 
 ## Phase 5: Programmer-Erweiterungen
 

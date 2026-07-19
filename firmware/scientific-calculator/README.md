@@ -25,6 +25,8 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 - Speicherregister mit `M+`, `M-`, `MR` und `MC`
 - Sechs Variablen `A` bis `F`, drei Benutzerfunktionen `F1(x)` bis `F3(x)`
   und sechs frei belegbare Favoritentasten
+- Automatische, stromausfallsichere Speicherung von Einstellungen, Verlauf,
+  Symbolen und Graphbereichen
 - Graphenmodus fuer Ausdruecke mit `x`, inklusive dynamischem Koordinatengitter,
   Achsenbeschriftung, Verschieben und Zoom
 - Drei einzeln aktivierbare Graphfunktionen `F1`, `F2` und `F3` in Cyan,
@@ -115,6 +117,22 @@ Funktionen und bereits definierte F1-F3 verwenden. Direkte und indirekte
 Rekursion sowie Syntaxfehler werden beim Speichern abgelehnt. Gespeicherte
 Funktionen koennen beispielsweise als `f1(2)` in BASIC, SCIENTIFIC und TOOLS
 aufgerufen oder in weiteren Graphfunktionen verwendet werden.
+
+## Permanente Speicherung
+
+Der Rechner speichert Winkelmodus, `ANS`, Speicherregister, letzte Seite,
+Programmer-Zustand, Verlauf, Variablen, Benutzerfunktionen, Favoriten und
+Graphbereiche automatisch. Aenderungen werden drei Sekunden gesammelt; ein
+unveraenderter Zustand wird nicht erneut in den Flash geschrieben.
+
+Zwei wechselnde, jeweils mit CRC32 geschuetzte Flashkopien verhindern, dass
+ein Stromausfall waehrend des Speicherns den vorherigen Zustand zerstoert.
+Defekte oder unbekannte Speicherdaten werden beim Start verworfen und durch
+sichere Werkseinstellungen ersetzt.
+
+Fuer einen Werksreset werden beide Hardwaretasten `K1` und `K2` beim
+Einschalten beziehungsweise Reset gleichzeitig gehalten und nach etwa zwei
+Sekunden losgelassen. Die Firmware bestaetigt dies mit `FACTORY RESET`.
 
 ## Build
 

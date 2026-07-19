@@ -8,6 +8,8 @@ add_executable(lafvin_scientific_calculator
     src/calculator_list.c
     src/calculator_navigation.c
     src/calculator_pages.c
+    src/calculator_persistence.c
+    src/calculator_storage.c
     src/calculator_symbols.c
     src/calculator_widgets.c
     src/number_formats.c
@@ -30,7 +32,15 @@ target_compile_definitions(lafvin_scientific_calculator PRIVATE
 
 target_link_libraries(lafvin_scientific_calculator
     lafvin_board
+    hardware_flash
+    hardware_sync
     m
+)
+
+pico_add_linker_script_override_path(
+    lafvin_scientific_calculator
+    ${CMAKE_CURRENT_LIST_DIR}/linker
+    FILES pico_flash_region.ld
 )
 
 pico_enable_stdio_usb(lafvin_scientific_calculator 1)

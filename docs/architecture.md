@@ -33,6 +33,10 @@ Der Rechner trennt Darstellung und Rechenlogik:
 - `calculator_graph`: TinyExpr-Anbindung und LCD-Darstellung des Graphmodells
 - `calculator_symbols`: Variablen A-F, Benutzerfunktionen F1-F3,
   Favoritenbelegung und Rekursionserkennung
+- `calculator_persistence`: versionierte, explizite Serialisierung des
+  Rechnerzustands mit CRC32 und Auswahl redundanter Datensaetze
+- `calculator_storage`: RP2040-Flash-Backend mit zwei wechselnden Sektoren,
+  Schreibvermeidung fuer unveraenderte Daten und Ruecklesepruefung
 - `numerical_analysis`: hardwareunabhaengige Nullstellen-, Schnittpunkt-,
   Ableitungs-, Integral- und Extremumsalgorithmen mit Toleranzgrenzen
 - `expression_editor`, `calculator_list` und `calculator_dialog`:
@@ -47,3 +51,8 @@ Alle Module ohne LCD-, Touch- oder Boardabhaengigkeit werden unter `tests/`
 direkt auf dem Host mit aktivierten Compilerwarnungen getestet. Dadurch kann
 neue Rechenlogik entwickelt werden, ohne einen Pico oder ein Display fuer den
 Testlauf zu benoetigen.
+
+Die letzten beiden 4-KiB-Sektoren des 2-MiB-Flashs sind linker-seitig von der
+Firmware getrennt. Ein neuer Zustand wird immer in den jeweils anderen Sektor
+geschrieben und erst nach erfolgreicher CRC-Pruefung aktiviert. Bei defekten
+oder unbekannten Daten startet der Rechner mit sicheren Werkseinstellungen.
