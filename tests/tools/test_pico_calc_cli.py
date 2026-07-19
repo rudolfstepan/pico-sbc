@@ -60,6 +60,7 @@ class CliStateTests(unittest.TestCase):
     def test_export_state(self):
         exported = export_state(FakeClient())
         self.assertEqual(exported["result"], 42.0)
+        self.assertEqual(exported["result_text"], "42")
         self.assertEqual(exported["expression"], "6*7")
         self.assertEqual(exported["functions"]["F1"], "x+1")
         self.assertEqual(exported["history"][0]["value"], 42.0)

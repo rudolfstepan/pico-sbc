@@ -47,7 +47,10 @@ Der Rechner trennt Darstellung und Rechenlogik:
   hardwareunabhaengige Eingabe-, Listen- und Dialogzustaende
 - `calculation_status`: gemeinsame Fehlercodes und lesbare Meldungen
 - `calculator_engine`: mathematische Ausdruecke, Symbolauflosung und
-  TinyExpr-Anbindung mit geschuetzten Benutzerfunktionsaufrufen
+  Auswahl zwischen Dezimal- und TinyExpr-Auswertung sowie geschuetzte
+  Benutzerfunktionsaufrufe
+- `decimal_engine`: begrenzte Multipraezisions-Dezimalarithmetik fuer bis zu
+  80 Stellen, exaktes `ANS` und kompakte BCD-Serialisierung
 - `programmer_engine`: wortbreitenabhaengige Zahlenbasen, Einzelbitoperationen,
   Rotationen sowie Carry- und Overflowstatus
 - `number_formats`: Zweierkomplement, Festkomma, Byte-Reihenfolge und
@@ -58,7 +61,18 @@ direkt auf dem Host mit aktivierten Compilerwarnungen getestet. Dadurch kann
 neue Rechenlogik entwickelt werden, ohne einen Pico oder ein Display fuer den
 Testlauf zu benoetigen.
 
+Der Rechenkern arbeitet hybrid. Reine Dezimalausdruecke mit `+`, `-`, `*`,
+`/`, `%`, ganzzahligen Potenzen, Klammern und `ANS` werden vom
+Multipraezisionskern verarbeitet. Endliche Ergebnisse bleiben bis zur
+Kapazitaetsgrenze exakt; periodische Divisionen werden nach 80 Stellen mit
+Round-to-even gerundet. Funktionen, Variablen, Statistik, Graphen und
+numerische Verfahren sowie BASIC-Variablen verwenden weiterhin `double`.
+Neben dem angezeigten Dezimaltext wird deshalb immer eine Double-Nachbildung
+fuer diese Module gehalten.
+
 Die letzten beiden 4-KiB-Sektoren des 2-MiB-Flashs sind linker-seitig von der
 Firmware getrennt. Ein neuer Zustand wird immer in den jeweils anderen Sektor
 geschrieben und erst nach erfolgreicher CRC-Pruefung aktiviert. Bei defekten
 oder unbekannten Daten startet der Rechner mit sicheren Werkseinstellungen.
+Flashformat 4 speichert das exakte `ANS` und die acht Verlaufsergebnisse
+BCD-komprimiert und migriert weiterhin Datensaetze der Versionen 1 bis 3.

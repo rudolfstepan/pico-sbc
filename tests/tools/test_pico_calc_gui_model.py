@@ -25,7 +25,7 @@ class FakeClient:
     def command(self, command):
         self.commands.append(command)
         responses = {
-            "INFO": "OK INFO\tprotocol=2\tfirmware=1.3.0\tmodel=scientific-calculator",
+            "INFO": "OK INFO\tprotocol=3\tfirmware=1.4.0\tmodel=scientific-calculator",
             "DIAG": (
                 "OK DIAG\tpage=0\tangle=DEG\thistory=1\tstats=1\tmode=1"
                 "\tbasic=1\tbasic_state=STOPPED"
@@ -39,6 +39,10 @@ class FakeClient:
             "GET BASIC": "OK BASIC\t1",
             "GET BASIC 0": "OK BASIC\t0\t10\tEND",
             "EVAL sqrt(4)": "OK RESULT\t2",
+            "EVAL 1.000000000000000000000000000000000000000000001*2": (
+                "OK RESULT\t"
+                "2.000000000000000000000000000000000000000000002"
+            ),
             "GET BASIC STATUS": (
                 "OK BASIC_STATUS\tstate=FINISHED\tstatus=OK\tsteps=2\toutput=1"
             ),
@@ -55,29 +59,36 @@ class FakeClient:
 class GuiModelTests(unittest.TestCase):
     def test_parse_properties(self):
         parsed = parse_properties(
-            "OK INFO\tprotocol=2\tfirmware=1.3.0", "INFO"
+            "OK INFO\tprotocol=3\tfirmware=1.4.0", "INFO"
         )
-        self.assertEqual(parsed, {"protocol": "2", "firmware": "1.3.0"})
+        self.assertEqual(parsed, {"protocol": "3", "firmware": "1.4.0"})
         with self.assertRaises(ProtocolError):
             parse_properties("OK INFO\tbroken", "INFO")
 
     def test_read_device_snapshot(self):
         snapshot = read_device_snapshot(FakeClient())
-        self.assertEqual(snapshot.info["firmware"], "1.3.0")
+        self.assertEqual(snapshot.info["firmware"], "1.4.0")
         self.assertEqual(snapshot.diagnostics["angle"], "DEG")
         self.assertEqual(snapshot.state["history"][0]["expression"], "6*7")
         self.assertEqual(snapshot.state["program"], ["10 END"])
 
         old_client = FakeClient()
         old_client.command = lambda command: (
-            "OK INFO\tprotocol=1\tfirmware=1.2.0"
+            "OK INFO\tprotocol=2\tfirmware=1.3.0"
             if command == "INFO" else "OK"
         )
-        with self.assertRaisesRegex(ProtocolError, "Protokoll 2"):
+        with self.assertRaisesRegex(ProtocolError, "Protokoll 3"):
             read_device_snapshot(old_client)
 
     def test_evaluate_expression(self):
-        self.assertEqual(evaluate_expression(FakeClient(), "sqrt(4)"), 2.0)
+        self.assertEqual(evaluate_expression(FakeClient(), "sqrt(4)"), "2")
+        self.assertEqual(
+            evaluate_expression(
+                FakeClient(),
+                "1.000000000000000000000000000000000000000000001*2",
+            ),
+            "2.000000000000000000000000000000000000000000002",
+        )
         with self.assertRaises(ProtocolError):
             evaluate_expression(FakeClient(), "   ")
 

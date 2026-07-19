@@ -1,5 +1,6 @@
 #include "calculator_pages.h"
 
+#include "calculator_engine.h"
 #include "calculator_widgets.h"
 #include "lcd_st7796.h"
 #include "number_formats.h"
@@ -48,7 +49,7 @@ void calculator_page_render_expression(calc_page_t page, bool degrees,
                                        const char *result_text) {
     char status[48];
     char editor_text[EXPRESSION_EDITOR_CAPACITY + 2];
-    char shown_result[36];
+    char shown_result[CALCULATOR_RESULT_TEXT_CAPACITY + 2u];
 
     snprintf(status, sizeof status, "%s  %s  %s",
              degrees ? "DEG" : "RAD",

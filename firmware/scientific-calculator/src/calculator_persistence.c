@@ -7,6 +7,9 @@
 #define RECORD_HEADER_SIZE 20u
 #define LEGACY_PERSISTENCE_VERSION 1u
 #define STATISTICS_PERSISTENCE_VERSION 2u
+#define BASIC_PERSISTENCE_VERSION 3u
+#define PRECISION_PERSISTENCE_VERSION 4u
+#define LEGACY_RESULT_CAPACITY 32u
 
 static const uint8_t record_magic[4] = {'P', 'C', 'A', 'L'};
 
@@ -111,6 +114,25 @@ static bool string_is_terminated(const char *text, size_t capacity) {
     return memchr(text, '\0', capacity) != NULL;
 }
 
+static void write_decimal_text(writer_t *writer, const char *text) {
+    uint8_t packed[DECIMAL_ENGINE_PACKED_CAPACITY];
+    if (!decimal_engine_pack_text(text, packed, sizeof packed)) {
+        writer->valid = false;
+        return;
+    }
+    write_bytes(writer, packed, sizeof packed);
+}
+
+static void read_decimal_text(reader_t *reader, char *text,
+                              size_t text_size) {
+    uint8_t packed[DECIMAL_ENGINE_PACKED_CAPACITY];
+    read_bytes(reader, packed, sizeof packed);
+    if (reader->valid &&
+        !decimal_engine_unpack_text(packed, sizeof packed, text, text_size)) {
+        reader->valid = false;
+    }
+}
+
 static bool format_bits_valid(unsigned int bits) {
     return bits == 8u || bits == 16u || bits == 32u || bits == 64u;
 }
@@ -166,6 +188,7 @@ static bool state_is_valid(const calculator_persisted_state_t *state) {
         !format_bits_valid(state->format_bits) ||
         state->fixed_fraction_bits >= state->format_bits ||
         !isfinite(state->ans) || !isfinite(state->memory_value) ||
+        !string_is_terminated(state->ans_text, sizeof state->ans_text) ||
         !base_valid(state->programmer_base) ||
         state->programmer_selected_bit >= state->format_bits ||
         state->history_count > CALCULATOR_PERSISTENCE_HISTORY_CAPACITY ||
@@ -209,6 +232,7 @@ void calculator_persistence_defaults(calculator_persisted_state_t *state) {
     state->format_bits = 32;
     state->fixed_fraction_bits = 16;
     state->programmer_base = PROGRAMMER_DEC;
+    snprintf(state->ans_text, sizeof state->ans_text, "0");
     calculator_symbols_init(&state->symbols);
     graph_model_init(&state->graph);
     graph_model_reset_range(&state->graph);
@@ -243,7 +267,7 @@ static void write_payload(writer_t *writer,
         write_bytes(writer, state->history[i].formula,
                     sizeof state->history[i].formula);
         write_bytes(writer, state->history[i].result,
-                    sizeof state->history[i].result);
+                    LEGACY_RESULT_CAPACITY);
         write_double(writer, state->history[i].value);
     }
 
@@ -294,6 +318,12 @@ static void write_payload(writer_t *writer,
         }
         write_u16(writer, number);
         write_bytes(writer, text, sizeof text);
+    }
+
+    write_decimal_text(writer, state->ans_text);
+    for (size_t i = 0; i < CALCULATOR_PERSISTENCE_HISTORY_CAPACITY; ++i) {
+        write_decimal_text(writer, state->history[i].result[0]
+            ? state->history[i].result : "0");
     }
 }
 
@@ -384,8 +414,10 @@ static void read_payload(reader_t *reader, uint16_t version,
     for (size_t i = 0; i < CALCULATOR_PERSISTENCE_HISTORY_CAPACITY; ++i) {
         read_bytes(reader, state->history[i].formula,
                    sizeof state->history[i].formula);
+        memset(state->history[i].result, 0,
+               sizeof state->history[i].result);
         read_bytes(reader, state->history[i].result,
-                   sizeof state->history[i].result);
+                   LEGACY_RESULT_CAPACITY);
         state->history[i].value = read_double(reader);
     }
 
@@ -424,7 +456,7 @@ static void read_payload(reader_t *reader, uint16_t version,
             state->statistics.y[i] = read_double(reader);
         }
     }
-    if (version >= 3u) {
+    if (version >= BASIC_PERSISTENCE_VERSION) {
         state->basic_program.count = read_u8(reader);
         for (unsigned int i = 0; i < 7; ++i) (void)read_u8(reader);
         for (size_t i = 0; i < BASIC_PROGRAM_MAX_LINES; ++i) {
@@ -432,6 +464,16 @@ static void read_payload(reader_t *reader, uint16_t version,
             read_bytes(reader, state->basic_program.lines[i].text,
                        sizeof state->basic_program.lines[i].text);
         }
+    }
+    if (version >= PRECISION_PERSISTENCE_VERSION) {
+        read_decimal_text(reader, state->ans_text, sizeof state->ans_text);
+        for (size_t i = 0; i < CALCULATOR_PERSISTENCE_HISTORY_CAPACITY; ++i) {
+            read_decimal_text(reader, state->history[i].result,
+                              sizeof state->history[i].result);
+            if (i >= state->history_count) state->history[i].result[0] = '\0';
+        }
+    } else {
+        snprintf(state->ans_text, sizeof state->ans_text, "%.17g", state->ans);
     }
 }
 
@@ -472,6 +514,7 @@ calculator_persistence_status_t calculator_persistence_decode(
     }
     if (version != LEGACY_PERSISTENCE_VERSION &&
         version != STATISTICS_PERSISTENCE_VERSION &&
+        version != BASIC_PERSISTENCE_VERSION &&
         version != CALCULATOR_PERSISTENCE_VERSION) {
         return CALCULATOR_PERSISTENCE_UNSUPPORTED;
     }

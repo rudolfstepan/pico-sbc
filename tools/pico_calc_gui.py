@@ -38,7 +38,7 @@ from pico_calc_gui_model import (
 
 
 APP_NAME = "Pico Calculator Link"
-APP_VERSION = "1.1"
+APP_VERSION = "1.2"
 BG = "#eef1f4"
 PANEL = "#ffffff"
 INK = "#202428"
@@ -291,9 +291,12 @@ class CalculatorLinkApp:
         )
         self.expression_entry.grid(row=0, column=0, sticky="ew", padx=18,
                                    pady=(16, 4))
-        tk.Label(display, textvariable=self.result_var, bg=DISPLAY, fg=AMBER,
-                 anchor="e", font=("Consolas", 28, "bold")).grid(
-            row=1, column=0, sticky="ew", padx=18, pady=(0, 12))
+        self.result_label = tk.Label(
+            display, textvariable=self.result_var, bg=DISPLAY, fg=AMBER,
+            anchor="e", font=("Consolas", 28, "bold"),
+        )
+        self.result_label.grid(row=1, column=0, sticky="ew", padx=18,
+                               pady=(0, 12))
         self.expression_entry.bind("<Return>", lambda _event: self._evaluate())
 
         actions = ttk.Frame(tab, style="Panel.TFrame")
@@ -630,19 +633,28 @@ class CalculatorLinkApp:
         self._submit("Lade Rechnerdaten", lambda: read_device_snapshot(self.client),
                      self._apply_snapshot)
 
+    def _set_result(self, value: str) -> None:
+        text = str(value)
+        length = len(text)
+        size = 28 if length <= 16 else (
+            20 if length <= 24 else (14 if length <= 40 else (
+                11 if length <= 60 else 9)))
+        self.result_var.set(text)
+        self.result_label.configure(font=("Consolas", size, "bold"))
+
     def _evaluate(self) -> None:
         if not self._require_connection():
             return
         expression = self.expression_var.get()
 
-        def operation() -> tuple[float, DeviceSnapshot]:
+        def operation() -> tuple[str, DeviceSnapshot]:
             value = evaluate_expression(self.client, expression)
             return value, read_device_snapshot(self.client)
 
-        def success(result: tuple[float, DeviceSnapshot]) -> None:
+        def success(result: tuple[str, DeviceSnapshot]) -> None:
             value, snapshot = result
             self._apply_snapshot(snapshot)
-            self.result_var.set(format_number(value))
+            self._set_result(value)
 
         self._submit("Führe Ausdruck aus", operation, success)
 
@@ -978,7 +990,8 @@ class CalculatorLinkApp:
         self.device_vars["BASIC"].set(
             f"{diag.get('basic', '0')} / {diag.get('basic_state', '-')}")
         self.expression_var.set(str(state.get("expression", "")))
-        self.result_var.set(format_number(state.get("result", 0)))
+        self._set_result(format_number(
+            state.get("result_text", state.get("result", 0))))
         for name, value in state.get("variables", {}).items():
             if name in self.variable_vars:
                 self.variable_vars[name].set(format_number(value))

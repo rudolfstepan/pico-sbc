@@ -4,6 +4,7 @@
 #include "basic_engine.h"
 #include "calculator_symbols.h"
 #include "calculator_ui_types.h"
+#include "decimal_engine.h"
 #include "expression_editor.h"
 #include "graph_model.h"
 #include "programmer_engine.h"
@@ -13,10 +14,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define CALCULATOR_PERSISTENCE_VERSION 3u
+#define CALCULATOR_PERSISTENCE_VERSION 4u
 #define CALCULATOR_PERSISTENCE_RECORD_CAPACITY 4096u
 #define CALCULATOR_PERSISTENCE_HISTORY_CAPACITY 8u
-#define CALCULATOR_PERSISTENCE_RESULT_CAPACITY 32u
+#define CALCULATOR_PERSISTENCE_RESULT_CAPACITY DECIMAL_ENGINE_TEXT_CAPACITY
 
 typedef struct {
     char formula[EXPRESSION_EDITOR_CAPACITY];
@@ -30,6 +31,7 @@ typedef struct {
     unsigned int format_bits;
     unsigned int fixed_fraction_bits;
     double ans;
+    char ans_text[CALCULATOR_PERSISTENCE_RESULT_CAPACITY];
     double memory_value;
     programmer_base_t programmer_base;
     uint64_t programmer_value;

@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 static int failures;
 
@@ -42,6 +43,37 @@ int main(void) {
     expect_status("fac(2.5)", CALC_DOMAIN_ERROR);
     expect_status("1/0", CALC_OVERFLOW);
     expect_status("2+(", CALC_PARSE_ERROR);
+
+    calculator_result_t precise;
+    int precise_error = 0;
+    calc_status_t precise_status = calc_engine_evaluate_precise_symbols(
+        "1.000000000000000000000000000000000000000000001*2",
+        0.0, "0", NULL, &precise, &precise_error);
+    if (precise_status != CALC_OK || !precise.decimal || !precise.exact ||
+        strcmp(precise.text,
+               "2.000000000000000000000000000000000000000000002") != 0) {
+        printf("FAIL: precise decimal result status=%d text=%s error=%d\n",
+               precise_status, precise.text, precise_error);
+        failures++;
+    }
+    precise_status = calc_engine_evaluate_precise_symbols(
+        "ans+0.000000000000000000000000000000000000000000001",
+        precise.value, precise.text, NULL, &precise, &precise_error);
+    if (precise_status != CALC_OK ||
+        strcmp(precise.text,
+               "2.000000000000000000000000000000000000000000003") != 0) {
+        printf("FAIL: precise ANS result status=%d text=%s\n",
+               precise_status, precise.text);
+        failures++;
+    }
+    precise_status = calc_engine_evaluate_precise_symbols(
+        "sin(30)", 0.0, "0", NULL, &precise, &precise_error);
+    if (precise_status != CALC_OK || precise.decimal ||
+        fabs(precise.value - 0.5) > 1e-12) {
+        printf("FAIL: precise fallback status=%d value=%.17g\n",
+               precise_status, precise.value);
+        failures++;
+    }
 
     calc_engine_set_degrees(false);
     expect_value("sin(pi/2)", 1.0, 1e-12);

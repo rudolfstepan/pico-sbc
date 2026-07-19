@@ -24,6 +24,7 @@ add_executable(calculator_engine_tests
     ${CALCULATOR_SRC}/calculation_status.c
     ${CALCULATOR_SRC}/calculator_engine.c
     ${CALCULATOR_SRC}/calculator_symbols.c
+    ${CALCULATOR_SRC}/decimal_engine.c
     ${TINYEXPR_SRC}/tinyexpr.c
 )
 target_include_directories(calculator_engine_tests PRIVATE
@@ -33,6 +34,14 @@ target_include_directories(calculator_engine_tests PRIVATE
 target_compile_definitions(calculator_engine_tests PRIVATE TE_POW_FROM_RIGHT)
 enable_project_warnings(calculator_engine_tests)
 add_test(NAME calculator_engine COMMAND calculator_engine_tests)
+
+add_executable(decimal_engine_tests
+    calculator/test_decimal_engine.c
+    ${CALCULATOR_SRC}/decimal_engine.c
+)
+target_include_directories(decimal_engine_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(decimal_engine_tests)
+add_test(NAME decimal_engine COMMAND decimal_engine_tests)
 
 add_executable(basic_engine_tests
     calculator/test_basic_engine.c
@@ -148,6 +157,7 @@ add_executable(graph_renderer_tests
     ${CALCULATOR_SRC}/calculation_status.c
     ${CALCULATOR_SRC}/calculator_engine.c
     ${CALCULATOR_SRC}/calculator_symbols.c
+    ${CALCULATOR_SRC}/decimal_engine.c
     ${CALCULATOR_SRC}/calculator_graph.c
     ${CALCULATOR_SRC}/calculator_keymaps.c
     ${CALCULATOR_SRC}/calculator_widgets.c
@@ -215,6 +225,7 @@ add_executable(calculator_persistence_tests
     ${CALCULATOR_SRC}/calculator_persistence.c
     ${CALCULATOR_SRC}/calculator_symbols.c
     ${CALCULATOR_SRC}/calculation_status.c
+    ${CALCULATOR_SRC}/decimal_engine.c
     ${CALCULATOR_SRC}/graph_model.c
     ${TINYEXPR_SRC}/tinyexpr.c
 )
@@ -306,6 +317,7 @@ add_executable(calculator_usb_protocol_tests
     ${CALCULATOR_SRC}/calculator_engine.c
     ${CALCULATOR_SRC}/calculator_symbols.c
     ${CALCULATOR_SRC}/calculator_usb_protocol.c
+    ${CALCULATOR_SRC}/decimal_engine.c
     ${CALCULATOR_SRC}/expression_editor.c
     ${CALCULATOR_SRC}/graph_model.c
     ${CALCULATOR_SRC}/statistics_engine.c

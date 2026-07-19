@@ -1,9 +1,11 @@
 #include "calculator_engine.h"
 
+#include "decimal_engine.h"
 #include "tinyexpr.h"
 
 #include <math.h>
 #include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -245,6 +247,41 @@ calc_status_t calc_engine_evaluate(const char *expression, double ans,
                                    double *result, int *error_position) {
     return calc_engine_evaluate_symbols(expression, ans, NULL, result,
                                         error_position);
+}
+
+calc_status_t calc_engine_evaluate_precise_symbols(
+    const char *expression, double ans, const char *ans_text,
+    const calculator_symbols_t *symbols, calculator_result_t *result,
+    int *error_position) {
+    if (error_position) *error_position = 0;
+    if (!expression || !*expression) return CALC_EMPTY;
+    if (!result) return CALC_RANGE_ERROR;
+
+    decimal_result_t decimal_result;
+    decimal_status_t decimal_status = decimal_engine_evaluate(
+        expression, ans_text, &decimal_result, error_position);
+    if (decimal_status == DECIMAL_STATUS_OK) {
+        result->value = decimal_result.approximation;
+        snprintf(result->text, sizeof result->text, "%s", decimal_result.text);
+        result->decimal = true;
+        result->exact = decimal_result.exact;
+        return CALC_OK;
+    }
+    if (decimal_status != DECIMAL_STATUS_UNSUPPORTED) {
+        if (decimal_status == DECIMAL_STATUS_SYNTAX) return CALC_PARSE_ERROR;
+        if (decimal_status == DECIMAL_STATUS_DIV_ZERO) return CALC_OVERFLOW;
+        return CALC_RANGE_ERROR;
+    }
+
+    double value = 0.0;
+    calc_status_t status = calc_engine_evaluate_symbols(
+        expression, ans, symbols, &value, error_position);
+    if (status != CALC_OK) return status;
+    result->value = value;
+    snprintf(result->text, sizeof result->text, "%.17g", value);
+    result->decimal = false;
+    result->exact = false;
+    return CALC_OK;
 }
 
 const char *calc_engine_status_text(calc_status_t status) {

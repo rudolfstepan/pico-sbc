@@ -361,7 +361,16 @@ Modulen. Hardwareunabhaengige Teile werden durch die Host-Tests unter
 
 ## Rechenkern
 
-Der Ausdrucksparser ist TinyExpr von Lewis Van Winkle und steht unter der
+Der Rechner besitzt einen hybriden Rechenkern. Reine Dezimalausdruecke mit
+`+`, `-`, `*`, `/`, `%`, Klammern, ganzzahligen Potenzen und `ANS` werden mit
+bis zu 80 Dezimalstellen verarbeitet. Endliche Ergebnisse bleiben exakt;
+periodische Divisionen werden nach 80 Stellen mit Round-to-even gerundet und
+auf dem LCD als `ROUNDED` markiert. Exakte Ergebnisse bleiben in `ANS`, im
+Verlauf, ueber USB und nach einem Neustart erhalten.
+
+Wissenschaftliche Funktionen, Variablen, Benutzerfunktionen, Graphen,
+Statistik, numerische Verfahren und BASIC-Zahlen nutzen weiterhin `double`. Ihr
+Ausdrucksparser ist TinyExpr von Lewis Van Winkle und steht unter der
 Zlib-Lizenz. Der unveraenderte Quelltext (Revision
 `4a7456e2eab88b4c76053c1c4157639ccb930e2b`) und die Lizenz befinden sich unter
 `../../third_party/tinyexpr`.

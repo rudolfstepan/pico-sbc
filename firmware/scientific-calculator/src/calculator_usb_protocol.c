@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CALCULATOR_FIRMWARE_VERSION "1.3.0"
+#define CALCULATOR_FIRMWARE_VERSION "1.4.0"
 
 static void respond(char *response, size_t size, const char *format, ...) {
     if (!response || !size) return;
@@ -118,7 +118,8 @@ static const char *basic_run_state_text(basic_run_state_t state) {
 }
 
 static void append_history(calculator_persisted_state_t *state,
-                           const char *expression, double value) {
+                           const char *expression, const char *result_text,
+                           double value) {
     if (state->history_count == CALCULATOR_PERSISTENCE_HISTORY_CAPACITY) {
         memmove(&state->history[0], &state->history[1],
                 (CALCULATOR_PERSISTENCE_HISTORY_CAPACITY - 1u) *
@@ -129,7 +130,7 @@ static void append_history(calculator_persisted_state_t *state,
     snprintf(state->history[index].formula,
              sizeof state->history[index].formula, "%s", expression);
     snprintf(state->history[index].result,
-             sizeof state->history[index].result, "%.12g", value);
+             sizeof state->history[index].result, "%s", result_text);
     state->history[index].value = value;
     state->history_index = index;
 }
@@ -146,7 +147,8 @@ static void execute_get(calculator_usb_context_t *context, char *cursor,
         if (*remaining_text(cursor)) {
             respond(response, response_size, "ERR ARGUMENT RESULT");
         } else {
-            respond(response, response_size, "OK RESULT\t%.17g", state->ans);
+            respond(response, response_size, "OK RESULT\t%s",
+                    state->ans_text[0] ? state->ans_text : "0");
         }
         return;
     }
@@ -370,11 +372,11 @@ static void execute_eval(calculator_usb_context_t *context, char *cursor,
         respond(response, response_size, "ERR TOO_LONG EXPR");
         return;
     }
-    double value = 0.0;
+    calculator_result_t result;
     int error_position = 0;
-    calc_status_t status = calc_engine_evaluate_symbols(
-        expression, context->state->ans, &context->state->symbols,
-        &value, &error_position);
+    calc_status_t status = calc_engine_evaluate_precise_symbols(
+        expression, context->state->ans, context->state->ans_text,
+        &context->state->symbols, &result, &error_position);
     if (status != CALC_OK) {
         if (status == CALC_PARSE_ERROR && error_position > 0) {
             respond(response, response_size, "ERR PARSE %d", error_position);
@@ -385,12 +387,14 @@ static void execute_eval(calculator_usb_context_t *context, char *cursor,
         return;
     }
     expression_editor_set(context->editor, expression);
-    context->state->ans = value;
-    append_history(context->state, expression, value);
+    context->state->ans = result.value;
+    snprintf(context->state->ans_text, sizeof context->state->ans_text,
+             "%s", result.text);
+    append_history(context->state, expression, result.text, result.value);
     effect->changed = true;
     effect->evaluated = true;
     effect->persistent_changed = true;
-    respond(response, response_size, "OK RESULT\t%.17g", value);
+    respond(response, response_size, "OK RESULT\t%s", result.text);
 }
 
 static void execute_stat(calculator_usb_context_t *context, char *cursor,

@@ -6,6 +6,8 @@ gesendet und genau eine Antwort empfangen. Das Protokoll ist ab
 Firmware `1.1.0` verfuegbar.
 Seit Firmware `1.3.0` erweitert Protokollversion 2 die Schnittstelle um
 BASIC-Programme, nicht blockierende Ausfuehrung, Ausgabe und `INPUT`.
+Seit Firmware `1.4.0` liefert Protokollversion 3 Dezimalergebnisse und `ANS`
+verlustfrei als Text mit bis zu 80 Stellen.
 
 ## Rahmenformat
 
@@ -59,7 +61,9 @@ Beispiel, wobei `<TAB>` jeweils ein Tabulatorzeichen bezeichnet:
 | `BASIC INPUT wert` | Angeforderten Wert oder Ausdruck an `INPUT` liefern |
 
 `EVAL` verwendet den am Rechner aktiven DEG- oder RAD-Modus und aktualisiert
-`ANS`, den sichtbaren Editor und den Verlauf. Variablen, Funktionen,
+`ANS`, den sichtbaren Editor und den Verlauf. Reine Dezimalarithmetik wird
+verlustfrei als Dezimaltext uebertragen; die PC-Werkzeuge wandeln diesen Wert
+nicht in binaeres Gleitkomma um. Variablen, Funktionen,
 Ergebnisse, Verlauf und Statistikdaten werden wie bei einer Touch-Eingabe
 persistent gespeichert. BASIC-Programme werden ebenfalls persistent
 gespeichert. Eine ungueltige Funktionsdefinition veraendert den bisherigen
@@ -68,11 +72,12 @@ Zustand nicht.
 Typische Antworten:
 
 ```text
-OK INFO<TAB>protocol=2<TAB>firmware=1.3.0<TAB>model=scientific-calculator
+OK INFO<TAB>protocol=3<TAB>firmware=1.4.0<TAB>model=scientific-calculator
 OK DIAG<TAB>page=0<TAB>angle=DEG<TAB>history=2<TAB>stats=3<TAB>mode=1<TAB>basic=4<TAB>basic_state=STOPPED
 OK VAR<TAB>A<TAB>3.5
 OK HISTORY<TAB>0<TAB>42<TAB>6*7<TAB>42
 OK STATS<TAB>0<TAB>1<TAB>3
+OK RESULT<TAB>2.000000000000000000000000000000000000000000002
 ERR PARSE 5
 ERR LINE_TOO_LONG
 ```

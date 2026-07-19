@@ -204,8 +204,9 @@ def export_state(client: Any) -> dict[str, Any]:
 
     return {
         "format": "pico-sbc-calculator-state",
-        "version": 2,
+        "version": 3,
         "result": float(result_fields[0]),
+        "result_text": result_fields[0],
         "expression": expression_fields[0] if expression_fields else "",
         "variables": variables,
         "functions": functions,

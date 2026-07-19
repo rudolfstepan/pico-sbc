@@ -48,9 +48,9 @@ def read_device_snapshot(client: Any) -> DeviceSnapshot:
         protocol_version = int(info.get("protocol", "0"))
     except ValueError as error:
         raise ProtocolError("Ungueltige Protokollversion") from error
-    if protocol_version < 2:
+    if protocol_version < 3:
         raise ProtocolError(
-            "Firmware 1.3.0 mit USB-Protokoll 2 oder neuer erforderlich"
+            "Firmware 1.4.0 mit USB-Protokoll 3 oder neuer erforderlich"
         )
     diagnostics = parse_properties(client.command("DIAG"), "DIAG")
     return DeviceSnapshot(
@@ -60,13 +60,13 @@ def read_device_snapshot(client: Any) -> DeviceSnapshot:
     )
 
 
-def evaluate_expression(client: Any, expression: str) -> float:
+def evaluate_expression(client: Any, expression: str) -> str:
     if not expression.strip():
         raise ProtocolError("Ausdruck darf nicht leer sein")
     result = fields(client.command(f"EVAL {expression}"), "RESULT")
     if len(result) != 1:
         raise ProtocolError("Ungueltige RESULT-Antwort")
-    return float(result[0])
+    return result[0]
 
 
 def synchronize_symbols(client: Any, variables: dict[str, Any],
@@ -145,4 +145,6 @@ def stop_basic_program(client: Any) -> BasicRunResult:
 
 
 def format_number(value: Any) -> str:
+    if isinstance(value, str):
+        return value
     return f"{float(value):.12g}"

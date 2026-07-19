@@ -29,6 +29,7 @@ int main(void) {
     expression_editor_t editor;
     basic_engine_t basic_engine;
     memset(&state, 0, sizeof state);
+    snprintf(state.ans_text, sizeof state.ans_text, "0");
     state.degrees = true;
     state.page = PAGE_BASIC;
     calculator_symbols_init(&state.symbols);
@@ -45,7 +46,7 @@ int main(void) {
 
     CHECK(strcmp(run(&context, "PING", &effect), "OK PONG") == 0);
     CHECK(!effect.changed);
-    CHECK(strstr(run(&context, "INFO", &effect), "protocol=2") != NULL);
+    CHECK(strstr(run(&context, "INFO", &effect), "protocol=3") != NULL);
     CHECK(strstr(run(&context, "DIAG", &effect), "mode=1") != NULL);
 
     CHECK(strcmp(run(&context, "SET EXPR 6*7", &effect),
@@ -61,6 +62,19 @@ int main(void) {
                  "OK HISTORY\t1") == 0);
     CHECK(strstr(run(&context, "GET HISTORY 0", &effect),
                  "\t42\t6*7\t42") != NULL);
+
+    const char *precise_expression =
+        "EVAL 1.000000000000000000000000000000000000000000001*2";
+    CHECK(strcmp(run(&context, precise_expression, &effect),
+        "OK RESULT\t2.000000000000000000000000000000000000000000002") == 0);
+    CHECK(strcmp(run(&context, "GET RESULT", &effect),
+        "OK RESULT\t2.000000000000000000000000000000000000000000002") == 0);
+    CHECK(strcmp(state.history[state.history_count - 1u].result,
+        "2.000000000000000000000000000000000000000000002") == 0);
+    CHECK(strcmp(run(&context,
+        "EVAL ans+0.000000000000000000000000000000000000000000001",
+        &effect),
+        "OK RESULT\t2.000000000000000000000000000000000000000000003") == 0);
 
     CHECK(strcmp(run(&context, "SET VAR a 5", &effect),
                  "OK VAR\tA\t5") == 0);

@@ -17,6 +17,9 @@
 #define BASIC_PAYLOAD_SIZE \
     (8u + BASIC_PROGRAM_MAX_LINES * \
      (sizeof(uint16_t) + BASIC_LINE_TEXT_CAPACITY))
+#define PRECISION_PAYLOAD_SIZE \
+    (DECIMAL_ENGINE_PACKED_CAPACITY * \
+     (1u + CALCULATOR_PERSISTENCE_HISTORY_CAPACITY))
 
 static void put_u32(uint8_t *destination, uint32_t value) {
     destination[0] = (uint8_t)value;
@@ -50,6 +53,8 @@ static void fill_state(calculator_persisted_state_t *state) {
     state->format_bits = 64;
     state->fixed_fraction_bits = 24;
     state->ans = 12.5;
+    snprintf(state->ans_text, sizeof state->ans_text,
+             "12.5000000000000000000000000000000000000000000001");
     state->memory_value = -7.25;
     state->programmer_base = PROGRAMMER_HEX;
     state->programmer_value = UINT64_C(0x123456789abcdef0);
@@ -120,6 +125,8 @@ int main(void) {
     CHECK(sequence == 41);
     CHECK(!decoded.degrees && decoded.page == PAGE_STATISTICS);
     CHECK(decoded.format_bits == 64 && decoded.fixed_fraction_bits == 24);
+    CHECK(strcmp(decoded.ans_text,
+                 "12.5000000000000000000000000000000000000000000001") == 0);
     CHECK(fabs(decoded.memory_value + 7.25) < 1e-12);
     CHECK(decoded.programmer_value == UINT64_C(0x123456789abcdef0));
     CHECK(decoded.programmer_signed && decoded.programmer_selected_bit == 17);
@@ -142,9 +149,24 @@ int main(void) {
     CHECK(canonical_size == first_size &&
           memcmp(canonical, first, first_size) == 0);
 
+    uint8_t version3[CALCULATOR_PERSISTENCE_RECORD_CAPACITY];
+    memcpy(version3, first, first_size);
+    size_t version3_payload_size = first_size - 20u - PRECISION_PAYLOAD_SIZE;
+    version3[4] = 3u;
+    version3[5] = 0u;
+    put_u32(version3 + 8, (uint32_t)version3_payload_size);
+    put_u32(version3 + 16,
+            test_record_crc(version3, version3_payload_size));
+    CHECK(calculator_persistence_decode(
+              version3, 20u + version3_payload_size, &decoded, &sequence) ==
+          CALCULATOR_PERSISTENCE_VALID);
+    CHECK(strcmp(decoded.ans_text, "12.5") == 0 &&
+          decoded.basic_program.count == 3);
+
     uint8_t version2[CALCULATOR_PERSISTENCE_RECORD_CAPACITY];
     memcpy(version2, first, first_size);
-    size_t version2_payload_size = first_size - 20u - BASIC_PAYLOAD_SIZE;
+    size_t version2_payload_size = first_size - 20u -
+        PRECISION_PAYLOAD_SIZE - BASIC_PAYLOAD_SIZE;
     version2[4] = 2u;
     version2[5] = 0u;
     put_u32(version2 + 8, (uint32_t)version2_payload_size);
@@ -159,7 +181,7 @@ int main(void) {
     uint8_t legacy[CALCULATOR_PERSISTENCE_RECORD_CAPACITY];
     memcpy(legacy, first, first_size);
     size_t legacy_payload_size = first_size - 20u -
-        STATISTICS_PAYLOAD_SIZE - BASIC_PAYLOAD_SIZE;
+        PRECISION_PAYLOAD_SIZE - STATISTICS_PAYLOAD_SIZE - BASIC_PAYLOAD_SIZE;
     legacy[4] = 1u;
     legacy[5] = 0u;
     legacy[21] = (uint8_t)PAGE_COMPLEX;

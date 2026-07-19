@@ -35,7 +35,8 @@
 #define PERSISTENCE_RETRY_MS 10000u
 
 static expression_editor_t expression_state;
-static char result_text[32] = "0";
+static char result_text[CALCULATOR_RESULT_TEXT_CAPACITY] = "0";
+static char ans_text[CALCULATOR_RESULT_TEXT_CAPACITY] = "0";
 static char message[24] = "READY";
 static double ans;
 static calc_page_t page;
@@ -73,6 +74,7 @@ static void capture_persisted_state(calculator_persisted_state_t *state) {
     state->format_bits = programmer.word_bits;
     state->fixed_fraction_bits = fixed_fraction_bits;
     state->ans = ans;
+    snprintf(state->ans_text, sizeof state->ans_text, "%s", ans_text);
     state->memory_value = memory_value;
     state->programmer_base = programmer.base;
     state->programmer_value = programmer.value;
@@ -93,6 +95,7 @@ static void apply_persisted_state(
     page = state->page;
     fixed_fraction_bits = state->fixed_fraction_bits;
     ans = state->ans;
+    snprintf(ans_text, sizeof ans_text, "%s", state->ans_text);
     memory_value = state->memory_value;
     symbols = state->symbols;
     memcpy(history, state->history, sizeof history);
@@ -110,7 +113,19 @@ static void apply_persisted_state(
     statistics.dataset = state->statistics;
     statistics.selected = 0;
     calculator_program_set_source(&basic_program_ui, &state->basic_program);
-    snprintf(result_text, sizeof result_text, "%.12g", ans);
+    snprintf(result_text, sizeof result_text, "%s", ans_text);
+}
+
+static void set_ans_double(double value) {
+    ans = value;
+    snprintf(ans_text, sizeof ans_text, "%.17g", value);
+    snprintf(result_text, sizeof result_text, "%s", ans_text);
+}
+
+static void set_ans_result(const calculator_result_t *result) {
+    ans = result->value;
+    snprintf(ans_text, sizeof ans_text, "%s", result->text);
+    snprintf(result_text, sizeof result_text, "%s", result->text);
 }
 
 static void mark_persistence_dirty(void) {
@@ -299,15 +314,16 @@ static void add_history(double value) {
 }
 
 static void evaluate_expression(void) {
-    double value = 0.0;
+    calculator_result_t result;
     int error_position = 0;
-    calc_status_t status = calc_engine_evaluate_symbols(
-        expression_state.text, ans, &symbols, &value, &error_position);
+    calc_status_t status = calc_engine_evaluate_precise_symbols(
+        expression_state.text, ans, ans_text, &symbols, &result,
+        &error_position);
     if (status == CALC_OK) {
-        ans = value;
-        snprintf(result_text, sizeof result_text, "%.12g", value);
-        add_history(value);
-        snprintf(message, sizeof message, "OK");
+        set_ans_result(&result);
+        add_history(result.value);
+        snprintf(message, sizeof message, "%s",
+                 result.decimal && !result.exact ? "ROUNDED" : "OK");
         just_evaluated = true;
         board_beep(1800, 18);
     } else {
@@ -473,8 +489,7 @@ static void activate_format_key(const calc_key_t *key) {
         double converted = number_format_bits_float32(
             (uint32_t)programmer.value);
         if (isfinite(converted)) {
-            ans = converted;
-            snprintf(result_text, sizeof result_text, "%.12g", ans);
+            set_ans_double(converted);
             snprintf(message, sizeof message, "FLOAT32 TO ANS");
         } else {
             snprintf(message, sizeof message, "NOT FINITE");
@@ -482,8 +497,7 @@ static void activate_format_key(const calc_key_t *key) {
     } else if (strcmp(key->token, "64A") == 0) {
         double converted = number_format_bits_float64(programmer.value);
         if (isfinite(converted)) {
-            ans = converted;
-            snprintf(result_text, sizeof result_text, "%.12g", ans);
+            set_ans_double(converted);
             snprintf(message, sizeof message, "FLOAT64 TO ANS");
         } else {
             snprintf(message, sizeof message, "NOT FINITE");
@@ -605,6 +619,8 @@ static void activate_history_key(const calc_key_t *key) {
         snprintf(result_text, sizeof result_text, "%s",
                  history[history_list.index].result);
         ans = history[history_list.index].value;
+        snprintf(ans_text, sizeof ans_text, "%s",
+                 history[history_list.index].result);
         just_evaluated = false;
         page = PAGE_BASIC;
         snprintf(message, sizeof message, "HISTORY LOADED");
@@ -854,8 +870,7 @@ static void activate_units_key(const calc_key_t *key) {
     calculator_units_output_t action = calculator_units_activate(
         &units, key->token, ans, &output, message, sizeof message);
     if (action == UNITS_OUTPUT_ANS) {
-        ans = output;
-        snprintf(result_text, sizeof result_text, "%.12g", ans);
+        set_ans_double(output);
         snprintf(message, sizeof message, "VALUE TO ANS");
     } else if (action == UNITS_OUTPUT_EDITOR) {
         char token[32];

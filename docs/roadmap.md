@@ -216,9 +216,10 @@ vergroesserte Datenschrift wurden auf dem Pico erfolgreich bestaetigt.
 **Fertig, wenn:** Daten zwischen Rechner und PC in beide Richtungen uebertragen
 werden koennen, ohne Touchbedienung oder Berechnungen zu blockieren.
 
-Softwarestand: Protokollversion 2 und Firmware 1.3.0 stellen einen begrenzten
-ASCII-Zeilenparser, transaktionale Funktionsimporte, Statistik- und
-BASIC-Programmlisten sowie Firmware- und Diagnoseinformationen bereit. CLI und
+Softwarestand: Protokollversion 3 und Firmware 1.4.0 stellen einen begrenzten
+ASCII-Zeilenparser, verlustfreie Dezimalergebnisse, transaktionale
+Funktionsimporte, Statistik- und BASIC-Programmlisten sowie Firmware- und
+Diagnoseinformationen bereit. CLI und
 `Pico Calculator Link` unter `tools/` unterstuetzen Portsuche, Einzelbefehle,
 Berechnung, Speicher-/Statistiksynchronisation, BASIC-Steuerung und
 JSON-Import/-Export. Pro Hauptschleife werden hoechstens 32 USB-Zeichen und ein
@@ -245,11 +246,36 @@ ausgefuehrt und nach einem Neustart wieder geladen werden koennen.
 Softwarestand: 20 Programmzeilen, 26 Variablen, sechs sichtbare Ausgabezeilen,
 eine QWERTZ- und eine dedizierte `TOK`-Tastatur sind implementiert. Die Python-
 GUI verwaltet `.bas`-Dateien, Geraetesynchronisation, Run/Stop, Ausgabe und
-`INPUT`. Das Flashformat Version 3 migriert bestehende Version-1- und
-Version-2-Daten. Alle 28 Host-Tests und der RP2040-Release-Build laufen
+`INPUT`. Das Flashformat Version 4 migriert bestehende Version-1- bis
+Version-3-Daten. Alle 29 Host-Tests und der RP2040-Release-Build laufen
 erfolgreich. Touchpositionen,
 Lesbarkeit, `INPUT` und Wiederherstellung nach einem Neustart stehen noch als
 Hardwaretest aus.
+
+## Phase 12: Exakte Dezimalarithmetik
+
+- [x] Einen begrenzten Multipraezisions-Dezimalkern implementieren.
+- [x] Addition, Subtraktion, Multiplikation, Division, Modulo und ganzzahlige
+  Potenzen mit Vorzeichen und Klammern unterstuetzen.
+- [x] Exaktes `ANS` in Anzeige, Verlauf und USB-Protokoll weiterreichen.
+- [x] Dezimalwerte BCD-komprimiert im versionierten Flashformat speichern.
+- [x] Periodische Divisionen reproduzierbar mit Round-to-even runden.
+- [x] Wissenschaftliche Funktionen kontrolliert auf TinyExpr/`double`
+  zurueckfallen lassen.
+- [x] Praezision, Rundung, Fehlerfaelle, Migration und USB mit Host-Tests
+  abdecken.
+
+**Fertig, wenn:** Reine Dezimalrechnungen bis 80 Stellen ohne unbemerkten
+Genauigkeitsverlust funktionieren und exakte Ergebnisse ueber `ANS`, Verlauf,
+USB und Neustarts erhalten bleiben.
+
+Softwarestand: Der hybride Rechenkern verarbeitet Dezimalarithmetik mit bis zu
+80 Stellen. Endliche Divisionen sind exakt, periodische Ergebnisse werden nach
+80 Stellen gerundet und gekennzeichnet. Funktionen, Variablen, Statistik,
+Graphen und BASIC-Zahlen bleiben fuer Geschwindigkeit und Kompatibilitaet
+`double`-basiert.
+Firmware 1.4.0, USB-Protokoll 3 und Flashformat 4 transportieren die neuen
+Ergebnisstrings. Der Hardwaretest von Anzeige und Neustart steht noch aus.
 
 ## Arbeitsweise pro Phase
 
