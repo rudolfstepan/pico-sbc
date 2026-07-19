@@ -179,6 +179,16 @@ int main(void) {
     expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_TABLE);
     expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_RANGE);
 
+    calculator_widget_set_data_focus(true);
+    if (calculator_widget_key_top(4) != 280) {
+        printf("FAIL: data-focus graph keypad geometry\n");
+        failures++;
+    }
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_PLOT);
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_TABLE);
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_ANALYSIS);
+    calculator_widget_set_data_focus(false);
+
     if (failures) {
         printf("%d graph renderer test(s) failed\n", failures);
         return 1;

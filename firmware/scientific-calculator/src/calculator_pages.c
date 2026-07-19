@@ -12,12 +12,27 @@
 #define COL_TEXT  RGB565(255, 255, 255)
 #define COL_MUTED RGB565(170, 170, 170)
 
+static int display_y(int logical_y) {
+    return calculator_widget_data_focus() ? logical_y * 2 : logical_y;
+}
+
+static void page_draw_text(int x, int y, const char *text,
+                           uint16_t foreground, uint16_t background,
+                           uint8_t scale) {
+    lcd_draw_text(x, display_y(y), text, foreground, background, scale);
+}
+
+/* Page renderers retain their 84-pixel logical y coordinates in both modes. */
+#define lcd_draw_text page_draw_text
+
 static void clear_display(void) {
-    lcd_fill_rect(0, 0, LCD_WIDTH, CALCULATOR_DISPLAY_HEIGHT, COL_BG);
+    lcd_fill_rect(0, 0, LCD_WIDTH,
+                  calculator_widget_display_height(), COL_BG);
 }
 
 static void finish_display(void) {
-    lcd_fill_rect(0, CALCULATOR_DISPLAY_HEIGHT - 2, LCD_WIDTH, 2, COL_MUTED);
+    lcd_fill_rect(0, calculator_widget_display_height() - 2,
+                  LCD_WIDTH, 2, COL_MUTED);
 }
 
 void calculator_page_render_expression(calc_page_t page, bool degrees,
@@ -619,13 +634,15 @@ static void render_statistics_histogram(const calculator_statistics_t *stats) {
         if (counts[i] > largest) largest = counts[i];
     }
     const int left = 30;
-    const int bottom = 79;
+    const int top = display_y(16);
+    const int bottom = display_y(79);
     const int width = 446;
     const int bar_width = width / (int)STATISTICS_HISTOGRAM_BINS;
-    lcd_fill_rect(left, 16, 1, bottom - 15, COL_MUTED);
+    const int plot_height = bottom - top - 7;
+    lcd_fill_rect(left, top, 1, bottom - top + 1, COL_MUTED);
     lcd_fill_rect(left, bottom, width, 1, COL_MUTED);
     for (size_t i = 0; i < STATISTICS_HISTOGRAM_BINS; ++i) {
-        int height = (int)(counts[i] * 56u / largest);
+        int height = (int)(counts[i] * (size_t)plot_height / largest);
         if (!height) continue;
         int x = left + (int)i * bar_width + 3;
         lcd_fill_rect(x, bottom - height, bar_width - 6, height, COL_TEXT);
@@ -650,8 +667,8 @@ static void render_statistics_scatter(const calculator_statistics_t *stats) {
     if (y_min == y_max) { y_min -= 1.0; y_max += 1.0; }
     const int left = 30;
     const int right = 476;
-    const int top = 16;
-    const int bottom = 80;
+    const int top = display_y(16);
+    const int bottom = display_y(80);
     lcd_fill_rect(left, top, 1, bottom - top + 1, COL_MUTED);
     lcd_fill_rect(left, bottom, right - left, 1, COL_MUTED);
     for (size_t i = 0; i < stats->dataset.count; ++i) {

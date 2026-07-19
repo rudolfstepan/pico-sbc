@@ -185,6 +185,7 @@ Lesbarkeit wurden anschliessend auf dem Pico erfolgreich geprueft.
 - [x] Lineare Regression mit Korrelationskoeffizient implementieren.
 - [x] Histogramm und Streudiagramm im Graphbereich darstellen.
 - [x] Zahlenlisten persistent speichern und beim Start wiederherstellen.
+- [x] Datenfokus mit doppelter Anzeigehoehe per Hardwaretaste bereitstellen.
 
 **Fertig, wenn:** Listen bearbeitet, ausgewertet und grafisch dargestellt
 werden koennen und Ergebnisse gegen bekannte Datensaetze getestet sind.
@@ -194,8 +195,8 @@ X und Y, lineare Regression mit `r` und `r^2`, Histogramm und Streudiagramm
 sind implementiert. Datensaetze werden im CRC-gesicherten Flashformat
 gespeichert; Version 2 liest bestehende Version-1-Daten weiterhin. Alle 23
 Host-Tests und der RP2040-Release-Build laufen erfolgreich. Touchbedienung,
-Lesbarkeit der Diagramme und Wiederherstellung nach einem Neustart stehen noch
-als Hardwaretest aus.
+Lesbarkeit der Diagramme, K2-Layoutumschaltung und Wiederherstellung nach einem
+Neustart stehen noch als Hardwaretest aus.
 
 ## Phase 10: USB-Datenaustausch
 

@@ -1,8 +1,17 @@
 #include "calculator_pages.h"
 #include "calculator_symbols.h"
+#include "calculator_widgets.h"
 #include "mock_lcd.h"
 
 #include <stdio.h>
+
+#define CHECK(condition) do { \
+    if (!(condition)) { \
+        fprintf(stderr, "check failed at line %d: %s\n", \
+                __LINE__, #condition); \
+        return 1; \
+    } \
+} while (0)
 
 int main(void) {
     calculator_symbols_t symbols;
@@ -117,6 +126,45 @@ int main(void) {
         puts("FAIL: out-of-bounds drawing on statistics pages");
         return 1;
     }
+
+    calculator_widget_state_t widget_state = {
+        .page = PAGE_STATISTICS,
+        .statistics_two_variable = true,
+        .statistics_view = STATISTICS_VIEW_PLOT,
+    };
+    calculator_widget_set_data_focus(true);
+    CHECK(calculator_widget_data_focus());
+    CHECK(calculator_widget_display_height() == 168);
+    CHECK(calculator_widget_key_top(0) == 188);
+    CHECK(calculator_widget_key_top(4) == 280);
+    CHECK(calculator_widget_key_height() == 21);
+
+    mock_lcd_reset();
+    calculator_page_render_programmer(&programmer, "DATA DISPLAY LARGE");
+    calculator_page_render_format(&programmer, 24, FORMAT_VIEW_IEEE64,
+                                  "DATA DISPLAY LARGE");
+    calculator_page_render_symbols(&symbols, 0, "DATA DISPLAY LARGE");
+    calculator_page_render_logic(&logic, "DATA DISPLAY LARGE");
+    calculator_page_render_units(&units, "DATA DISPLAY LARGE");
+    calculator_page_render_complex(&complex, true, "DATA DISPLAY LARGE");
+    calculator_page_render_statistics(&statistics, "DATA DISPLAY LARGE");
+    calculator_widget_render_keypad(PAGE_STATISTICS, &widget_state);
+    CHECK(!mock_lcd_had_out_of_bounds_draw());
+
+    const calc_key_t *first = calculator_widget_hit_key(
+        PAGE_STATISTICS, &widget_state, 5, 189);
+    const calc_key_t *gap = calculator_widget_hit_key(
+        PAGE_STATISTICS, &widget_state, 5, 209);
+    const calc_key_t *last = calculator_widget_hit_key(
+        PAGE_STATISTICS, &widget_state, 5, 300);
+    CHECK(first && first->row == 0 && first->col == 0);
+    CHECK(gap == NULL);
+    CHECK(last && last->row == 4 && last->col == 0);
+
+    calculator_widget_set_data_focus(false);
+    CHECK(calculator_widget_display_height() == 84);
+    CHECK(calculator_widget_key_top(4) == 272);
+    CHECK(calculator_widget_key_height() == 42);
 
     puts("calculator page tests passed");
     return 0;

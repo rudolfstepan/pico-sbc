@@ -16,14 +16,42 @@
 #define COL_GRAPH_F2 RGB565(255, 220, 0)
 #define COL_GRAPH_F3 RGB565(255, 80, 190)
 
+static bool data_focus;
+
+void calculator_widget_set_data_focus(bool enabled) {
+    data_focus = enabled;
+}
+
+bool calculator_widget_data_focus(void) {
+    return data_focus;
+}
+
+int calculator_widget_display_height(void) {
+    return data_focus ? CALCULATOR_DATA_FOCUS_DISPLAY_HEIGHT
+                      : CALCULATOR_DISPLAY_HEIGHT;
+}
+
+int calculator_widget_key_top(unsigned int row) {
+    int top = data_focus ? CALCULATOR_DATA_FOCUS_KEY_Y : CALCULATOR_KEY_Y;
+    int height = data_focus ? CALCULATOR_DATA_FOCUS_KEY_HEIGHT
+                            : CALCULATOR_KEY_HEIGHT;
+    int gap = data_focus ? CALCULATOR_DATA_FOCUS_KEY_GAP_Y
+                         : CALCULATOR_KEY_GAP_Y;
+    return top + (int)row * (height + gap);
+}
+
+int calculator_widget_key_height(void) {
+    return data_focus ? CALCULATOR_DATA_FOCUS_KEY_HEIGHT
+                      : CALCULATOR_KEY_HEIGHT;
+}
+
 static int key_x(const calc_key_t *key) {
     return CALCULATOR_KEY_X +
            key->col * (CALCULATOR_KEY_WIDTH + CALCULATOR_KEY_GAP_X);
 }
 
 static int key_y(const calc_key_t *key) {
-    return CALCULATOR_KEY_Y +
-           key->row * (CALCULATOR_KEY_HEIGHT + CALCULATOR_KEY_GAP_Y);
+    return calculator_widget_key_top(key->row);
 }
 
 static const char *unit_category_token(unit_category_t category) {
@@ -158,20 +186,21 @@ void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
     uint16_t border = selected_graph_function ? COL_TEXT :
         (dark ? COL_TEXT : COL_BG);
     size_t label_length = strlen(label);
+    int key_height = calculator_widget_key_height();
     int scale_x = (CALCULATOR_KEY_WIDTH - 8) / ((int)label_length * 6);
-    int scale_y = (CALCULATOR_KEY_HEIGHT - 8) / 8;
+    int scale_y = (key_height - 8) / 8;
     uint8_t scale = (uint8_t)(scale_x < scale_y ? scale_x : scale_y);
     if (scale > 4) scale = 4;
     if (scale < 1) scale = 1;
     int text_width = (int)label_length * 6 * scale;
     int text_height = 8 * scale;
 
-    lcd_fill_rect(x, y, CALCULATOR_KEY_WIDTH, CALCULATOR_KEY_HEIGHT, fill);
-    lcd_draw_rect(x, y, CALCULATOR_KEY_WIDTH, CALCULATOR_KEY_HEIGHT, border);
+    lcd_fill_rect(x, y, CALCULATOR_KEY_WIDTH, key_height, fill);
+    lcd_draw_rect(x, y, CALCULATOR_KEY_WIDTH, key_height, border);
     lcd_draw_rect(x + 1, y + 1, CALCULATOR_KEY_WIDTH - 2,
-                  CALCULATOR_KEY_HEIGHT - 2, border);
+                  key_height - 2, border);
     lcd_draw_text(x + (CALCULATOR_KEY_WIDTH - text_width) / 2,
-                  y + (CALCULATOR_KEY_HEIGHT - text_height) / 2,
+                  y + (key_height - text_height) / 2,
                   label, foreground, fill, scale);
 }
 
@@ -185,8 +214,9 @@ void calculator_widget_render_keypad(calc_page_t page,
         : (page == PAGE_FORMAT
            ? calculator_format_keymap(state->format_view, &count)
            : calculator_keymap(page, &count)));
-    lcd_fill_rect(0, CALCULATOR_DISPLAY_HEIGHT, LCD_WIDTH,
-                  LCD_HEIGHT - CALCULATOR_DISPLAY_HEIGHT, COL_BG);
+    int display_height = calculator_widget_display_height();
+    lcd_fill_rect(0, display_height, LCD_WIDTH,
+                  LCD_HEIGHT - display_height, COL_BG);
     for (size_t i = 0; i < count; ++i) {
         calculator_widget_draw_key(&keys[i], false, state);
     }
@@ -206,8 +236,9 @@ const calc_key_t *calculator_widget_hit_key(calc_page_t page,
     for (size_t i = 0; i < count; ++i) {
         int left = key_x(&keys[i]);
         int top = key_y(&keys[i]);
+        int key_height = calculator_widget_key_height();
         if (x >= left && x < left + CALCULATOR_KEY_WIDTH &&
-            y >= top && y < top + CALCULATOR_KEY_HEIGHT) {
+            y >= top && y < top + key_height) {
             return &keys[i];
         }
     }

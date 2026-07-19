@@ -969,6 +969,7 @@ void calculator_ui_init(void) {
     calculator_units_init(&units);
     calculator_complex_init(&complex);
     calculator_statistics_init(&statistics);
+    calculator_widget_set_data_focus(false);
 
     calculator_persisted_state_t persisted;
     calculator_storage_load_status_t load_status =
@@ -1023,6 +1024,7 @@ void calculator_ui_task(void) {
     static bool old_button1;
     static bool old_button2;
     static bool joystick_locked;
+    static absolute_time_t button2_debounce_until;
     bool button1 = board_button1_pressed();
     bool button2 = board_button2_pressed();
     if (button1 && !old_button1) {
@@ -1045,27 +1047,18 @@ void calculator_ui_task(void) {
         render_display();
         mark_persistence_dirty();
     }
-    if (button2 && !old_button2) {
-        if (page == PAGE_PROGRAMMER) {
-            programmer_engine_delete(&programmer);
-        } else if (page == PAGE_COMPLEX) {
-            calculator_complex_activate(&complex, "DEL",
-                                        calc_engine_uses_degrees(),
-                                        message, sizeof message);
+    if (button2 && !old_button2 && time_reached(button2_debounce_until)) {
+        bool data_focus = !calculator_widget_data_focus();
+        calculator_widget_set_data_focus(data_focus);
+        button2_debounce_until = make_timeout_time_ms(250);
+        snprintf(message, sizeof message,
+                 data_focus ? "DATA DISPLAY LARGE" : "KEYPAD LARGE");
+        if (page == PAGE_GRAPH) {
+            render_graph();
+        } else {
+            render_display();
             render_keypad();
-        } else if (page == PAGE_STATISTICS) {
-            calculator_statistics_activate(&statistics, "DEL", ans,
-                                            message, sizeof message);
-            render_keypad();
-        } else if (page == PAGE_LOGIC) {
-            calculator_logic_activate(&logic, "DEL",
-                                      message, sizeof message);
-            render_keypad();
-        } else if (calculator_page_accepts_expression(page)) {
-            delete_expression_char();
         }
-        render_display();
-        mark_persistence_dirty();
     }
     old_button1 = button1;
     old_button2 = button2;

@@ -20,8 +20,7 @@
 #define COL_GRAPH_F3 RGB565(255, 80, 190)
 
 #define GRAPH_PLOT_TOP 28
-#define GRAPH_PLOT_BOTTOM (CALCULATOR_KEY_Y + \
-    4 * (CALCULATOR_KEY_HEIGHT + CALCULATOR_KEY_GAP_Y) - 4)
+#define GRAPH_PLOT_BOTTOM (calculator_widget_key_top(4) - 4)
 #define GRAPH_MARKER_CAPACITY 18
 
 typedef struct {

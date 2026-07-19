@@ -13,12 +13,16 @@
 #include <stdint.h>
 
 #define CALCULATOR_DISPLAY_HEIGHT 84
+#define CALCULATOR_DATA_FOCUS_DISPLAY_HEIGHT 168
 #define CALCULATOR_KEY_X 4
 #define CALCULATOR_KEY_Y 88
+#define CALCULATOR_DATA_FOCUS_KEY_Y 188
 #define CALCULATOR_KEY_WIDTH 75
 #define CALCULATOR_KEY_HEIGHT 42
+#define CALCULATOR_DATA_FOCUS_KEY_HEIGHT 21
 #define CALCULATOR_KEY_GAP_X 4
 #define CALCULATOR_KEY_GAP_Y 4
+#define CALCULATOR_DATA_FOCUS_KEY_GAP_Y 2
 
 typedef struct {
     calc_page_t page;
@@ -43,6 +47,11 @@ typedef struct {
     const char *favorites[6];
 } calculator_widget_state_t;
 
+void calculator_widget_set_data_focus(bool enabled);
+bool calculator_widget_data_focus(void);
+int calculator_widget_display_height(void);
+int calculator_widget_key_top(unsigned int row);
+int calculator_widget_key_height(void);
 void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
                                 const calculator_widget_state_t *state);
 void calculator_widget_render_keypad(calc_page_t page,

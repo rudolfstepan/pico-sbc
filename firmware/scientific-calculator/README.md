@@ -45,7 +45,8 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
   Gelb und Magenta
 - Trace-Cursor, scrollbare Wertetabelle, automatische Skalierung sowie Marker
   fuer Nullstellen und Schnittpunkte
-- K1 berechnet, K2 loescht das letzte Zeichen
+- K1 berechnet beziehungsweise fuegt Statistikdaten hinzu; K2 schaltet das
+  Displaylayout um
 
 Die Seitentaste wechselt
 `BASIC -> SCIENTIFIC -> PROGRAMMER -> FORMAT -> TOOLS -> SYMBOLS -> LOGIC -> UNITS -> COMPLEX -> STATS -> BASIC`.
@@ -54,6 +55,20 @@ Editor den Cursor und im Graphenmodus den sichtbaren Ausschnitt.
 Funktionen setzen automatisch eine oeffnende Klammer. Die schliessende Klammer
 wird ueber `)` eingegeben. Fuer `nCr` und `nPr` trennt `,` die Argumente, zum
 Beispiel `ncr(6,2)`.
+
+## Displaylayout
+
+K2 wechselt jederzeit zwischen zwei Ansichten. Die Standardansicht verwendet
+einen 84 Pixel hohen Datenbereich und grosse Touch-Tasten. Im Datenfokus ist
+der Datenbereich mit 168 Pixeln doppelt so hoch; Inhalte, Diagramme und
+Zeilenabstaende nutzen den zusaetzlichen Platz. Das fuenfzeilige Tastenfeld
+ist mit 113 statt 226 Pixeln halb so hoch. Zeichnung und Touch-Hitboxen werden
+gemeinsam umgeschaltet.
+
+Die aktive Ansicht bleibt bis zum naechsten Druck auf K2 erhalten und startet
+nach einem Neustart wieder im Standardlayout. `DEL` auf dem Touchscreen
+uebernimmt in beiden Ansichten das Loeschen. K1 bleibt fuer `=`, Programmer-
+Operationen und `ADD` im Statistikmodus reserviert.
 
 ## Graph 2.0
 
@@ -189,8 +204,8 @@ das letzte normale Rechenergebnis in das aktive Feld.
 - `PLOT` zeichnet in `1VAR` ein Histogramm und in `2VAR` ein Streudiagramm
   mit gestrichelter Regressionsgerade.
 
-K1 entspricht `ADD`, K2 loescht das letzte Zeichen. Der Joystick waehlt mit
-links/rechts eine Zeile und mit oben/unten das X- oder Y-Feld. Modus und
+K1 entspricht `ADD`. K2 schaltet das Displaylayout um. Der Joystick waehlt
+mit links/rechts eine Zeile und mit oben/unten das X- oder Y-Feld. Modus und
 Zahlenliste werden automatisch im Flash gespeichert.
 
 ## Erweiterte Programmer-Werkzeuge
