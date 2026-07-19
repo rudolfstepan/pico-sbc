@@ -1,17 +1,11 @@
 #pragma once
 
+#include "calculation_status.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 
 typedef struct calc_compiled calc_compiled_t;
-
-typedef enum {
-    CALC_OK = 0,
-    CALC_EMPTY,
-    CALC_PARSE_ERROR,
-    CALC_DOMAIN_ERROR,
-    CALC_OVERFLOW
-} calc_status_t;
 
 void calc_engine_set_degrees(bool degrees);
 bool calc_engine_uses_degrees(void);

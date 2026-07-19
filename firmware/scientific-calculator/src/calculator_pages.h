@@ -1,0 +1,29 @@
+#ifndef CALCULATOR_PAGES_H
+#define CALCULATOR_PAGES_H
+
+#include "calculator_ui_types.h"
+#include "expression_editor.h"
+#include "programmer_engine.h"
+
+#include <stdbool.h>
+#include <stddef.h>
+
+void calculator_page_render_expression(calc_page_t page, bool degrees,
+                                       const char *message,
+                                       const expression_editor_t *editor,
+                                       const char *result_text);
+void calculator_page_render_programmer(const programmer_engine_t *programmer,
+                                       const char *message);
+void calculator_page_render_format(const programmer_engine_t *programmer,
+                                   unsigned int format_bits,
+                                   unsigned int fixed_fraction_bits,
+                                   const char *message);
+void calculator_page_render_tools(double memory_value, const char *message,
+                                  const expression_editor_t *editor,
+                                  size_t history_count,
+                                  size_t history_index,
+                                  const char *history_formula,
+                                  const char *history_result,
+                                  const char *result_text);
+
+#endif

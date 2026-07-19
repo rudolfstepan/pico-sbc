@@ -9,7 +9,7 @@ ein Test auf dem echten LCD erfolgreich sind.
 
 | Phase | Erweiterung | Abhaengigkeit | Status |
 |---:|---|---|---|
-| 0 | Technische Grundlage | keine | geplant |
+| 0 | Technische Grundlage | keine | Software fertig, Boardtest offen |
 | 1 | Graph 2.0 | Phase 0 | geplant |
 | 2 | Numerische Analyse | Phase 1 | geplant |
 | 3 | Variablen und Benutzerfunktionen | Phase 2 | geplant |
@@ -22,14 +22,18 @@ ein Test auf dem echten LCD erfolgreich sind.
 
 ## Phase 0: Technische Grundlage
 
-- [ ] `calculator_ui.c` in Seiten, Widgets und Navigation aufteilen.
-- [ ] Gemeinsame Eingabe-, Dialog- und Listenkomponenten bereitstellen.
-- [ ] Rechenlogik konsequent von LCD-, Touch- und Boardcode trennen.
-- [ ] Einheitliche Fehlercodes fuer Zahlenbereich, Konvergenz und Syntax nutzen.
-- [ ] Host-Tests fuer jede neue hardwareunabhaengige Komponente vorbereiten.
+- [x] `calculator_ui.c` in Seiten, Widgets und Navigation aufteilen.
+- [x] Gemeinsame Eingabe-, Dialog- und Listenkomponenten bereitstellen.
+- [x] Rechenlogik konsequent von LCD-, Touch- und Boardcode trennen.
+- [x] Einheitliche Fehlercodes fuer Zahlenbereich, Konvergenz und Syntax nutzen.
+- [x] Host-Tests fuer jede neue hardwareunabhaengige Komponente vorbereiten.
 
 **Fertig, wenn:** Die vorhandene Firmware unveraendert bedienbar bleibt, beide
 Firmware-Ziele bauen und alle bestehenden Tests weiterhin bestehen.
+
+Softwarestand: Neun Host-Tests und beide Firmware-Ziele bauen erfolgreich.
+Der abschliessende Sicht-, Touch- und Reaktionstest auf dem Board ist noch
+offen, da kein Pico im BOOTSEL-Modus angeschlossen war.
 
 ## Phase 1: Graph 2.0
 

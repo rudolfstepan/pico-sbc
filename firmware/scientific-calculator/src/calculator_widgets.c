@@ -1,0 +1,112 @@
+#include "calculator_widgets.h"
+
+#include "calculator_keymaps.h"
+#include "lcd_st7796.h"
+
+#include <string.h>
+
+#define COL_BG       RGB565(0, 0, 0)
+#define COL_TEXT     RGB565(255, 255, 255)
+#define COL_MUTED    RGB565(170, 170, 170)
+#define COL_KEY      RGB565(238, 238, 238)
+#define COL_FUNCTION RGB565(170, 170, 170)
+#define COL_COMMAND  RGB565(60, 60, 60)
+
+static int key_x(const calc_key_t *key) {
+    return CALCULATOR_KEY_X +
+           key->col * (CALCULATOR_KEY_WIDTH + CALCULATOR_KEY_GAP_X);
+}
+
+static int key_y(const calc_key_t *key) {
+    return CALCULATOR_KEY_Y +
+           key->row * (CALCULATOR_KEY_HEIGHT + CALCULATOR_KEY_GAP_Y);
+}
+
+static uint16_t key_fill(const calc_key_t *key, bool pressed,
+                         const calculator_widget_state_t *state) {
+    if (pressed) return COL_BG;
+    if (state->page == PAGE_PROGRAMMER && key->action == ACT_PROG_BASE) {
+        unsigned int key_base = strcmp(key->token, "BIN") == 0 ? 2u :
+            (strcmp(key->token, "HEX") == 0 ? 16u : 10u);
+        if (state->programmer_base == key_base) return COL_TEXT;
+    }
+    if (state->page == PAGE_FORMAT && key->action == ACT_FMT_WIDTH) {
+        unsigned int key_bits = key->token[0] == '8' ? 8u :
+            (key->token[0] == '1' ? 16u :
+             (key->token[0] == '3' ? 32u : 64u));
+        if (key_bits == state->format_bits) return COL_TEXT;
+    }
+    switch (key->style) {
+        case STYLE_NUMBER: return COL_KEY;
+        case STYLE_FUNCTION: return COL_FUNCTION;
+        case STYLE_COMMAND: return COL_COMMAND;
+        case STYLE_EQUALS: return COL_TEXT;
+        default: return COL_KEY;
+    }
+}
+
+void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
+                                const calculator_widget_state_t *state) {
+    int x = key_x(key);
+    int y = key_y(key);
+    const char *label = key->action == ACT_ANGLE
+        ? (state->degrees ? "DEG" : "RAD") : key->label;
+    uint16_t fill = key_fill(key, pressed, state);
+    bool disabled = false;
+    if (state->page == PAGE_PROGRAMMER && key->action == ACT_PROG_DIGIT) {
+        int digit = key->token[0] <= '9'
+            ? key->token[0] - '0' : key->token[0] - 'A' + 10;
+        disabled = digit >= (int)state->programmer_base;
+        if (disabled && !pressed) fill = COL_COMMAND;
+    }
+    bool dark = fill == COL_BG || fill == COL_COMMAND;
+    uint16_t foreground = disabled ? COL_MUTED : (dark ? COL_TEXT : COL_BG);
+    uint16_t border = dark ? COL_TEXT : COL_BG;
+    size_t label_length = strlen(label);
+    int scale_x = (CALCULATOR_KEY_WIDTH - 8) / ((int)label_length * 6);
+    int scale_y = (CALCULATOR_KEY_HEIGHT - 8) / 8;
+    uint8_t scale = (uint8_t)(scale_x < scale_y ? scale_x : scale_y);
+    if (scale > 4) scale = 4;
+    if (scale < 1) scale = 1;
+    int text_width = (int)label_length * 6 * scale;
+    int text_height = 8 * scale;
+
+    lcd_fill_rect(x, y, CALCULATOR_KEY_WIDTH, CALCULATOR_KEY_HEIGHT, fill);
+    lcd_draw_rect(x, y, CALCULATOR_KEY_WIDTH, CALCULATOR_KEY_HEIGHT, border);
+    lcd_draw_rect(x + 1, y + 1, CALCULATOR_KEY_WIDTH - 2,
+                  CALCULATOR_KEY_HEIGHT - 2, border);
+    lcd_draw_text(x + (CALCULATOR_KEY_WIDTH - text_width) / 2,
+                  y + (CALCULATOR_KEY_HEIGHT - text_height) / 2,
+                  label, foreground, fill, scale);
+}
+
+void calculator_widget_render_keypad(calc_page_t page,
+                                     const calculator_widget_state_t *state) {
+    size_t count;
+    const calc_key_t *keys = calculator_keymap(page, &count);
+    lcd_fill_rect(0, CALCULATOR_DISPLAY_HEIGHT, LCD_WIDTH,
+                  LCD_HEIGHT - CALCULATOR_DISPLAY_HEIGHT, COL_BG);
+    for (size_t i = 0; i < count; ++i) {
+        calculator_widget_draw_key(&keys[i], false, state);
+    }
+}
+
+const calc_key_t *calculator_widget_hit_key(calc_page_t page,
+                                            uint16_t x, uint16_t y) {
+    size_t count;
+    const calc_key_t *keys = calculator_keymap(page, &count);
+    for (size_t i = 0; i < count; ++i) {
+        int left = key_x(&keys[i]);
+        int top = key_y(&keys[i]);
+        if (x >= left && x < left + CALCULATOR_KEY_WIDTH &&
+            y >= top && y < top + CALCULATOR_KEY_HEIGHT) {
+            return &keys[i];
+        }
+    }
+    return NULL;
+}
+
+const char *calculator_widget_tail(const char *text, size_t max_chars) {
+    size_t length = strlen(text);
+    return length > max_chars ? text + length - max_chars : text;
+}

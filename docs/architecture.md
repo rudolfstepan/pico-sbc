@@ -22,10 +22,21 @@ duplizieren.
 
 Der Rechner trennt Darstellung und Rechenlogik:
 
-- `calculator_ui`: Seiten, Touchbedienung, Editor und Graphdarstellung
+- `calculator_ui`: Anwendungszustand sowie Touch-, Tasten- und Joystickereignisse
+- `calculator_ui_types` und `calculator_keymaps`: gemeinsame Seiten-, Aktions-
+  und Tastenbeschreibungen
+- `calculator_navigation`: hardwareunabhaengige Seitennavigation
+- `calculator_pages` und `calculator_widgets`: LCD-Seiten und gemeinsame
+  Tasten-/Treffergeometrie
+- `calculator_graph`: Graph-Viewport, Navigation und LCD-Darstellung
+- `expression_editor`, `calculator_list` und `calculator_dialog`:
+  hardwareunabhaengige Eingabe-, Listen- und Dialogzustaende
+- `calculation_status`: gemeinsame Fehlercodes und lesbare Meldungen
 - `calculator_engine`: mathematische Ausdruecke und TinyExpr-Anbindung
 - `programmer_engine`: 64-Bit-Zahlenbasen und Bitoperationen
 - `number_formats`: Zweierkomplement, Festkomma und IEEE-754
 
-Die drei Rechenmodule sind hardwareunabhaengig und werden unter `tests/`
-direkt auf dem Host getestet.
+Alle Module ohne LCD-, Touch- oder Boardabhaengigkeit werden unter `tests/`
+direkt auf dem Host mit aktivierten Compilerwarnungen getestet. Dadurch kann
+neue Rechenlogik entwickelt werden, ohne einen Pico oder ein Display fuer den
+Testlauf zu benoetigen.

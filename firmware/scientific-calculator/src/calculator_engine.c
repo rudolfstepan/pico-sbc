@@ -121,14 +121,7 @@ calc_status_t calc_engine_evaluate(const char *expression, double ans,
 }
 
 const char *calc_engine_status_text(calc_status_t status) {
-    switch (status) {
-        case CALC_OK: return "OK";
-        case CALC_EMPTY: return "ENTER EXPRESSION";
-        case CALC_PARSE_ERROR: return "SYNTAX ERROR";
-        case CALC_DOMAIN_ERROR: return "MATH ERROR";
-        case CALC_OVERFLOW: return "OVERFLOW";
-        default: return "ERROR";
-    }
+    return calculation_status_text(status);
 }
 
 calc_compiled_t *calc_engine_compile_x(const char *expression, double ans,

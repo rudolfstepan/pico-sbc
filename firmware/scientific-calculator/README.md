@@ -47,6 +47,14 @@ cmake --build out/firmware --target lafvin_scientific_calculator
 Die flashbare Datei liegt danach unter
 `out/firmware/bin/lafvin_scientific_calculator.uf2`.
 
+## Quellstruktur
+
+Die Bedienlogik in `calculator_ui.c` koordiniert nur noch den
+Anwendungszustand und Hardwareereignisse. Seiten, Tastengeometrie, Graph,
+Navigation, Ausdruckseditor, Listen und Dialogzustaende liegen in getrennten
+Modulen. Hardwareunabhaengige Teile werden durch die Host-Tests unter
+`../../tests/calculator` abgedeckt.
+
 ## Rechenkern
 
 Der Ausdrucksparser ist TinyExpr von Lewis Van Winkle und steht unter der

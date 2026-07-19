@@ -1,8 +1,17 @@
 add_executable(lafvin_scientific_calculator
     src/main.c
+    src/calculation_status.c
+    src/calculator_dialog.c
     src/calculator_engine.c
+    src/calculator_graph.c
+    src/calculator_keymaps.c
+    src/calculator_list.c
+    src/calculator_navigation.c
+    src/calculator_pages.c
+    src/calculator_widgets.c
     src/number_formats.c
     src/programmer_engine.c
+    src/expression_editor.c
     src/calculator_ui.c
     ${PROJECT_SOURCE_DIR}/third_party/tinyexpr/tinyexpr.c
 )

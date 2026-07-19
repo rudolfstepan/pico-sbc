@@ -21,6 +21,7 @@ endfunction()
 
 add_executable(calculator_engine_tests
     calculator/test_engine.c
+    ${CALCULATOR_SRC}/calculation_status.c
     ${CALCULATOR_SRC}/calculator_engine.c
     ${TINYEXPR_SRC}/tinyexpr.c
 )
@@ -47,3 +48,51 @@ add_executable(number_format_tests
 target_include_directories(number_format_tests PRIVATE ${CALCULATOR_SRC})
 enable_project_warnings(number_format_tests)
 add_test(NAME number_formats COMMAND number_format_tests)
+
+add_executable(expression_editor_tests
+    calculator/test_expression_editor.c
+    ${CALCULATOR_SRC}/expression_editor.c
+)
+target_include_directories(expression_editor_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(expression_editor_tests)
+add_test(NAME expression_editor COMMAND expression_editor_tests)
+
+add_executable(navigation_tests
+    calculator/test_navigation.c
+    ${CALCULATOR_SRC}/calculator_navigation.c
+)
+target_include_directories(navigation_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(navigation_tests)
+add_test(NAME navigation COMMAND navigation_tests)
+
+add_executable(keymap_tests
+    calculator/test_keymaps.c
+    ${CALCULATOR_SRC}/calculator_keymaps.c
+)
+target_include_directories(keymap_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(keymap_tests)
+add_test(NAME keymaps COMMAND keymap_tests)
+
+add_executable(calculation_status_tests
+    calculator/test_calculation_status.c
+    ${CALCULATOR_SRC}/calculation_status.c
+)
+target_include_directories(calculation_status_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(calculation_status_tests)
+add_test(NAME calculation_status COMMAND calculation_status_tests)
+
+add_executable(calculator_list_tests
+    calculator/test_calculator_list.c
+    ${CALCULATOR_SRC}/calculator_list.c
+)
+target_include_directories(calculator_list_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(calculator_list_tests)
+add_test(NAME calculator_list COMMAND calculator_list_tests)
+
+add_executable(calculator_dialog_tests
+    calculator/test_calculator_dialog.c
+    ${CALCULATOR_SRC}/calculator_dialog.c
+)
+target_include_directories(calculator_dialog_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(calculator_dialog_tests)
+add_test(NAME calculator_dialog COMMAND calculator_dialog_tests)
