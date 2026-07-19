@@ -260,6 +260,11 @@ Damit lassen sich Ausdruecke berechnen, Variablen und Funktionen setzen sowie
 Verlauf und Statistikdaten lesen oder schreiben. `INFO` zeigt die Firmware- und
 Protokollversion, `DIAG` den kompakten Laufzeitzustand.
 
+Ab Firmware `1.3.0` kann `Pico Calculator Link` auch BASIC-Programme als
+`.bas`-Datei laden und speichern, mit dem Rechner synchronisieren, starten und
+stoppen. Ausgabe und angeforderte `INPUT`-Werte werden direkt im BASIC-Tab der
+Desktop-Anwendung angezeigt beziehungsweise eingegeben.
+
 ```sh
 python -m pip install -r tools/requirements.txt
 python tools/pico_calc_cli.py ports

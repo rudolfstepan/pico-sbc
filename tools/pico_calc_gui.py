@@ -14,19 +14,31 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 from typing import Any, Callable
 
-from pico_calc_cli import ProtocolError, SerialClient, export_state, import_state
+from pico_calc_cli import (
+    ProtocolError,
+    SerialClient,
+    export_state,
+    import_state,
+    normalize_basic_program,
+    read_basic_program,
+    synchronize_basic_program,
+)
 from pico_calc_gui_model import (
+    BasicRunResult,
     DeviceSnapshot,
+    continue_basic_program,
     evaluate_expression,
     format_number,
     read_device_snapshot,
+    run_basic_program,
+    stop_basic_program,
     synchronize_statistics,
     synchronize_symbols,
 )
 
 
 APP_NAME = "Pico Calculator Link"
-APP_VERSION = "1.0"
+APP_VERSION = "1.1"
 BG = "#eef1f4"
 PANEL = "#ffffff"
 INK = "#202428"
@@ -86,10 +98,15 @@ class CalculatorLinkApp:
         self.stats_x_var = tk.StringVar()
         self.stats_y_var = tk.StringVar()
         self.raw_command_var = tk.StringVar()
+        self.basic_status_var = tk.StringVar(value="STOPPED")
+        self.basic_input_var = tk.StringVar()
+        self.basic_connection_buttons: list[ttk.Button] = []
+        self.basic_running = False
+        self.basic_cancel = threading.Event()
         self.device_vars = {
             name: tk.StringVar(value="-")
             for name in ("Modell", "Firmware", "Protokoll", "Winkel",
-                         "Seite", "Verlauf", "Statistik")
+                         "Seite", "Verlauf", "Statistik", "BASIC")
         }
         self.variable_vars = {
             name: tk.StringVar(value="0") for name in "ABCDEF"
@@ -177,6 +194,7 @@ class CalculatorLinkApp:
         self._build_calculator_tab()
         self._build_symbols_tab()
         self._build_statistics_tab()
+        self._build_basic_tab()
         self._build_history_tab()
         self._build_console_tab()
 
@@ -423,6 +441,84 @@ class CalculatorLinkApp:
                        side=tk.RIGHT)
         self._stats_mode_changed()
 
+    def _build_basic_tab(self) -> None:
+        self.basic_tab = self._new_tab("BASIC")
+        tab = self.basic_tab
+        tab.columnconfigure(0, weight=1)
+        tab.rowconfigure(1, weight=1)
+
+        toolbar = ttk.Frame(tab, style="Panel.TFrame")
+        toolbar.grid(row=0, column=0, sticky="ew", padx=18, pady=(18, 10))
+        ttk.Button(toolbar, text="Datei laden",
+                   command=self._load_basic_file).pack(side=tk.LEFT)
+        ttk.Button(toolbar, text="Datei speichern",
+                   command=self._save_basic_file).pack(side=tk.LEFT, padx=6)
+
+        load_button = ttk.Button(toolbar, text="Vom Rechner laden",
+                                 command=self._load_basic_device)
+        load_button.pack(side=tk.LEFT, padx=(18, 6))
+        sync_button = ttk.Button(toolbar, text="Zum Rechner speichern",
+                                 command=self._sync_basic_program)
+        sync_button.pack(side=tk.LEFT)
+        stop_button = ttk.Button(toolbar, text="Stop",
+                                 command=self._stop_basic_program)
+        stop_button.pack(side=tk.RIGHT, padx=(6, 0))
+        run_button = ttk.Button(toolbar, text="Ausführen",
+                                style="Accent.TButton",
+                                command=self._run_basic_program)
+        run_button.pack(side=tk.RIGHT)
+        self.basic_connection_buttons.extend(
+            (load_button, sync_button, stop_button, run_button))
+
+        content = ttk.Frame(tab, style="Panel.TFrame")
+        content.grid(row=1, column=0, sticky="nsew", padx=18)
+        content.columnconfigure(0, weight=3)
+        content.columnconfigure(1, weight=2)
+        content.rowconfigure(0, weight=1)
+
+        editor_frame = ttk.LabelFrame(content, text="Programm")
+        editor_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+        editor_frame.columnconfigure(0, weight=1)
+        editor_frame.rowconfigure(0, weight=1)
+        self.basic_editor = tk.Text(
+            editor_frame, wrap=tk.NONE, undo=True, bg="#ffffff", fg=INK,
+            insertbackground=INK, selectbackground="#d9ece9",
+            font=("Consolas", 11), relief=tk.FLAT, padx=10, pady=10,
+        )
+        editor_scroll = ttk.Scrollbar(editor_frame, orient=tk.VERTICAL,
+                                      command=self.basic_editor.yview)
+        self.basic_editor.configure(yscrollcommand=editor_scroll.set)
+        self.basic_editor.grid(row=0, column=0, sticky="nsew")
+        editor_scroll.grid(row=0, column=1, sticky="ns")
+
+        output_frame = ttk.LabelFrame(content, text="Ausgabe")
+        output_frame.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
+        output_frame.columnconfigure(0, weight=1)
+        output_frame.rowconfigure(0, weight=1)
+        self.basic_output = tk.Text(
+            output_frame, wrap=tk.WORD, bg=DISPLAY, fg="#f5f7fa",
+            insertbackground="#ffffff", selectbackground=TEAL,
+            font=("Consolas", 11), relief=tk.FLAT, padx=10, pady=10,
+        )
+        self.basic_output.grid(row=0, column=0, sticky="nsew")
+        self.basic_output.configure(state=tk.DISABLED)
+
+        input_row = ttk.Frame(tab, style="Panel.TFrame")
+        input_row.grid(row=2, column=0, sticky="ew", padx=18, pady=18)
+        ttk.Label(input_row, text="INPUT", style="Panel.TLabel").pack(
+            side=tk.LEFT)
+        basic_input = ttk.Entry(input_row, textvariable=self.basic_input_var,
+                                width=24, font=("Consolas", 10))
+        basic_input.pack(side=tk.LEFT, padx=(6, 6))
+        basic_input.bind("<Return>",
+                         lambda _event: self._send_basic_input())
+        input_button = ttk.Button(input_row, text="Eingabe senden",
+                                  command=self._send_basic_input)
+        input_button.pack(side=tk.LEFT)
+        self.basic_connection_buttons.append(input_button)
+        ttk.Label(input_row, textvariable=self.basic_status_var,
+                  style="Muted.Panel.TLabel").pack(side=tk.RIGHT)
+
     def _build_history_tab(self) -> None:
         self.history_tab = self._new_tab("Verlauf")
         tab = self.history_tab
@@ -588,6 +684,146 @@ class CalculatorLinkApp:
 
         self._submit("Synchronisiere Statistik", operation, self._apply_snapshot)
 
+    def _basic_source(self) -> str:
+        return self.basic_editor.get("1.0", "end-1c")
+
+    def _set_basic_source(self, program: list[str]) -> None:
+        self.basic_editor.delete("1.0", tk.END)
+        if program:
+            self.basic_editor.insert("1.0", "\n".join(program) + "\n")
+
+    def _apply_basic_result(self, result: BasicRunResult) -> None:
+        status = result.status
+        self.basic_status_var.set(
+            f"{status.get('state', '?')}  {status.get('status', '?')}  "
+            f"{status.get('steps', '0')} Schritte")
+        self.basic_output.configure(state=tk.NORMAL)
+        self.basic_output.delete("1.0", tk.END)
+        if result.output:
+            self.basic_output.insert("1.0", "\n".join(result.output) + "\n")
+        self.basic_output.configure(state=tk.DISABLED)
+
+    def _load_basic_file(self) -> None:
+        selected = filedialog.askopenfilename(
+            parent=self.root, title="BASIC-Programm laden",
+            filetypes=(("BASIC", "*.bas"), ("Text", "*.txt"),
+                       ("Alle Dateien", "*.*")),
+        )
+        if not selected:
+            return
+        try:
+            source = Path(selected).read_text(encoding="ascii")
+            program = normalize_basic_program(source)
+        except (OSError, UnicodeError, ProtocolError) as error:
+            messagebox.showerror(APP_NAME, str(error))
+            return
+        self._set_basic_source(program)
+        self.status_var.set(f"BASIC-Datei geladen: {selected}")
+
+    def _save_basic_file(self) -> None:
+        try:
+            program = normalize_basic_program(self._basic_source())
+        except ProtocolError as error:
+            messagebox.showerror(APP_NAME, str(error))
+            return
+        selected = filedialog.asksaveasfilename(
+            parent=self.root, title="BASIC-Programm speichern",
+            defaultextension=".bas", filetypes=(("BASIC", "*.bas"),
+                                                ("Text", "*.txt")),
+            initialfile="program.bas",
+        )
+        if not selected:
+            return
+        try:
+            Path(selected).write_text(
+                ("\n".join(program) + "\n") if program else "",
+                encoding="ascii")
+        except OSError as error:
+            messagebox.showerror(APP_NAME, str(error))
+            return
+        self.status_var.set(f"BASIC-Datei gespeichert: {selected}")
+
+    def _load_basic_device(self) -> None:
+        if not self._require_connection():
+            return
+        self._submit("Lade BASIC-Programm",
+                     lambda: read_basic_program(self.client),
+                     self._set_basic_source)
+
+    def _sync_basic_program(self) -> None:
+        if not self._require_connection():
+            return
+        source = self._basic_source()
+
+        def success(program: list[str]) -> None:
+            self._set_basic_source(program)
+            self.basic_status_var.set("GESPEICHERT")
+
+        self._submit("Speichere BASIC-Programm",
+                     lambda: synchronize_basic_program(self.client, source),
+                     success)
+
+    def _run_basic_program(self) -> None:
+        if not self._require_connection():
+            return
+        if self.busy:
+            self.root.bell()
+            self.status_var.set("Ein Vorgang läuft bereits")
+            return
+        source = self._basic_source()
+        self.basic_cancel.clear()
+        self.basic_running = True
+
+        def success(result: BasicRunResult) -> None:
+            self.basic_running = False
+            self._apply_basic_result(result)
+
+        def failure(error: Exception) -> None:
+            self.basic_running = False
+            messagebox.showerror(APP_NAME, str(error))
+
+        self._submit(
+            "Führe BASIC-Programm aus",
+            lambda: run_basic_program(
+                self.client, source, self.basic_cancel.is_set),
+            success, failure)
+
+    def _stop_basic_program(self) -> None:
+        if not self._require_connection():
+            return
+        if self.basic_running:
+            self.basic_cancel.set()
+            self.basic_status_var.set("STOP ANGEFORDERT")
+            return
+        self._submit("Stoppe BASIC-Programm",
+                     lambda: stop_basic_program(self.client),
+                     self._apply_basic_result)
+
+    def _send_basic_input(self) -> None:
+        if not self._require_connection():
+            return
+        if self.busy:
+            self.root.bell()
+            self.status_var.set("Ein Vorgang läuft bereits")
+            return
+        value = self.basic_input_var.get()
+        self.basic_cancel.clear()
+        self.basic_running = True
+
+        def success(result: BasicRunResult) -> None:
+            self.basic_running = False
+            self.basic_input_var.set("")
+            self._apply_basic_result(result)
+
+        def failure(error: Exception) -> None:
+            self.basic_running = False
+            messagebox.showerror(APP_NAME, str(error))
+
+        self._submit("Sende BASIC-Eingabe",
+                     lambda: continue_basic_program(
+                         self.client, value, self.basic_cancel.is_set),
+                     success, failure)
+
     def _export_json(self) -> None:
         if not self._require_connection():
             return
@@ -739,6 +975,8 @@ class CalculatorLinkApp:
         self.device_vars["Verlauf"].set(diag.get("history", "0"))
         self.device_vars["Statistik"].set(
             f"{diag.get('mode', '-')}VAR / {diag.get('stats', '0')}")
+        self.device_vars["BASIC"].set(
+            f"{diag.get('basic', '0')} / {diag.get('basic_state', '-')}")
         self.expression_var.set(str(state.get("expression", "")))
         self.result_var.set(format_number(state.get("result", 0)))
         for name, value in state.get("variables", {}).items():
@@ -749,6 +987,7 @@ class CalculatorLinkApp:
                 self.function_vars[name].set(str(value))
         self._load_history(state.get("history", []))
         self._load_statistics(state.get("statistics", {}))
+        self._set_basic_source(state.get("program", []))
 
     def _load_history(self, history: list[dict[str, Any]]) -> None:
         self.history_tree.delete(*self.history_tree.get_children())
@@ -789,6 +1028,8 @@ class CalculatorLinkApp:
         self.disconnect_button.configure(state="normal" if connected else "disabled")
         state = "normal" if connected else "disabled"
         for button in (self.sync_button, self.export_button, self.import_button):
+            button.configure(state=state)
+        for button in self.basic_connection_buttons:
             button.configure(state=state)
         if not connected:
             for variable in self.device_vars.values():

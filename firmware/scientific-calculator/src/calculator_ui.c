@@ -1016,24 +1016,38 @@ void calculator_ui_usb_command(const char *command,
     calculator_usb_context_t context = {
         .state = &usb_state,
         .editor = &expression_state,
+        .basic_engine = &basic_program_ui.engine,
     };
     calculator_usb_effect_t effect;
     calculator_usb_execute(&context, command, response, response_size,
                            &effect);
-    if (!effect.changed) return;
+    if (!effect.changed && !effect.basic_runtime_changed) return;
 
-    apply_persisted_state(&usb_state);
-    if (effect.statistics_changed) {
-        statistics.selected = 0;
-        statistics.active_y = false;
-        statistics.editing = false;
-        statistics.view = STATISTICS_VIEW_DATA;
-        expression_editor_clear(&statistics.x_editor);
-        expression_editor_clear(&statistics.y_editor);
+    if (effect.changed) {
+        apply_persisted_state(&usb_state);
+        if (effect.statistics_changed) {
+            statistics.selected = 0;
+            statistics.active_y = false;
+            statistics.editing = false;
+            statistics.view = STATISTICS_VIEW_DATA;
+            expression_editor_clear(&statistics.x_editor);
+            expression_editor_clear(&statistics.y_editor);
+        }
+        just_evaluated = effect.evaluated;
     }
-    just_evaluated = effect.evaluated;
-    snprintf(message, sizeof message,
-             effect.evaluated ? "USB RESULT" : "USB UPDATED");
+    if (effect.basic_runtime_changed) {
+        page = PAGE_BASIC_PROGRAM;
+        basic_program_ui.output_view = true;
+        expression_editor_clear(&basic_program_ui.editor);
+        snprintf(basic_program_ui.notice, sizeof basic_program_ui.notice,
+                 "%s", basic_program_ui.engine.state == BASIC_RUN_STOPPED
+                     ? "USB STOP" : "USB RUN");
+    } else {
+        snprintf(message, sizeof message,
+                 effect.evaluated ? "USB RESULT" :
+                 (effect.basic_program_changed ? "USB PROGRAM" :
+                  "USB UPDATED"));
+    }
     if (page == PAGE_GRAPH) {
         render_graph();
     } else {

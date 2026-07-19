@@ -211,20 +211,19 @@ vergroesserte Datenschrift wurden auf dem Pico erfolgreich bestaetigt.
 - [x] Ein kleines plattformunabhaengiges Kommandozeilenwerkzeug bereitstellen.
 - [x] Eine grafische Desktop-Anwendung fuer Steuerung und Synchronisation
   bereitstellen.
+- [x] BASIC-Programme laden, speichern, synchronisieren und ausfuehren.
 
 **Fertig, wenn:** Daten zwischen Rechner und PC in beide Richtungen uebertragen
 werden koennen, ohne Touchbedienung oder Berechnungen zu blockieren.
 
-Softwarestand: Protokollversion 1 und Firmware 1.1.0 stellen einen begrenzten
-ASCII-Zeilenparser, transaktionale Funktionsimporte, Statistiklisten sowie
-Firmware- und Diagnoseinformationen bereit. CLI und `Pico Calculator Link`
-unter `tools/` unterstuetzen Portsuche, Einzelbefehle, Berechnung,
-Speicher-/Statistiksynchronisation und JSON-Import/-Export. Pro Hauptschleife
-werden hoechstens 32 USB-Zeichen und ein Befehl bearbeitet; die Ausgabe wartet
-maximal 2 ms. Alle 26 Host-Tests, der RP2040-Release-Build, ein realer
-JSON-Export/-Import und die GUI-Synchronisation ueber COM3 laufen erfolgreich.
-Die Reaktionszeit bei gleichzeitiger Touchbedienung steht noch als
-Hardwaretest aus.
+Softwarestand: Protokollversion 2 und Firmware 1.3.0 stellen einen begrenzten
+ASCII-Zeilenparser, transaktionale Funktionsimporte, Statistik- und
+BASIC-Programmlisten sowie Firmware- und Diagnoseinformationen bereit. CLI und
+`Pico Calculator Link` unter `tools/` unterstuetzen Portsuche, Einzelbefehle,
+Berechnung, Speicher-/Statistiksynchronisation, BASIC-Steuerung und
+JSON-Import/-Export. Pro Hauptschleife werden hoechstens 32 USB-Zeichen und ein
+Befehl bearbeitet; die Ausgabe wartet maximal 2 ms. Die Reaktionszeit bei
+gleichzeitiger Touchbedienung steht noch als Hardwaretest aus.
 
 ## Phase 11: BASIC-Programmiermodus
 
@@ -237,14 +236,18 @@ Hardwaretest aus.
 - [x] Laufende Programme in begrenzten Paketen ausfuehren und Endlosschleifen
   sicher abbrechen.
 - [x] Programme im versionierten Flashformat persistent speichern.
+- [x] Programm, Ausgabe, Start/Stop und `INPUT` ueber USB und Python-GUI
+  bedienen.
 
 **Fertig, wenn:** Programme vollstaendig per Touch eingegeben, bearbeitet,
 ausgefuehrt und nach einem Neustart wieder geladen werden koennen.
 
 Softwarestand: 20 Programmzeilen, 26 Variablen, sechs sichtbare Ausgabezeilen,
-eine QWERTZ- und eine dedizierte `TOK`-Tastatur sind implementiert. Das
-Flashformat Version 3 migriert bestehende Version-1- und Version-2-Daten. Alle
-28 Host-Tests und der RP2040-Release-Build laufen erfolgreich. Touchpositionen,
+eine QWERTZ- und eine dedizierte `TOK`-Tastatur sind implementiert. Die Python-
+GUI verwaltet `.bas`-Dateien, Geraetesynchronisation, Run/Stop, Ausgabe und
+`INPUT`. Das Flashformat Version 3 migriert bestehende Version-1- und
+Version-2-Daten. Alle 28 Host-Tests und der RP2040-Release-Build laufen
+erfolgreich. Touchpositionen,
 Lesbarkeit, `INPUT` und Wiederherstellung nach einem Neustart stehen noch als
 Hardwaretest aus.
 

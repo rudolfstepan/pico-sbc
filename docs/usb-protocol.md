@@ -4,6 +4,8 @@ Der Scientific Calculator stellt ueber seinen normalen USB-Anschluss eine
 serielle CDC-Schnittstelle bereit. Pro Zeile wird genau ein ASCII-Befehl
 gesendet und genau eine Antwort empfangen. Das Protokoll ist ab
 Firmware `1.1.0` verfuegbar.
+Seit Firmware `1.3.0` erweitert Protokollversion 2 die Schnittstelle um
+BASIC-Programme, nicht blockierende Ausfuehrung, Ausgabe und `INPUT`.
 
 ## Rahmenformat
 
@@ -38,6 +40,11 @@ Beispiel, wobei `<TAB>` jeweils ein Tabulatorzeichen bezeichnet:
 | `GET HISTORY index` | Einen Verlaufseintrag lesen |
 | `GET STATS` | Statistikmodus und Anzahl der Zeilen lesen |
 | `GET STATS index` | Eine Statistikzeile lesen |
+| `GET BASIC` | Anzahl der gespeicherten BASIC-Zeilen lesen |
+| `GET BASIC index` | BASIC-Zeile mit Nummer und Anweisung lesen |
+| `GET BASIC STATUS` | Laufzustand, Ergebnisstatus und Schrittzahl lesen |
+| `GET BASIC OUTPUT` | Anzahl der aktuellen Ausgabezeilen lesen |
+| `GET BASIC OUTPUT index` | Eine Ausgabezeile lesen |
 | `SET EXPR ausdruck` | Sichtbaren Ausdruck ersetzen |
 | `SET VAR A wert` ... `SET VAR F wert` | Variable setzen |
 | `SET FUNC F1 ausdruck` ... `SET FUNC F3 ausdruck` | Funktion validieren und setzen |
@@ -46,24 +53,34 @@ Beispiel, wobei `<TAB>` jeweils ein Tabulatorzeichen bezeichnet:
 | `STAT CLEAR` | Statistikliste leeren |
 | `STAT ADD x` | Zeile im 1VAR-Modus anfuegen |
 | `STAT ADD x y` | Wertepaar im 2VAR-Modus anfuegen |
+| `BASIC LINE zeile` | Zeile speichern oder nur per Nummer loeschen |
+| `BASIC CLEAR` | BASIC-Programm und Ausgabe leeren |
+| `BASIC RUN` / `BASIC STOP` | Programm nicht blockierend starten oder stoppen |
+| `BASIC INPUT wert` | Angeforderten Wert oder Ausdruck an `INPUT` liefern |
 
 `EVAL` verwendet den am Rechner aktiven DEG- oder RAD-Modus und aktualisiert
 `ANS`, den sichtbaren Editor und den Verlauf. Variablen, Funktionen,
 Ergebnisse, Verlauf und Statistikdaten werden wie bei einer Touch-Eingabe
-persistent gespeichert. Eine ungueltige Funktionsdefinition veraendert den
-bisherigen Zustand nicht.
+persistent gespeichert. BASIC-Programme werden ebenfalls persistent
+gespeichert. Eine ungueltige Funktionsdefinition veraendert den bisherigen
+Zustand nicht.
 
 Typische Antworten:
 
 ```text
-OK INFO<TAB>protocol=1<TAB>firmware=1.2.0<TAB>model=scientific-calculator
-OK DIAG<TAB>page=0<TAB>angle=DEG<TAB>history=2<TAB>stats=3<TAB>mode=1
+OK INFO<TAB>protocol=2<TAB>firmware=1.3.0<TAB>model=scientific-calculator
+OK DIAG<TAB>page=0<TAB>angle=DEG<TAB>history=2<TAB>stats=3<TAB>mode=1<TAB>basic=4<TAB>basic_state=STOPPED
 OK VAR<TAB>A<TAB>3.5
 OK HISTORY<TAB>0<TAB>42<TAB>6*7<TAB>42
 OK STATS<TAB>0<TAB>1<TAB>3
 ERR PARSE 5
 ERR LINE_TOO_LONG
 ```
+
+`BASIC RUN` antwortet sofort. Der Interpreter wird danach in kleinen Paketen
+in der normalen Firmware-Hauptschleife ausgefuehrt. Ein PC fragt mit
+`GET BASIC STATUS` weiter ab und liest nach `FINISHED`, `ERROR` oder `INPUT`
+die Ausgabe. Touch, Hardwaretasten und LCD bleiben dabei aktiv.
 
 ## Kommandozeilenwerkzeug
 
@@ -86,9 +103,10 @@ python tools/pico_calc_cli.py --port COM5 export calculator-state.json
 python tools/pico_calc_cli.py --port COM5 import calculator-state.json
 ```
 
-Der JSON-Export enthaelt Ausdruck, Ergebnis, A-F, F1-F3, Verlauf und die
-Statistikliste. Beim Import werden Ausdruck, Variablen, Funktionen und
-Statistikdaten uebertragen. Abhaengige Benutzerfunktionen werden automatisch
+Der JSON-Export enthaelt Ausdruck, Ergebnis, A-F, F1-F3, Verlauf, BASIC-
+Programm und Statistikliste. Beim Import werden Ausdruck, Variablen,
+Funktionen, BASIC-Zeilen und Statistikdaten uebertragen. Abhaengige
+Benutzerfunktionen werden automatisch
 in einer gueltigen Reihenfolge wiederholt; Rekursionen werden abgelehnt.
 
 ## Desktop-Anwendung
@@ -109,6 +127,8 @@ damit Fenster und Eingaben auch bei einem Timeout bedienbar bleiben.
 - `Speicher` bearbeitet A-F und F1-F3 gemeinsam.
 - `Statistik` verwaltet bis zu 32 lokale Werte oder Wertepaare und uebertraegt
   sie gesammelt zum Rechner.
+- `BASIC` laedt und speichert `.bas`-Dateien, synchronisiert den Programmspeicher,
+  startet oder stoppt Programme und zeigt Ausgabe sowie `INPUT`-Zustand.
 - `Verlauf` liest die acht persistenten Eintraege und uebernimmt Ausdruecke
   wieder in den Rechner.
 - `Protokoll` sendet einzelne Rohbefehle und protokolliert Antworten.

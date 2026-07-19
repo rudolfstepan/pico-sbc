@@ -4,7 +4,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 
-from pico_calc_cli import ProtocolError, export_state, import_state
+from pico_calc_cli import (
+    ProtocolError,
+    export_state,
+    import_state,
+    normalize_basic_program,
+    synchronize_basic_program,
+)
 
 
 class FakeClient:
@@ -21,6 +27,9 @@ class FakeClient:
             "GET STATS": "OK STATS\t2\t2",
             "GET STATS 0": "OK STATS\t0\t1\t3",
             "GET STATS 1": "OK STATS\t1\t2\t5",
+            "GET BASIC": "OK BASIC\t2",
+            "GET BASIC 0": "OK BASIC\t0\t10\tPRINT \"HELLO\"",
+            "GET BASIC 1": "OK BASIC\t1\t20\tEND",
         }
         if command.startswith("GET VAR "):
             name = command[-1]
@@ -55,6 +64,7 @@ class CliStateTests(unittest.TestCase):
         self.assertEqual(exported["functions"]["F1"], "x+1")
         self.assertEqual(exported["history"][0]["value"], 42.0)
         self.assertEqual(exported["statistics"]["values"], [[1.0, 3.0], [2.0, 5.0]])
+        self.assertEqual(exported["program"], ['10 PRINT "HELLO"', "20 END"])
 
     def test_import_state(self):
         client = FakeClient()
@@ -64,11 +74,16 @@ class CliStateTests(unittest.TestCase):
             "variables": {"A": 3.5},
             "functions": {"F1": "x+A"},
             "statistics": {"mode": 2, "values": [[1, 3], [2, 5]]},
+            "program": ['10 PRINT "HELLO"', "20 END"],
         })
         self.assertIn("SET EXPR A+1", client.commands)
         self.assertIn("SET VAR A 3.5", client.commands)
         self.assertIn("SET FUNC F1 x+A", client.commands)
-        self.assertEqual(client.commands[-2:], ["STAT ADD 1 3", "STAT ADD 2 5"])
+        self.assertIn("STAT ADD 1 3", client.commands)
+        self.assertEqual(client.commands[-3:], [
+            "BASIC CLEAR", 'BASIC LINE 10 PRINT "HELLO"',
+            "BASIC LINE 20 END",
+        ])
 
     def test_import_rejects_bad_rows(self):
         client = FakeClient()
@@ -99,6 +114,22 @@ class CliStateTests(unittest.TestCase):
         client = FakeClient()
         import_state(client, {"variables": {"A": 2}})
         self.assertNotIn("SET EXPR ", client.commands)
+
+    def test_basic_program_is_sorted_and_validated_before_clear(self):
+        client = FakeClient()
+        program = synchronize_basic_program(client, "20 END\n10 PRINT 1\n")
+        self.assertEqual(program, ["10 PRINT 1", "20 END"])
+        self.assertEqual(client.commands[-3:], [
+            "BASIC CLEAR", "BASIC LINE 10 PRINT 1", "BASIC LINE 20 END",
+        ])
+
+        invalid_client = FakeClient()
+        with self.assertRaises(ProtocolError):
+            synchronize_basic_program(invalid_client, "10 PRINT 1\n10 END")
+        self.assertNotIn("BASIC CLEAR", invalid_client.commands)
+
+        with self.assertRaises(ProtocolError):
+            normalize_basic_program("PRINT 1")
 
 
 if __name__ == "__main__":

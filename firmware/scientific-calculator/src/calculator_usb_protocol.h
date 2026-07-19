@@ -7,13 +7,14 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#define CALCULATOR_USB_PROTOCOL_VERSION 1u
+#define CALCULATOR_USB_PROTOCOL_VERSION 2u
 #define CALCULATOR_USB_LINE_CAPACITY 192u
 #define CALCULATOR_USB_RESPONSE_CAPACITY 192u
 
 typedef struct {
     calculator_persisted_state_t *state;
     expression_editor_t *editor;
+    basic_engine_t *basic_engine;
 } calculator_usb_context_t;
 
 typedef struct {
@@ -21,6 +22,8 @@ typedef struct {
     bool evaluated;
     bool persistent_changed;
     bool statistics_changed;
+    bool basic_program_changed;
+    bool basic_runtime_changed;
 } calculator_usb_effect_t;
 
 typedef enum {

@@ -298,6 +298,7 @@ add_test(NAME calculator_statistics COMMAND calculator_statistics_tests)
 
 add_executable(calculator_usb_protocol_tests
     calculator/test_calculator_usb_protocol.c
+    ${CALCULATOR_SRC}/basic_engine.c
     ${CALCULATOR_SRC}/calculation_status.c
     ${CALCULATOR_SRC}/calculator_engine.c
     ${CALCULATOR_SRC}/calculator_symbols.c

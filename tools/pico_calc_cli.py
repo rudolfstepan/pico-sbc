@@ -6,12 +6,15 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 import sys
 import time
 from pathlib import Path
 from typing import Any
 
 LINE_CAPACITY = 192
+BASIC_MAX_LINES = 20
+BASIC_LINE_TEXT_CAPACITY = 64
 
 
 class ProtocolError(RuntimeError):
@@ -86,6 +89,84 @@ def fields(response: str, expected: str) -> list[str]:
     return parts[1:]
 
 
+def normalize_basic_program(source: str | list[Any]) -> list[str]:
+    if isinstance(source, list):
+        raw_lines = [str(line) for line in source]
+    elif isinstance(source, str):
+        raw_lines = source.splitlines()
+    else:
+        raise ProtocolError("BASIC-Programm muss Text oder eine Zeilenliste sein")
+
+    normalized: list[tuple[int, str]] = []
+    numbers: set[int] = set()
+    for raw_line in raw_lines:
+        line = raw_line.strip()
+        if not line:
+            continue
+        if any(ord(character) < 0x20 or ord(character) > 0x7E
+               for character in line):
+            raise ProtocolError("BASIC-Programm enthaelt ungueltige Zeichen")
+        match = re.fullmatch(r"([0-9]+) +(.*\S)", line)
+        if match is None:
+            raise ProtocolError(f"Ungueltige BASIC-Zeile: {line}")
+        number = int(match.group(1))
+        statement = match.group(2)
+        if number < 1 or number > 65535:
+            raise ProtocolError(f"Ungueltige BASIC-Zeilennummer: {number}")
+        if len(statement.encode("ascii")) >= BASIC_LINE_TEXT_CAPACITY:
+            raise ProtocolError(f"BASIC-Zeile {number} ist zu lang")
+        if number in numbers:
+            raise ProtocolError(f"Doppelte BASIC-Zeilennummer: {number}")
+        numbers.add(number)
+        normalized.append((number, statement))
+    if len(normalized) > BASIC_MAX_LINES:
+        raise ProtocolError("BASIC-Programm darf maximal 20 Zeilen enthalten")
+    normalized.sort(key=lambda item: item[0])
+    return [f"{number} {statement}" for number, statement in normalized]
+
+
+def read_basic_program(client: Any) -> list[str]:
+    metadata = fields(client.command("GET BASIC"), "BASIC")
+    if len(metadata) != 1:
+        raise ProtocolError("Ungueltige BASIC-Antwort")
+    count = int(metadata[0])
+    if count < 0 or count > BASIC_MAX_LINES:
+        raise ProtocolError("Ungueltige BASIC-Zeilenanzahl")
+    program = []
+    for index in range(count):
+        item = fields(client.command(f"GET BASIC {index}"), "BASIC")
+        if len(item) != 3 or int(item[0]) != index:
+            raise ProtocolError("Ungueltige BASIC-Zeilenantwort")
+        program.append(f"{int(item[1])} {item[2]}")
+    return normalize_basic_program(program)
+
+
+def synchronize_basic_program(client: Any,
+                              source: str | list[Any]) -> list[str]:
+    program = normalize_basic_program(source)
+    client.command("BASIC CLEAR")
+    for line in program:
+        client.command(f"BASIC LINE {line}")
+    return program
+
+
+def read_basic_output(client: Any) -> list[str]:
+    metadata = fields(client.command("GET BASIC OUTPUT"), "BASIC_OUTPUT")
+    if len(metadata) != 1:
+        raise ProtocolError("Ungueltige BASIC_OUTPUT-Antwort")
+    count = int(metadata[0])
+    if count < 0 or count > 6:
+        raise ProtocolError("Ungueltige BASIC-Ausgabeanzahl")
+    output = []
+    for index in range(count):
+        item = fields(client.command(f"GET BASIC OUTPUT {index}"),
+                      "BASIC_OUTPUT")
+        if len(item) < 1 or int(item[0]) != index:
+            raise ProtocolError("Ungueltige BASIC-Ausgabezeile")
+        output.append(item[1] if len(item) > 1 else "")
+    return output
+
+
 def export_state(client: Any) -> dict[str, Any]:
     result_fields = fields(client.command("GET RESULT"), "RESULT")
     expression_fields = fields(client.command("GET EXPR"), "EXPR")
@@ -119,15 +200,18 @@ def export_state(client: Any) -> dict[str, Any]:
             row.append(float(item[2]))
         values.append(row)
 
+    program = read_basic_program(client)
+
     return {
         "format": "pico-sbc-calculator-state",
-        "version": 1,
+        "version": 2,
         "result": float(result_fields[0]),
         "expression": expression_fields[0] if expression_fields else "",
         "variables": variables,
         "functions": functions,
         "history": history,
         "statistics": {"mode": mode, "values": values},
+        "program": program,
     }
 
 
@@ -181,29 +265,31 @@ def import_state(client: Any, data: dict[str, Any]) -> None:
         pending_functions = remaining
 
     statistics = data.get("statistics")
-    if statistics is None:
-        return
-    if not isinstance(statistics, dict):
-        raise ProtocolError("statistics muss ein Objekt sein")
-    mode = int(statistics.get("mode", 1))
-    if mode not in (1, 2):
-        raise ProtocolError("Statistikmodus muss 1 oder 2 sein")
-    values = statistics.get("values", [])
-    if not isinstance(values, list) or len(values) > 32:
-        raise ProtocolError("Statistikliste muss maximal 32 Zeilen enthalten")
-    normalized_rows = []
-    for row in values:
-        if not isinstance(row, list) or len(row) != mode:
-            raise ProtocolError(f"Statistikzeile passt nicht zu Modus {mode}")
-        numbers = [float(value) for value in row]
-        if not all(math.isfinite(value) for value in numbers):
-            raise ProtocolError("Statistikwerte muessen endlich sein")
-        normalized_rows.append(numbers)
-    client.command(f"STAT MODE {mode}")
-    client.command("STAT CLEAR")
-    for row in normalized_rows:
-        numbers = " ".join(f"{float(value):.17g}" for value in row)
-        client.command(f"STAT ADD {numbers}")
+    if statistics is not None:
+        if not isinstance(statistics, dict):
+            raise ProtocolError("statistics muss ein Objekt sein")
+        mode = int(statistics.get("mode", 1))
+        if mode not in (1, 2):
+            raise ProtocolError("Statistikmodus muss 1 oder 2 sein")
+        values = statistics.get("values", [])
+        if not isinstance(values, list) or len(values) > 32:
+            raise ProtocolError("Statistikliste muss maximal 32 Zeilen enthalten")
+        normalized_rows = []
+        for row in values:
+            if not isinstance(row, list) or len(row) != mode:
+                raise ProtocolError(f"Statistikzeile passt nicht zu Modus {mode}")
+            numbers = [float(value) for value in row]
+            if not all(math.isfinite(value) for value in numbers):
+                raise ProtocolError("Statistikwerte muessen endlich sein")
+            normalized_rows.append(numbers)
+        client.command(f"STAT MODE {mode}")
+        client.command("STAT CLEAR")
+        for row in normalized_rows:
+            numbers = " ".join(f"{float(value):.17g}" for value in row)
+            client.command(f"STAT ADD {numbers}")
+
+    if "program" in data:
+        synchronize_basic_program(client, data["program"])
 
 
 def list_ports() -> int:

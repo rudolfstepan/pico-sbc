@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CALCULATOR_FIRMWARE_VERSION "1.2.0"
+#define CALCULATOR_FIRMWARE_VERSION "1.3.0"
 
 static void respond(char *response, size_t size, const char *format, ...) {
     if (!response || !size) return;
@@ -104,6 +104,17 @@ static bool function_index(const char *word, size_t *index) {
     }
     *index = (size_t)(word[1] - '1');
     return true;
+}
+
+static const char *basic_run_state_text(basic_run_state_t state) {
+    switch (state) {
+        case BASIC_RUN_STOPPED: return "STOPPED";
+        case BASIC_RUN_RUNNING: return "RUNNING";
+        case BASIC_RUN_INPUT: return "INPUT";
+        case BASIC_RUN_FINISHED: return "FINISHED";
+        case BASIC_RUN_ERROR: return "ERROR";
+        default: return "UNKNOWN";
+    }
 }
 
 static void append_history(calculator_persisted_state_t *state,
@@ -214,6 +225,61 @@ static void execute_get(calculator_usb_context_t *context, char *cursor,
             respond(response, response_size, "OK STATS\t%u\t%.17g",
                     (unsigned int)index, state->statistics.x[index]);
         }
+        return;
+    }
+    if (word_is(subject, "BASIC")) {
+        basic_engine_t *engine = context->basic_engine;
+        if (!engine) {
+            respond(response, response_size, "ERR INTERNAL BASIC");
+            return;
+        }
+        char *item = next_word(&cursor);
+        if (!item) {
+            respond(response, response_size, "OK BASIC\t%u",
+                    (unsigned int)engine->program.count);
+            return;
+        }
+        if (word_is(item, "STATUS")) {
+            if (*remaining_text(cursor)) {
+                respond(response, response_size,
+                        "ERR ARGUMENT GET BASIC STATUS");
+                return;
+            }
+            respond(response, response_size,
+                    "OK BASIC_STATUS\tstate=%s\tstatus=%s\tsteps=%u\toutput=%u",
+                    basic_run_state_text(engine->state),
+                    basic_status_text(engine->status),
+                    (unsigned int)engine->instruction_count,
+                    (unsigned int)engine->output_count);
+            return;
+        }
+        if (word_is(item, "OUTPUT")) {
+            char *index_word = next_word(&cursor);
+            if (!index_word) {
+                respond(response, response_size, "OK BASIC_OUTPUT\t%u",
+                        (unsigned int)engine->output_count);
+                return;
+            }
+            size_t index = 0;
+            if (!parse_index(index_word, &index) ||
+                *remaining_text(cursor) || index >= engine->output_count) {
+                respond(response, response_size, "ERR INDEX BASIC_OUTPUT");
+                return;
+            }
+            respond(response, response_size, "OK BASIC_OUTPUT\t%u\t%s",
+                    (unsigned int)index, engine->output[index]);
+            return;
+        }
+        size_t index = 0;
+        if (!parse_index(item, &index) || *remaining_text(cursor) ||
+            index >= engine->program.count) {
+            respond(response, response_size, "ERR INDEX BASIC");
+            return;
+        }
+        respond(response, response_size, "OK BASIC\t%u\t%u\t%s",
+                (unsigned int)index,
+                (unsigned int)engine->program.lines[index].number,
+                engine->program.lines[index].text);
         return;
     }
     respond(response, response_size, "ERR UNKNOWN_SUBJECT %s", subject);
@@ -399,6 +465,96 @@ static void execute_stat(calculator_usb_context_t *context, char *cursor,
     respond(response, response_size, "ERR UNKNOWN_ACTION %s", action);
 }
 
+static void execute_basic(calculator_usb_context_t *context, char *cursor,
+                          char *response, size_t response_size,
+                          calculator_usb_effect_t *effect) {
+    basic_engine_t *engine = context->basic_engine;
+    if (!engine) {
+        respond(response, response_size, "ERR INTERNAL BASIC");
+        return;
+    }
+    char *action = next_word(&cursor);
+    if (!action) {
+        respond(response, response_size, "ERR ARGUMENT BASIC action");
+        return;
+    }
+    if (word_is(action, "LINE")) {
+        char *source = remaining_text(cursor);
+        if (!*source) {
+            respond(response, response_size, "ERR ARGUMENT BASIC LINE source");
+            return;
+        }
+        basic_status_t status = basic_engine_store_line(engine, source);
+        if (status != BASIC_STATUS_OK) {
+            respond(response, response_size, "ERR BASIC %s",
+                    basic_status_text(status));
+            return;
+        }
+        context->state->basic_program = engine->program;
+        effect->changed = true;
+        effect->persistent_changed = true;
+        effect->basic_program_changed = true;
+        respond(response, response_size, "OK BASIC\t%u",
+                (unsigned int)engine->program.count);
+        return;
+    }
+    if (word_is(action, "CLEAR")) {
+        if (*remaining_text(cursor)) {
+            respond(response, response_size, "ERR ARGUMENT BASIC CLEAR");
+            return;
+        }
+        basic_engine_clear_program(engine);
+        context->state->basic_program = engine->program;
+        effect->changed = true;
+        effect->persistent_changed = true;
+        effect->basic_program_changed = true;
+        respond(response, response_size, "OK BASIC\t0");
+        return;
+    }
+    if (word_is(action, "RUN")) {
+        if (*remaining_text(cursor)) {
+            respond(response, response_size, "ERR ARGUMENT BASIC RUN");
+            return;
+        }
+        basic_status_t status = basic_engine_run(engine);
+        if (status != BASIC_STATUS_OK) {
+            respond(response, response_size, "ERR BASIC %s",
+                    basic_status_text(status));
+            return;
+        }
+        effect->basic_runtime_changed = true;
+        respond(response, response_size, "OK BASIC_RUN\tRUNNING");
+        return;
+    }
+    if (word_is(action, "STOP")) {
+        if (*remaining_text(cursor)) {
+            respond(response, response_size, "ERR ARGUMENT BASIC STOP");
+            return;
+        }
+        basic_engine_stop(engine);
+        effect->basic_runtime_changed = true;
+        respond(response, response_size, "OK BASIC_RUN\tSTOPPED");
+        return;
+    }
+    if (word_is(action, "INPUT")) {
+        char *input = remaining_text(cursor);
+        if (!*input) {
+            respond(response, response_size, "ERR ARGUMENT BASIC INPUT value");
+            return;
+        }
+        basic_status_t status = basic_engine_submit_input(engine, input);
+        if (status != BASIC_STATUS_OK) {
+            respond(response, response_size, "ERR BASIC %s",
+                    basic_status_text(status));
+            return;
+        }
+        effect->basic_runtime_changed = true;
+        respond(response, response_size, "OK BASIC_INPUT\tRUNNING");
+        return;
+    }
+    respond(response, response_size, "ERR UNKNOWN_ACTION %s", action);
+}
+
 void calculator_usb_execute(calculator_usb_context_t *context,
                             const char *line,
                             char *response, size_t response_size,
@@ -445,12 +601,18 @@ void calculator_usb_execute(calculator_usb_context_t *context,
             respond(response, response_size, "ERR ARGUMENT DIAG");
         } else {
             respond(response, response_size,
-                    "OK DIAG\tpage=%u\tangle=%s\thistory=%u\tstats=%u\tmode=%u",
+                    "OK DIAG\tpage=%u\tangle=%s\thistory=%u\tstats=%u\tmode=%u"
+                    "\tbasic=%u\tbasic_state=%s",
                     (unsigned int)context->state->page,
                     context->state->degrees ? "DEG" : "RAD",
                     (unsigned int)context->state->history_count,
                     (unsigned int)context->state->statistics.count,
-                    context->state->statistics.two_variable ? 2u : 1u);
+                    context->state->statistics.two_variable ? 2u : 1u,
+                    context->basic_engine
+                        ? (unsigned int)context->basic_engine->program.count : 0u,
+                    context->basic_engine
+                        ? basic_run_state_text(context->basic_engine->state)
+                        : "UNKNOWN");
         }
     } else if (word_is(command, "GET")) {
         execute_get(context, cursor, response, response_size);
@@ -460,6 +622,8 @@ void calculator_usb_execute(calculator_usb_context_t *context,
         execute_eval(context, cursor, response, response_size, &local_effect);
     } else if (word_is(command, "STAT")) {
         execute_stat(context, cursor, response, response_size, &local_effect);
+    } else if (word_is(command, "BASIC")) {
+        execute_basic(context, cursor, response, response_size, &local_effect);
     } else {
         respond(response, response_size, "ERR UNKNOWN_COMMAND %s", command);
     }

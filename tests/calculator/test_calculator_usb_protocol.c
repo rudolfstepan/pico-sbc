@@ -27,6 +27,7 @@ static const char *run(calculator_usb_context_t *context, const char *command,
 int main(void) {
     calculator_persisted_state_t state;
     expression_editor_t editor;
+    basic_engine_t basic_engine;
     memset(&state, 0, sizeof state);
     state.degrees = true;
     state.page = PAGE_BASIC;
@@ -34,15 +35,17 @@ int main(void) {
     graph_model_init(&state.graph);
     statistics_engine_init(&state.statistics);
     expression_editor_init(&editor);
+    basic_engine_init(&basic_engine);
     calculator_usb_context_t context = {
         .state = &state,
         .editor = &editor,
+        .basic_engine = &basic_engine,
     };
     calculator_usb_effect_t effect;
 
     CHECK(strcmp(run(&context, "PING", &effect), "OK PONG") == 0);
     CHECK(!effect.changed);
-    CHECK(strstr(run(&context, "INFO", &effect), "protocol=1") != NULL);
+    CHECK(strstr(run(&context, "INFO", &effect), "protocol=2") != NULL);
     CHECK(strstr(run(&context, "DIAG", &effect), "mode=1") != NULL);
 
     CHECK(strcmp(run(&context, "SET EXPR 6*7", &effect),
@@ -95,11 +98,59 @@ int main(void) {
     CHECK(strcmp(run(&context, "GET STATS 0", &effect),
                  "OK STATS\t0\t-2.5") == 0);
 
+    CHECK(strcmp(run(&context, "BASIC LINE 20 END", &effect),
+                 "OK BASIC\t1") == 0);
+    CHECK(effect.changed && effect.persistent_changed &&
+          effect.basic_program_changed);
+    CHECK(strcmp(run(&context, "BASIC LINE 10 PRINT \"USB\"", &effect),
+                 "OK BASIC\t2") == 0);
+    CHECK(strcmp(run(&context, "GET BASIC", &effect),
+                 "OK BASIC\t2") == 0);
+    CHECK(strcmp(run(&context, "GET BASIC 0", &effect),
+                 "OK BASIC\t0\t10\tPRINT \"USB\"") == 0);
+    CHECK(strcmp(run(&context, "BASIC RUN", &effect),
+                 "OK BASIC_RUN\tRUNNING") == 0);
+    CHECK(!effect.changed && effect.basic_runtime_changed);
+    CHECK(strstr(run(&context, "GET BASIC STATUS", &effect),
+                 "state=RUNNING") != NULL);
+    while (basic_engine.state == BASIC_RUN_RUNNING) {
+        basic_engine_step(&basic_engine);
+    }
+    CHECK(strstr(run(&context, "GET BASIC STATUS", &effect),
+                 "state=FINISHED") != NULL);
+    CHECK(strcmp(run(&context, "GET BASIC OUTPUT", &effect),
+                 "OK BASIC_OUTPUT\t1") == 0);
+    CHECK(strcmp(run(&context, "GET BASIC OUTPUT 0", &effect),
+                 "OK BASIC_OUTPUT\t0\tUSB") == 0);
+
+    CHECK(strcmp(run(&context, "BASIC CLEAR", &effect),
+                 "OK BASIC\t0") == 0);
+    CHECK(strcmp(run(&context, "BASIC LINE 10 INPUT A", &effect),
+                 "OK BASIC\t1") == 0);
+    CHECK(strcmp(run(&context, "BASIC LINE 20 PRINT A*2", &effect),
+                 "OK BASIC\t2") == 0);
+    CHECK(strcmp(run(&context, "BASIC RUN", &effect),
+                 "OK BASIC_RUN\tRUNNING") == 0);
+    CHECK(basic_engine_step(&basic_engine) == BASIC_STATUS_OK);
+    CHECK(strstr(run(&context, "GET BASIC STATUS", &effect),
+                 "state=INPUT") != NULL);
+    CHECK(strcmp(run(&context, "BASIC INPUT 21", &effect),
+                 "OK BASIC_INPUT\tRUNNING") == 0);
+    while (basic_engine.state == BASIC_RUN_RUNNING) {
+        basic_engine_step(&basic_engine);
+    }
+    CHECK(strcmp(run(&context, "GET BASIC OUTPUT 1", &effect),
+                 "OK BASIC_OUTPUT\t1\t42") == 0);
+    CHECK(strcmp(run(&context, "BASIC STOP", &effect),
+                 "OK BASIC_RUN\tSTOPPED") == 0);
+
     CHECK(strncmp(run(&context, "EVAL sin(", &effect), "ERR PARSE", 9) == 0);
     CHECK(strcmp(run(&context, "SET VAR A nan", &effect),
                  "ERR ARGUMENT VAR A-F value") == 0);
     CHECK(strcmp(run(&context, "GET HISTORY 99", &effect),
                  "ERR INDEX HISTORY") == 0);
+    CHECK(strcmp(run(&context, "GET BASIC OUTPUT 99", &effect),
+                 "ERR INDEX BASIC_OUTPUT") == 0);
     CHECK(strncmp(run(&context, "BOGUS", &effect),
                   "ERR UNKNOWN_COMMAND", 19) == 0);
     CHECK(strcmp(run(&context, "PING extra", &effect),
