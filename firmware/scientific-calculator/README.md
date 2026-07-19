@@ -24,6 +24,10 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 - Speicherregister mit `M+`, `M-`, `MR` und `MC`
 - Graphenmodus fuer Ausdruecke mit `x`, inklusive dynamischem Koordinatengitter,
   Achsenbeschriftung, Verschieben und Zoom
+- Drei einzeln aktivierbare Graphfunktionen `F1`, `F2` und `F3` in Cyan,
+  Gelb und Magenta
+- Trace-Cursor, scrollbare Wertetabelle, automatische Skalierung sowie Marker
+  fuer Nullstellen und Schnittpunkte
 - K1 berechnet, K2 loescht das letzte Zeichen
 
 Die Seitentaste wechselt
@@ -33,6 +37,29 @@ Editor den Cursor und im Graphenmodus den sichtbaren Ausschnitt.
 Funktionen setzen automatisch eine oeffnende Klammer. Die schliessende Klammer
 wird ueber `)` eingegeben. Fuer `nCr` und `nPr` trennt `,` die Argumente, zum
 Beispiel `ncr(6,2)`.
+
+## Graph 2.0
+
+Auf `TOOLS` stehen `X`, trigonometrische Funktionen, Klammern, Potenzen und
+Operatoren direkt bereit. `GRAPH` speichert den aktuellen Ausdruck im
+ausgewaehlten Funktionsplatz und skaliert die y-Achse automatisch. Ein
+schneller Test ist `AC -> SIN -> X -> ) -> GRAPH`.
+
+Die Graph-x-Achse wird immer in Radiant ausgewertet. Dadurch zeigt `sin(x)` im
+Standardbereich mehrere vollstaendige Perioden, unabhaengig vom DEG/RAD-Modus
+des normalen Rechners.
+
+- `F1`, `F2`, `F3`: Funktionsplatz auswaehlen; `ON/OFF` schaltet ihn sichtbar.
+- `TOOLS`: ausgewaehlte Funktion bearbeiten und mit `GRAPH` uebernehmen.
+- `MORE -> TRACE`: Cursor aktivieren; Joystick links/rechts bewegt ihn.
+- `MORE -> TABLE`: Wertetabelle; `X-/X+` scrollt und `STEP-/STEP+` aendert
+  die Schrittweite.
+- `MORE -> AUTO`: sichtbare Funktionen automatisch in y skalieren.
+- `MORE -> RANGE`: x- und y-Spanne getrennt per Touch aendern oder
+  mit `RESET` auf den Standardbereich zuruecksetzen.
+
+Farbige Kreuze markieren Nullstellen. Weisse Kreuze markieren Schnittpunkte
+aktiver Funktionen.
 
 ## Build
 

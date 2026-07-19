@@ -28,7 +28,9 @@ Der Rechner trennt Darstellung und Rechenlogik:
 - `calculator_navigation`: hardwareunabhaengige Seitennavigation
 - `calculator_pages` und `calculator_widgets`: LCD-Seiten und gemeinsame
   Tasten-/Treffergeometrie
-- `calculator_graph`: Graph-Viewport, Navigation und LCD-Darstellung
+- `graph_model`: drei Funktionsplaetze, Viewport, Trace, Tabelle,
+  Auto-Skalierung sowie Nullstellen- und Schnittpunktsuche
+- `calculator_graph`: TinyExpr-Anbindung und LCD-Darstellung des Graphmodells
 - `expression_editor`, `calculator_list` und `calculator_dialog`:
   hardwareunabhaengige Eingabe-, Listen- und Dialogzustaende
 - `calculation_status`: gemeinsame Fehlercodes und lesbare Meldungen

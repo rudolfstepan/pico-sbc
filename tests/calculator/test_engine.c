@@ -57,6 +57,18 @@ int main(void) {
     }
     calc_engine_free(graph);
 
+    graph_error = 0;
+    graph = calc_engine_compile_x("sin(x)", 0.0, &graph_error);
+    graph_result = 0.0;
+    if (!graph || !calc_engine_evaluate_x(graph, 1.5707963267948966,
+                                          &graph_result) ||
+        fabs(graph_result - 1.0) > 1e-12) {
+        printf("FAIL: radian graph sine, error=%d result=%.12g\n",
+               graph_error, graph_result);
+        failures++;
+    }
+    calc_engine_free(graph);
+
     if (failures) {
         printf("%d calculator engine test(s) failed\n", failures);
         return 1;

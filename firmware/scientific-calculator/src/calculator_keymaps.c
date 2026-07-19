@@ -169,16 +169,75 @@ static const calc_key_t tools_keys[] = {
     {"END", "END", 3, 2, ACT_CURSOR, STYLE_FUNCTION},
     {"DEL", "", 4, 2, ACT_DELETE, STYLE_COMMAND},
     {"AC", "", 5, 2, ACT_CLEAR, STYLE_COMMAND},
+
+    {"SIN", "sin(", 0, 3, ACT_INSERT, STYLE_FUNCTION},
+    {"COS", "cos(", 1, 3, ACT_INSERT, STYLE_FUNCTION},
+    {"TAN", "tan(", 2, 3, ACT_INSERT, STYLE_FUNCTION},
+    {"(", "(", 3, 3, ACT_INSERT, STYLE_FUNCTION},
+    {")", ")", 4, 3, ACT_INSERT, STYLE_FUNCTION},
+    {"SQRT", "sqrt(", 5, 3, ACT_INSERT, STYLE_FUNCTION},
+
+    {"X^2", "^2", 0, 4, ACT_INSERT, STYLE_FUNCTION},
+    {"X^3", "^3", 1, 4, ACT_INSERT, STYLE_FUNCTION},
+    {"+", "+", 2, 4, ACT_INSERT, STYLE_FUNCTION},
+    {"-", "-", 3, 4, ACT_INSERT, STYLE_FUNCTION},
+    {"*", "*", 4, 4, ACT_INSERT, STYLE_FUNCTION},
+    {"/", "/", 5, 4, ACT_INSERT, STYLE_FUNCTION},
 };
 
-static const calc_key_t graph_keys[] = {
+static const calc_key_t graph_plot_keys[] = {
     {"TOOLS", "", 0, 4, ACT_GOTO_TOOLS, STYLE_COMMAND},
-    {"PLOT", "PLOT", 1, 4, ACT_GRAPH, STYLE_EQUALS},
-    {"X-", "LEFT", 2, 4, ACT_GRAPH, STYLE_FUNCTION},
-    {"X+", "RIGHT", 3, 4, ACT_GRAPH, STYLE_FUNCTION},
-    {"ZOOM+", "IN", 4, 4, ACT_GRAPH, STYLE_FUNCTION},
-    {"ZOOM-", "OUT", 5, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"F1", "F1", 1, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"F2", "F2", 2, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"F3", "F3", 3, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"ON/OFF", "TOGGLE", 4, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"MORE", "MENU", 5, 4, ACT_GRAPH, STYLE_EQUALS},
 };
+
+static const calc_key_t graph_menu_keys[] = {
+    {"PLOT", "PLOT", 0, 4, ACT_GRAPH, STYLE_COMMAND},
+    {"TABLE", "TABLE", 1, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"TRACE", "TRACE", 2, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"AUTO", "AUTO", 3, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"ZOOM+", "IN", 4, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"RANGE", "RANGE", 5, 4, ACT_GRAPH, STYLE_EQUALS},
+};
+
+static const calc_key_t graph_table_keys[] = {
+    {"PLOT", "PLOT", 0, 4, ACT_GRAPH, STYLE_COMMAND},
+    {"X-", "TABLE-", 1, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"X+", "TABLE+", 2, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"STEP-", "STEP-", 3, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"STEP+", "STEP+", 4, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"AUTO", "AUTO", 5, 4, ACT_GRAPH, STYLE_EQUALS},
+};
+
+static const calc_key_t graph_range_keys[] = {
+    {"PLOT", "PLOT", 0, 4, ACT_GRAPH, STYLE_COMMAND},
+    {"XW-", "XSPAN-", 1, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"XW+", "XSPAN+", 2, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"YW-", "YSPAN-", 3, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"YW+", "YSPAN+", 4, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"RESET", "RESET", 5, 4, ACT_GRAPH, STYLE_EQUALS},
+};
+
+const calc_key_t *calculator_graph_keymap(graph_view_t view, size_t *count) {
+    switch (view) {
+        case GRAPH_VIEW_MENU:
+            *count = sizeof graph_menu_keys / sizeof graph_menu_keys[0];
+            return graph_menu_keys;
+        case GRAPH_VIEW_TABLE:
+            *count = sizeof graph_table_keys / sizeof graph_table_keys[0];
+            return graph_table_keys;
+        case GRAPH_VIEW_RANGE:
+            *count = sizeof graph_range_keys / sizeof graph_range_keys[0];
+            return graph_range_keys;
+        case GRAPH_VIEW_PLOT:
+        default:
+            *count = sizeof graph_plot_keys / sizeof graph_plot_keys[0];
+            return graph_plot_keys;
+    }
+}
 
 const calc_key_t *calculator_keymap(calc_page_t page, size_t *count) {
     switch (page) {
@@ -195,8 +254,7 @@ const calc_key_t *calculator_keymap(calc_page_t page, size_t *count) {
             *count = sizeof tools_keys / sizeof tools_keys[0];
             return tools_keys;
         case PAGE_GRAPH:
-            *count = sizeof graph_keys / sizeof graph_keys[0];
-            return graph_keys;
+            return calculator_graph_keymap(GRAPH_VIEW_PLOT, count);
         case PAGE_BASIC:
         default:
             *count = sizeof basic_keys / sizeof basic_keys[0];

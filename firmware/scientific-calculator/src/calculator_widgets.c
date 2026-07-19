@@ -11,6 +11,9 @@
 #define COL_KEY      RGB565(238, 238, 238)
 #define COL_FUNCTION RGB565(170, 170, 170)
 #define COL_COMMAND  RGB565(60, 60, 60)
+#define COL_GRAPH_F1 RGB565(0, 220, 255)
+#define COL_GRAPH_F2 RGB565(255, 220, 0)
+#define COL_GRAPH_F3 RGB565(255, 80, 190)
 
 static int key_x(const calc_key_t *key) {
     return CALCULATOR_KEY_X +
@@ -25,6 +28,16 @@ static int key_y(const calc_key_t *key) {
 static uint16_t key_fill(const calc_key_t *key, bool pressed,
                          const calculator_widget_state_t *state) {
     if (pressed) return COL_BG;
+    if (state->page == PAGE_GRAPH && key->action == ACT_GRAPH &&
+        key->token[0] == 'F' && key->token[1] >= '1' &&
+        key->token[1] <= '3' && key->token[2] == '\0') {
+        size_t index = (size_t)(key->token[1] - '1');
+        if (state->graph_active_mask & (1u << index)) {
+            const uint16_t colors[] = {COL_GRAPH_F1, COL_GRAPH_F2, COL_GRAPH_F3};
+            return colors[index];
+        }
+        return COL_COMMAND;
+    }
     if (state->page == PAGE_PROGRAMMER && key->action == ACT_PROG_BASE) {
         unsigned int key_base = strcmp(key->token, "BIN") == 0 ? 2u :
             (strcmp(key->token, "HEX") == 0 ? 16u : 10u);
@@ -61,7 +74,12 @@ void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
     }
     bool dark = fill == COL_BG || fill == COL_COMMAND;
     uint16_t foreground = disabled ? COL_MUTED : (dark ? COL_TEXT : COL_BG);
-    uint16_t border = dark ? COL_TEXT : COL_BG;
+    bool selected_graph_function = state->page == PAGE_GRAPH &&
+        key->action == ACT_GRAPH && key->token[0] == 'F' &&
+        key->token[1] == (char)('1' + state->graph_selected_function) &&
+        key->token[2] == '\0';
+    uint16_t border = selected_graph_function ? COL_TEXT :
+        (dark ? COL_TEXT : COL_BG);
     size_t label_length = strlen(label);
     int scale_x = (CALCULATOR_KEY_WIDTH - 8) / ((int)label_length * 6);
     int scale_y = (CALCULATOR_KEY_HEIGHT - 8) / 8;
@@ -83,7 +101,9 @@ void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
 void calculator_widget_render_keypad(calc_page_t page,
                                      const calculator_widget_state_t *state) {
     size_t count;
-    const calc_key_t *keys = calculator_keymap(page, &count);
+    const calc_key_t *keys = page == PAGE_GRAPH
+        ? calculator_graph_keymap(state->graph_view, &count)
+        : calculator_keymap(page, &count);
     lcd_fill_rect(0, CALCULATOR_DISPLAY_HEIGHT, LCD_WIDTH,
                   LCD_HEIGHT - CALCULATOR_DISPLAY_HEIGHT, COL_BG);
     for (size_t i = 0; i < count; ++i) {
@@ -92,9 +112,12 @@ void calculator_widget_render_keypad(calc_page_t page,
 }
 
 const calc_key_t *calculator_widget_hit_key(calc_page_t page,
+                                            const calculator_widget_state_t *state,
                                             uint16_t x, uint16_t y) {
     size_t count;
-    const calc_key_t *keys = calculator_keymap(page, &count);
+    const calc_key_t *keys = page == PAGE_GRAPH
+        ? calculator_graph_keymap(state->graph_view, &count)
+        : calculator_keymap(page, &count);
     for (size_t i = 0; i < count; ++i) {
         int left = key_x(&keys[i]);
         int top = key_y(&keys[i]);

@@ -2,6 +2,7 @@
 #define CALCULATOR_WIDGETS_H
 
 #include "calculator_ui_types.h"
+#include "graph_model.h"
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -20,6 +21,9 @@ typedef struct {
     unsigned int programmer_base;
     unsigned int format_bits;
     bool degrees;
+    graph_view_t graph_view;
+    unsigned int graph_active_mask;
+    size_t graph_selected_function;
 } calculator_widget_state_t;
 
 void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
@@ -27,6 +31,7 @@ void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
 void calculator_widget_render_keypad(calc_page_t page,
                                      const calculator_widget_state_t *state);
 const calc_key_t *calculator_widget_hit_key(calc_page_t page,
+                                            const calculator_widget_state_t *state,
                                             uint16_t x, uint16_t y);
 const char *calculator_widget_tail(const char *text, size_t max_chars);
 

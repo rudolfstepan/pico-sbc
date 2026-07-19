@@ -96,3 +96,33 @@ add_executable(calculator_dialog_tests
 target_include_directories(calculator_dialog_tests PRIVATE ${CALCULATOR_SRC})
 enable_project_warnings(calculator_dialog_tests)
 add_test(NAME calculator_dialog COMMAND calculator_dialog_tests)
+
+add_executable(graph_model_tests
+    calculator/test_graph_model.c
+    ${CALCULATOR_SRC}/calculation_status.c
+    ${CALCULATOR_SRC}/graph_model.c
+)
+target_include_directories(graph_model_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(graph_model_tests)
+add_test(NAME graph_model COMMAND graph_model_tests)
+
+add_executable(graph_renderer_tests
+    calculator/test_graph_renderer.c
+    calculator/mock_lcd.c
+    ${CALCULATOR_SRC}/calculation_status.c
+    ${CALCULATOR_SRC}/calculator_engine.c
+    ${CALCULATOR_SRC}/calculator_graph.c
+    ${CALCULATOR_SRC}/calculator_keymaps.c
+    ${CALCULATOR_SRC}/calculator_widgets.c
+    ${CALCULATOR_SRC}/graph_model.c
+    ${TINYEXPR_SRC}/tinyexpr.c
+)
+target_include_directories(graph_renderer_tests PRIVATE
+    ${CALCULATOR_SRC}
+    ${PROJECT_ROOT}/lib/board/include
+    ${TINYEXPR_SRC}
+    calculator
+)
+target_compile_definitions(graph_renderer_tests PRIVATE TE_POW_FROM_RIGHT)
+enable_project_warnings(graph_renderer_tests)
+add_test(NAME graph_renderer COMMAND graph_renderer_tests)

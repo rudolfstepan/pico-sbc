@@ -9,8 +9,8 @@ ein Test auf dem echten LCD erfolgreich sind.
 
 | Phase | Erweiterung | Abhaengigkeit | Status |
 |---:|---|---|---|
-| 0 | Technische Grundlage | keine | Software fertig, Boardtest offen |
-| 1 | Graph 2.0 | Phase 0 | geplant |
+| 0 | Technische Grundlage | keine | abgeschlossen |
+| 1 | Graph 2.0 | Phase 0 | abgeschlossen |
 | 2 | Numerische Analyse | Phase 1 | geplant |
 | 3 | Variablen und Benutzerfunktionen | Phase 2 | geplant |
 | 4 | Permanente Speicherung | Phase 3 | geplant |
@@ -32,21 +32,25 @@ ein Test auf dem echten LCD erfolgreich sind.
 Firmware-Ziele bauen und alle bestehenden Tests weiterhin bestehen.
 
 Softwarestand: Neun Host-Tests und beide Firmware-Ziele bauen erfolgreich.
-Der abschliessende Sicht-, Touch- und Reaktionstest auf dem Board ist noch
-offen, da kein Pico im BOOTSEL-Modus angeschlossen war.
+Anzeige, Touch und Reaktion wurden anschliessend auf dem Pico geprueft.
 
 ## Phase 1: Graph 2.0
 
-- [ ] Drei Funktionsplaetze `F1`, `F2` und `F3` verwalten.
-- [ ] Funktionen einzeln aktivieren und in unterscheidbaren Farben zeichnen.
-- [ ] Trace-Cursor mit numerischer `x`- und `y`-Anzeige integrieren.
-- [ ] Eine scrollbare Wertetabelle fuer den aktuellen Graphbereich anzeigen.
-- [ ] Automatische Skalierung fuer den sichtbaren Wertebereich implementieren.
-- [ ] Nullstellen und Schnittpunkte im sichtbaren Bereich markieren.
-- [ ] Graphbereiche und Schrittweite direkt am Touchscreen bearbeiten.
+- [x] Drei Funktionsplaetze `F1`, `F2` und `F3` verwalten.
+- [x] Funktionen einzeln aktivieren und in unterscheidbaren Farben zeichnen.
+- [x] Trace-Cursor mit numerischer `x`- und `y`-Anzeige integrieren.
+- [x] Eine scrollbare Wertetabelle fuer den aktuellen Graphbereich anzeigen.
+- [x] Automatische Skalierung fuer den sichtbaren Wertebereich implementieren.
+- [x] Nullstellen und Schnittpunkte im sichtbaren Bereich markieren.
+- [x] Graphbereiche und Schrittweite direkt am Touchscreen bearbeiten.
 
 **Fertig, wenn:** Drei Funktionen gleichzeitig dargestellt, verfolgt und als
 Wertetabelle angezeigt werden koennen, ohne dass Beschriftungen ueberlappen.
+
+Abschlussstand: Graphmodell und LCD-Renderer sind durch Host-Tests fuer
+Funktionsspeicher, Viewport, Auto-Skalierung, Nullstellen, Schnittpunkte,
+Radiant-Auswertung und Zeichenbereich abgesichert. Darstellung und
+Touchbedienung wurden auf dem 480-x-320-LCD erfolgreich geprueft.
 
 ## Phase 2: Numerische Analyse
 

@@ -33,8 +33,19 @@ int main(void) {
     CHECK(check_page(PAGE_SCIENTIFIC, 30) == 0);
     CHECK(check_page(PAGE_PROGRAMMER, 30) == 0);
     CHECK(check_page(PAGE_FORMAT, 30) == 0);
-    CHECK(check_page(PAGE_TOOLS, 18) == 0);
+    CHECK(check_page(PAGE_TOOLS, 30) == 0);
     CHECK(check_page(PAGE_GRAPH, 6) == 0);
+    for (graph_view_t view = GRAPH_VIEW_PLOT; view <= GRAPH_VIEW_RANGE;
+         view = (graph_view_t)(view + 1)) {
+        size_t count = 0;
+        const calc_key_t *keys = calculator_graph_keymap(view, &count);
+        CHECK(keys != NULL);
+        CHECK(count == 6);
+        for (size_t i = 0; i < count; ++i) {
+            CHECK(keys[i].row == 4);
+            CHECK(keys[i].col == i);
+        }
+    }
     puts("keymap tests passed");
     return 0;
 }

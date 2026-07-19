@@ -46,11 +46,20 @@ static double memory_value;
 static calculator_graph_t graph;
 
 static calculator_widget_state_t current_widget_state(void) {
+    unsigned int active_mask = 0;
+    for (size_t i = 0; i < GRAPH_FUNCTION_COUNT; ++i) {
+        if (graph.functions[i].active && graph.functions[i].expression[0]) {
+            active_mask |= 1u << i;
+        }
+    }
     calculator_widget_state_t state = {
         .page = page,
         .programmer_base = (unsigned int)programmer.base,
         .format_bits = format_bits,
         .degrees = calc_engine_uses_degrees(),
+        .graph_view = graph.view,
+        .graph_active_mask = active_mask,
+        .graph_selected_function = graph.selected_function,
     };
     return state;
 }
@@ -92,8 +101,7 @@ static void render_keypad(void) {
 
 static void render_graph(void) {
     calculator_widget_state_t state = current_widget_state();
-    calculator_graph_render(&graph, expression_state.text, ans, &state,
-                            message, sizeof message);
+    calculator_graph_render(&graph, ans, &state, message, sizeof message);
 }
 
 static bool token_is_operator(const char *token) {
@@ -386,14 +394,75 @@ static void activate_cursor_key(const calc_key_t *key) {
 }
 
 static void activate_graph_key(const calc_key_t *key) {
-    if (strcmp(key->token, "LEFT") == 0) {
-        calculator_graph_pan(&graph, -0.1, 0.0);
-    } else if (strcmp(key->token, "RIGHT") == 0) {
-        calculator_graph_pan(&graph, 0.1, 0.0);
+    if (key->token[0] == 'F' && key->token[1] >= '1' &&
+        key->token[1] <= '3' && key->token[2] == '\0') {
+        size_t index = (size_t)(key->token[1] - '1');
+        graph_model_select_function(&graph, index);
+        expression_editor_set(&expression_state,
+                              graph.functions[index].expression);
+        snprintf(message, sizeof message, "F%u SELECTED",
+                 (unsigned int)(index + 1));
+    } else if (strcmp(key->token, "TOGGLE") == 0) {
+        if (graph_model_toggle_function(&graph, graph.selected_function)) {
+            snprintf(message, sizeof message, "F%u %s",
+                     (unsigned int)(graph.selected_function + 1),
+                     graph.functions[graph.selected_function].active
+                        ? "ON" : "OFF");
+        } else {
+            snprintf(message, sizeof message, "EDIT F%u IN TOOLS",
+                     (unsigned int)(graph.selected_function + 1));
+        }
+    } else if (strcmp(key->token, "MENU") == 0) {
+        graph_model_set_view(&graph, GRAPH_VIEW_MENU);
+    } else if (strcmp(key->token, "PLOT") == 0) {
+        graph_model_set_view(&graph, GRAPH_VIEW_PLOT);
+    } else if (strcmp(key->token, "TABLE") == 0) {
+        graph_model_set_view(&graph, GRAPH_VIEW_TABLE);
+    } else if (strcmp(key->token, "RANGE") == 0) {
+        graph_model_set_view(&graph, GRAPH_VIEW_RANGE);
+    } else if (strcmp(key->token, "TRACE") == 0) {
+        graph.trace_enabled = !graph.trace_enabled;
+        if (graph.trace_enabled) graph.trace_x = graph.x_center;
+        graph_model_set_view(&graph, GRAPH_VIEW_PLOT);
+        snprintf(message, sizeof message, "TRACE %s",
+                 graph.trace_enabled ? "ON" : "OFF");
+    } else if (strcmp(key->token, "AUTO") == 0) {
+        calc_status_t status = calculator_graph_auto_scale(&graph, ans);
+        snprintf(message, sizeof message, "%s",
+                 status == CALC_OK ? "AUTO SCALE" :
+                 calc_engine_status_text(status));
+        graph_model_set_view(&graph, GRAPH_VIEW_PLOT);
     } else if (strcmp(key->token, "IN") == 0) {
         calculator_graph_zoom(&graph, 0.5);
-    } else if (strcmp(key->token, "OUT") == 0) {
-        calculator_graph_zoom(&graph, 2.0);
+    } else if (strcmp(key->token, "TABLE-") == 0) {
+        graph_model_scroll_table(&graph, -5.0);
+    } else if (strcmp(key->token, "TABLE+") == 0) {
+        graph_model_scroll_table(&graph, 5.0);
+    } else if (strcmp(key->token, "STEP-") == 0) {
+        graph_model_scale_table_step(&graph, 0.5);
+    } else if (strcmp(key->token, "STEP+") == 0) {
+        graph_model_scale_table_step(&graph, 2.0);
+    } else if (strcmp(key->token, "XSPAN-") == 0 ||
+               strcmp(key->token, "XSPAN+") == 0) {
+        double factor = key->token[5] == '-' ? 0.5 : 2.0;
+        graph_model_set_range(&graph,
+            graph.x_center - graph.x_span * factor * 0.5,
+            graph.x_center + graph.x_span * factor * 0.5,
+            graph.y_center - graph.y_span * 0.5,
+            graph.y_center + graph.y_span * 0.5);
+        graph_model_set_view(&graph, GRAPH_VIEW_RANGE);
+    } else if (strcmp(key->token, "YSPAN-") == 0 ||
+               strcmp(key->token, "YSPAN+") == 0) {
+        double factor = key->token[5] == '-' ? 0.5 : 2.0;
+        graph_model_set_range(&graph,
+            graph.x_center - graph.x_span * 0.5,
+            graph.x_center + graph.x_span * 0.5,
+            graph.y_center - graph.y_span * factor * 0.5,
+            graph.y_center + graph.y_span * factor * 0.5);
+        graph_model_set_view(&graph, GRAPH_VIEW_RANGE);
+    } else if (strcmp(key->token, "RESET") == 0) {
+        graph_model_reset_range(&graph);
+        graph_model_set_view(&graph, GRAPH_VIEW_RANGE);
     }
     render_graph();
 }
@@ -469,10 +538,19 @@ static void activate_key(const calc_key_t *key) {
             activate_cursor_key(key);
             break;
         case ACT_GOTO_GRAPH:
+            if (expression_state.length) {
+                graph_model_set_function(&graph, graph.selected_function,
+                                         expression_state.text);
+                calculator_graph_auto_scale(&graph, ans);
+            }
             page = PAGE_GRAPH;
+            graph_model_set_view(&graph, GRAPH_VIEW_PLOT);
             render_graph();
             break;
         case ACT_GOTO_TOOLS:
+            expression_editor_set(
+                &expression_state,
+                graph.functions[graph.selected_function].expression);
             page = PAGE_TOOLS;
             snprintf(message, sizeof message, "%s", calculator_page_message(page));
             render_keypad();
@@ -485,7 +563,8 @@ static void activate_key(const calc_key_t *key) {
 }
 
 static const calc_key_t *hit_key(uint16_t x, uint16_t y) {
-    return calculator_widget_hit_key(page, x, y);
+    calculator_widget_state_t state = current_widget_state();
+    return calculator_widget_hit_key(page, &state, x, y);
 }
 
 void calculator_ui_init(void) {
@@ -553,11 +632,19 @@ void calculator_ui_task(void) {
     } else if (!joystick_locked) {
         joystick_locked = true;
         if (page == PAGE_GRAPH) {
-            double horizontal = joystick.left ? -0.1 :
-                (joystick.right ? 0.1 : 0.0);
-            double vertical = joystick.up ? 0.1 :
-                (joystick.down ? -0.1 : 0.0);
-            calculator_graph_pan(&graph, horizontal, vertical);
+            if (graph.view == GRAPH_VIEW_TABLE) {
+                if (joystick.up) graph_model_scroll_table(&graph, -1.0);
+                if (joystick.down) graph_model_scroll_table(&graph, 1.0);
+            } else if (graph.trace_enabled &&
+                       (joystick.left || joystick.right)) {
+                graph_model_move_trace(&graph, joystick.left ? -1.0 : 1.0);
+            } else {
+                double horizontal = joystick.left ? -0.1 :
+                    (joystick.right ? 0.1 : 0.0);
+                double vertical = joystick.up ? 0.1 :
+                    (joystick.down ? -0.1 : 0.0);
+                calculator_graph_pan(&graph, horizontal, vertical);
+            }
             render_graph();
         } else if (calculator_page_accepts_expression(page)) {
             if (joystick.left) {
