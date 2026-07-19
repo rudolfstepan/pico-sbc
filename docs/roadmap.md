@@ -202,15 +202,24 @@ vergroesserte Datenschrift wurden auf dem Pico erfolgreich bestaetigt.
 
 ## Phase 10: USB-Datenaustausch
 
-- [ ] Ein einfaches, dokumentiertes USB-CDC-Befehlsformat definieren.
-- [ ] Ausdruecke, Variablen, Funktionen und Wertelisten importieren.
-- [ ] Ergebnisse, Verlauf und Statistikdaten exportieren.
-- [ ] Diagnoseausgaben und Firmwareinformationen abrufbar machen.
-- [ ] Eingaben begrenzen und ungueltige Befehle ohne Absturz ablehnen.
-- [ ] Ein kleines plattformunabhaengiges Kommandozeilenwerkzeug bereitstellen.
+- [x] Ein einfaches, dokumentiertes USB-CDC-Befehlsformat definieren.
+- [x] Ausdruecke, Variablen, Funktionen und Wertelisten importieren.
+- [x] Ergebnisse, Verlauf und Statistikdaten exportieren.
+- [x] Diagnoseausgaben und Firmwareinformationen abrufbar machen.
+- [x] Eingaben begrenzen und ungueltige Befehle ohne Absturz ablehnen.
+- [x] Ein kleines plattformunabhaengiges Kommandozeilenwerkzeug bereitstellen.
 
 **Fertig, wenn:** Daten zwischen Rechner und PC in beide Richtungen uebertragen
 werden koennen, ohne Touchbedienung oder Berechnungen zu blockieren.
+
+Softwarestand: Protokollversion 1 und Firmware 1.1.0 stellen einen begrenzten
+ASCII-Zeilenparser, transaktionale Funktionsimporte, Statistiklisten sowie
+Firmware- und Diagnoseinformationen bereit. Das Python-CLI unter `tools/`
+unterstuetzt Portsuche, Einzelbefehle, Berechnung und JSON-Import/-Export. Pro
+Hauptschleife werden hoechstens 32 USB-Zeichen und ein Befehl bearbeitet; die
+Ausgabe wartet maximal 2 ms. Alle 25 Host-Tests, der RP2040-Release-Build und
+ein realer JSON-Export/-Import ueber COM3 laufen erfolgreich. Die Reaktionszeit
+bei gleichzeitiger Touchbedienung steht noch als Hardwaretest aus.
 
 ## Arbeitsweise pro Phase
 

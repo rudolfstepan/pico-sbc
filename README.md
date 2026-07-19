@@ -17,6 +17,8 @@ flashbare Anwendungen und eine gemeinsame Hardwarebibliothek.
 firmware/             Anwendungen mit eigener UI und Programmlogik
 lib/board/            Gemeinsame Board-, LCD- und Touchtreiber
 tests/calculator/     Hardwareunabhaengige Unit-Tests
+tests/tools/          Tests fuer die PC-Werkzeuge
+tools/                Plattformunabhaengiges USB-Kommandozeilenwerkzeug
 docs/                 Hardware- und Architekturunterlagen
 third_party/tinyexpr/ TinyExpr als gepinntes Git-Submodul
 ```
@@ -28,6 +30,7 @@ third_party/tinyexpr/ TinyExpr als gepinntes Git-Submodul
 - Arm GNU Toolchain (`arm-none-eabi-gcc`)
 - Ninja oder ein anderer von CMake unterstuetzter Generator
 - Ein nativer C-Compiler fuer die Host-Tests
+- Optional Python 3.9 und PySerial fuer den USB-Datenaustausch
 
 ## Repository klonen
 
@@ -71,6 +74,8 @@ ctest --test-dir out/tests --output-on-failure
 Pinbelegung und technische Daten stehen in [docs/hardware.md](docs/hardware.md).
 Die Architektur der Firmware ist in
 [docs/architecture.md](docs/architecture.md) beschrieben.
+Das Befehlsformat und das PC-Werkzeug sind in
+[docs/usb-protocol.md](docs/usb-protocol.md) dokumentiert.
 
 ## Roadmap
 

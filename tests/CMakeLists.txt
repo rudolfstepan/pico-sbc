@@ -258,3 +258,32 @@ add_executable(calculator_statistics_tests
 target_include_directories(calculator_statistics_tests PRIVATE ${CALCULATOR_SRC})
 enable_project_warnings(calculator_statistics_tests)
 add_test(NAME calculator_statistics COMMAND calculator_statistics_tests)
+
+add_executable(calculator_usb_protocol_tests
+    calculator/test_calculator_usb_protocol.c
+    ${CALCULATOR_SRC}/calculation_status.c
+    ${CALCULATOR_SRC}/calculator_engine.c
+    ${CALCULATOR_SRC}/calculator_symbols.c
+    ${CALCULATOR_SRC}/calculator_usb_protocol.c
+    ${CALCULATOR_SRC}/expression_editor.c
+    ${CALCULATOR_SRC}/graph_model.c
+    ${CALCULATOR_SRC}/statistics_engine.c
+    ${TINYEXPR_SRC}/tinyexpr.c
+)
+target_include_directories(calculator_usb_protocol_tests PRIVATE
+    ${CALCULATOR_SRC}
+    ${TINYEXPR_SRC}
+)
+target_compile_definitions(calculator_usb_protocol_tests PRIVATE
+    TE_POW_FROM_RIGHT
+)
+enable_project_warnings(calculator_usb_protocol_tests)
+add_test(NAME calculator_usb_protocol COMMAND calculator_usb_protocol_tests)
+
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND)
+    add_test(NAME pico_calc_cli
+        COMMAND ${Python3_EXECUTABLE}
+                ${CMAKE_CURRENT_LIST_DIR}/tools/test_pico_calc_cli.py
+    )
+endif()

@@ -47,6 +47,8 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
   fuer Nullstellen und Schnittpunkte
 - K1 berechnet beziehungsweise fuegt Statistikdaten hinzu; K2 schaltet das
   Displaylayout um
+- USB-CDC-Protokoll und Python-CLI fuer Berechnung, Diagnose sowie
+  JSON-Import und -Export
 
 Die Seitentaste wechselt
 `BASIC -> SCIENTIFIC -> PROGRAMMER -> FORMAT -> TOOLS -> SYMBOLS -> LOGIC -> UNITS -> COMPLEX -> STATS -> BASIC`.
@@ -208,6 +210,23 @@ das letzte normale Rechenergebnis in das aktive Feld.
 K1 entspricht `ADD`. K2 schaltet das Displaylayout um. Der Joystick waehlt
 mit links/rechts eine Zeile und mit oben/unten das X- oder Y-Feld. Modus und
 Zahlenliste werden automatisch im Flash gespeichert.
+
+## USB-Datenaustausch
+
+Ab Firmware `1.1.0` nimmt der Rechner ueber USB zeilenweise CDC-Befehle an.
+Damit lassen sich Ausdruecke berechnen, Variablen und Funktionen setzen sowie
+Verlauf und Statistikdaten lesen oder schreiben. `INFO` zeigt die Firmware- und
+Protokollversion, `DIAG` den kompakten Laufzeitzustand.
+
+```sh
+python -m pip install -r tools/requirements.txt
+python tools/pico_calc_cli.py ports
+python tools/pico_calc_cli.py --port COM5 eval "sqrt(2)"
+python tools/pico_calc_cli.py --port COM5 export calculator-state.json
+```
+
+Die vollstaendige Befehlsreferenz, Linux-Beispiele, Grenzen und das JSON-Format
+stehen in [docs/usb-protocol.md](../../docs/usb-protocol.md).
 
 ## Erweiterte Programmer-Werkzeuge
 

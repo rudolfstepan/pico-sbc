@@ -21,6 +21,10 @@ CMakeFiles/
 cmake_install.cmake
 compile_commands.json
 
+# Python caches
+__pycache__/
+*.py[cod]
+
 # Editor and OS files
 /.agents/
 /.vscode/

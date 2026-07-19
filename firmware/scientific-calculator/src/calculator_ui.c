@@ -12,6 +12,7 @@
 #include "calculator_storage.h"
 #include "calculator_symbols.h"
 #include "calculator_statistics.h"
+#include "calculator_usb_protocol.h"
 #include "calculator_ui_types.h"
 #include "calculator_widgets.h"
 #include "expression_editor.h"
@@ -56,6 +57,7 @@ static calculator_complex_t complex;
 static calculator_statistics_t statistics;
 static bool persistence_dirty;
 static absolute_time_t persistence_deadline;
+static calculator_persisted_state_t usb_state;
 
 static void render_display(void);
 static void render_graph(void);
@@ -958,6 +960,39 @@ static void activate_key(const calc_key_t *key) {
 static const calc_key_t *hit_key(uint16_t x, uint16_t y) {
     calculator_widget_state_t state = current_widget_state();
     return calculator_widget_hit_key(page, &state, x, y);
+}
+
+void calculator_ui_usb_command(const char *command,
+                               char *response, size_t response_size) {
+    capture_persisted_state(&usb_state);
+    calculator_usb_context_t context = {
+        .state = &usb_state,
+        .editor = &expression_state,
+    };
+    calculator_usb_effect_t effect;
+    calculator_usb_execute(&context, command, response, response_size,
+                           &effect);
+    if (!effect.changed) return;
+
+    apply_persisted_state(&usb_state);
+    if (effect.statistics_changed) {
+        statistics.selected = 0;
+        statistics.active_y = false;
+        statistics.editing = false;
+        statistics.view = STATISTICS_VIEW_DATA;
+        expression_editor_clear(&statistics.x_editor);
+        expression_editor_clear(&statistics.y_editor);
+    }
+    just_evaluated = effect.evaluated;
+    snprintf(message, sizeof message,
+             effect.evaluated ? "USB RESULT" : "USB UPDATED");
+    if (page == PAGE_GRAPH) {
+        render_graph();
+    } else {
+        render_display();
+        render_keypad();
+    }
+    if (effect.persistent_changed) mark_persistence_dirty();
 }
 
 void calculator_ui_init(void) {
