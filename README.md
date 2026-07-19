@@ -91,6 +91,8 @@ ctest --test-dir out/tests --output-on-failure
 ## Hardware
 
 Pinbelegung und technische Daten stehen in [docs/hardware.md](docs/hardware.md).
+Die vollstaendige Bedienung des Scientific Calculator beschreibt das
+[Benutzerhandbuch](docs/user-manual.md).
 Die Architektur der Firmware ist in
 [docs/architecture.md](docs/architecture.md) beschrieben.
 Das Befehlsformat und das PC-Werkzeug sind in

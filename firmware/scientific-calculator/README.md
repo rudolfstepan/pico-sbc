@@ -2,6 +2,9 @@
 
 Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 
+Das schrittweise [Benutzerhandbuch](../../docs/user-manual.md) beschreibt
+Installation, Bedienung, alle Rechnermodi und die PC-Anwendung.
+
 ## Funktionen
 
 - Grundrechenarten mit korrekter Operatorrangfolge
