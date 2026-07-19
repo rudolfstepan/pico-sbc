@@ -253,6 +253,10 @@ Rechenfunktionen von TinyExpr, beispielsweise `SIN`, `COS`, `SQRT`, `ABS` und
 `EXP`. Nach 5000 ausgefuehrten Anweisungen wird ein Programm automatisch mit
 `STEP LIMIT` beendet, damit eine Endlosschleife die Bedienung nicht blockiert.
 
+Unter [`examples/basic/`](../../examples/basic/README.md) liegen direkt ladbare
+Testprogramme fuer Ausgabe, Arithmetik, Schleifen, Verzweigungen, `INPUT`,
+Fakultaet und Trigonometrie.
+
 ## USB-Datenaustausch
 
 Ab Firmware `1.1.0` nimmt der Rechner ueber USB zeilenweise CDC-Befehle an.

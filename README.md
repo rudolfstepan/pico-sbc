@@ -15,6 +15,7 @@ flashbare Anwendungen und eine gemeinsame Hardwarebibliothek.
 
 ```text
 firmware/             Anwendungen mit eigener UI und Programmlogik
+examples/basic/       Beispiel- und Testprogramme fuer den BASIC-Modus
 lib/board/            Gemeinsame Board-, LCD- und Touchtreiber
 tests/calculator/     Hardwareunabhaengige Unit-Tests
 tests/tools/          Tests fuer die PC-Werkzeuge

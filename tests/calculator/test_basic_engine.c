@@ -21,6 +21,70 @@ static basic_status_t run_to_stop(basic_engine_t *engine) {
     return status;
 }
 
+static int load_example(basic_engine_t *engine, const char *filename) {
+    char path[512];
+    snprintf(path, sizeof path, "%s/%s", BASIC_EXAMPLES_DIR, filename);
+    FILE *file = fopen(path, "r");
+    if (!file) {
+        fprintf(stderr, "cannot open BASIC example: %s\n", path);
+        return 1;
+    }
+
+    char line[128];
+    while (fgets(line, sizeof line, file)) {
+        size_t length = strcspn(line, "\r\n");
+        line[length] = '\0';
+        if (!line[0]) continue;
+        basic_status_t status = basic_engine_store_line(engine, line);
+        if (status != BASIC_STATUS_OK) {
+            fprintf(stderr, "%s: %s: %s\n", filename, line,
+                    basic_status_text(status));
+            fclose(file);
+            return 1;
+        }
+    }
+    if (ferror(file)) {
+        fprintf(stderr, "cannot read BASIC example: %s\n", path);
+        fclose(file);
+        return 1;
+    }
+    fclose(file);
+    return 0;
+}
+
+static int run_example(const char *filename, const char *input,
+                       const char *expected_last_output) {
+    basic_engine_t engine;
+    basic_engine_init(&engine);
+    if (load_example(&engine, filename)) return 1;
+    if (basic_engine_run(&engine) != BASIC_STATUS_OK) return 1;
+
+    bool input_submitted = false;
+    while (engine.state == BASIC_RUN_RUNNING ||
+           engine.state == BASIC_RUN_INPUT) {
+        if (engine.state == BASIC_RUN_INPUT) {
+            if (!input || input_submitted ||
+                basic_engine_submit_input(&engine, input) != BASIC_STATUS_OK) {
+                fprintf(stderr, "%s: unexpected INPUT state\n", filename);
+                return 1;
+            }
+            input_submitted = true;
+        } else if (basic_engine_step(&engine) != BASIC_STATUS_OK) {
+            fprintf(stderr, "%s: execution failed: %s\n", filename,
+                    basic_status_text(engine.status));
+            return 1;
+        }
+    }
+    if (engine.state != BASIC_RUN_FINISHED || !engine.output_count) return 1;
+    const char *actual = engine.output[engine.output_count - 1u];
+    if (strcmp(actual, expected_last_output) != 0) {
+        fprintf(stderr, "%s: expected '%s', got '%s'\n", filename,
+                expected_last_output, actual);
+        return 1;
+    }
+    return 0;
+}
+
 int main(void) {
     basic_engine_t engine;
     basic_engine_init(&engine);
@@ -92,6 +156,25 @@ int main(void) {
     CHECK(basic_engine_run(&engine) == BASIC_STATUS_OK);
     CHECK(run_to_stop(&engine) == BASIC_STATUS_OK);
     CHECK(isfinite(strtod(engine.output[0], NULL)));
+
+    static const struct {
+        const char *filename;
+        const char *input;
+        const char *expected_last_output;
+    } examples[] = {
+        {"01_hello.bas", NULL, "READY"},
+        {"02_arithmetic.bas", NULL, "42"},
+        {"03_for_loop.bas", NULL, "25"},
+        {"04_input_branch.bas", "-9", "9"},
+        {"05_countdown.bas", NULL, "START"},
+        {"06_sum_goto.bas", NULL, "55"},
+        {"07_factorial.bas", "5", "120"},
+        {"08_trigonometry.bas", NULL, "1"},
+    };
+    for (size_t i = 0; i < sizeof examples / sizeof examples[0]; ++i) {
+        CHECK(run_example(examples[i].filename, examples[i].input,
+                          examples[i].expected_last_output) == 0);
+    }
 
     puts("BASIC engine tests passed");
     return 0;

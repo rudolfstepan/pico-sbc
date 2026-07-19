@@ -43,7 +43,10 @@ target_include_directories(basic_engine_tests PRIVATE
     ${CALCULATOR_SRC}
     ${TINYEXPR_SRC}
 )
-target_compile_definitions(basic_engine_tests PRIVATE TE_POW_FROM_RIGHT)
+target_compile_definitions(basic_engine_tests PRIVATE
+    TE_POW_FROM_RIGHT
+    BASIC_EXAMPLES_DIR="${PROJECT_ROOT}/examples/basic"
+)
 enable_project_warnings(basic_engine_tests)
 add_test(NAME basic_engine COMMAND basic_engine_tests)
 
