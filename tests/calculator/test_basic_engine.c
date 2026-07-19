@@ -170,6 +170,7 @@ int main(void) {
         {"06_sum_goto.bas", NULL, "55"},
         {"07_factorial.bas", "5", "120"},
         {"08_trigonometry.bas", NULL, "1"},
+        {"09_mandelbrot_text.bas", NULL, "100000100"},
     };
     for (size_t i = 0; i < sizeof examples / sizeof examples[0]; ++i) {
         CHECK(run_example(examples[i].filename, examples[i].input,

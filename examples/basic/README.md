@@ -15,8 +15,14 @@ werden. Die Sammlung bleibt innerhalb der Grenzen des Rechners: maximal
 | `06_sum_goto.bas` | Zuweisung und bedingter Ruecksprung | - | `55` |
 | `07_factorial.bas` | Eingabe und iterative Berechnung | `5` | `120` |
 | `08_trigonometry.bas` | `SIN` und `PI()` | - | `1` |
+| `09_mandelbrot_text.bas` | Berechnetes 8x6-Mandelbrotbild aus `0` und `1` | - | `100000100` |
 
 Bei Programmen mit `INPUT` erscheint der Zustand `INPUT` in der PC-Oberflaeche.
 Den Tabellenwert in das Eingabefeld schreiben und `Eingabe senden` waehlen.
 Alle Dateien werden auch durch den Host-Test `basic_engine` geladen und
 ausgefuehrt.
+
+Beim Mandelbrotprogramm ist die erste `1` jeder Ausgabezeile nur ein
+Platzhalter, damit fuehrende Null-Pixel erhalten bleiben. Die folgenden acht
+Ziffern bilden eine Zeile ab: `1` liegt nach acht Iterationen noch in der Menge,
+`0` ist vorher aus dem Radius 2 ausgebrochen.
