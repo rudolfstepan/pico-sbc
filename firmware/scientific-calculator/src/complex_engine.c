@@ -1,7 +1,6 @@
 #include "complex_engine.h"
 
 #include <ctype.h>
-#include <errno.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -169,14 +168,15 @@ static complex_value_t parse_primary(parser_t *parser) {
     }
     if (isdigit((unsigned char)*parser->cursor) || *parser->cursor == '.') {
         char *end = NULL;
-        errno = 0;
         double number = strtod(parser->cursor, &end);
         if (end == parser->cursor) {
             set_error(parser, COMPLEX_STATUS_SYNTAX);
             return value(0.0, 0.0);
         }
         parser->cursor = end;
-        if (errno == ERANGE || !isfinite(number)) {
+        /* Only overflow is a range error; ERANGE underflow still yields a
+         * usable subnormal value. */
+        if (!isfinite(number)) {
             set_error(parser, COMPLEX_STATUS_RANGE);
         }
         return value(number, 0.0);

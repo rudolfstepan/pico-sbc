@@ -61,6 +61,11 @@ int main(void) {
           COMPLEX_STATUS_SYNTAX);
     CHECK(error > 0);
 
+    /* Regression: subnormal literals underflow gradually but are still
+     * representable — they must not be rejected as a range error. */
+    CHECK(evaluate("1e-310", false, &result) == COMPLEX_STATUS_OK);
+    CHECK(evaluate("1e309", false, &result) == COMPLEX_STATUS_RANGE);
+
     puts("complex engine tests passed");
     return 0;
 }

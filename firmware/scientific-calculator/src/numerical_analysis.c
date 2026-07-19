@@ -358,7 +358,9 @@ size_t numerical_find_extrema(numerical_function_t function, void *context,
     }
     unsigned int samples = options.sample_count;
     if (samples > NUMERICAL_MAX_SAMPLES) samples = NUMERICAL_MAX_SAMPLES;
-    double values[NUMERICAL_MAX_SAMPLES + 1];
+    /* Static: ~1.9 KB would exhaust the 2 KB RP2040 stack on its own
+     * (single-threaded firmware, so this is safe). */
+    static double values[NUMERICAL_MAX_SAMPLES + 1];
     double step = (right - left) / samples;
     for (unsigned int i = 0; i <= samples; ++i) {
         if (!function(context, left + i * step, &values[i]) ||

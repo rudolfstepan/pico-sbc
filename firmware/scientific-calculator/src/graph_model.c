@@ -84,10 +84,16 @@ bool graph_model_set_range(graph_model_t *model,
         !(x_max > x_min) || !(y_max > y_min)) {
         return false;
     }
-    model->x_center = (x_min + x_max) * 0.5;
-    model->y_center = (y_min + y_max) * 0.5;
-    model->x_span = x_max - x_min;
-    model->y_span = y_max - y_min;
+    double x_span = x_max - x_min;
+    double y_span = y_max - y_min;
+    /* Finite bounds can still produce an infinite span (e.g. repeated
+     * zoom-out doubling); reject instead of poisoning the model. */
+    if (!isfinite(x_span) || !isfinite(y_span)) return false;
+    /* min + span/2 stays finite even where (min + max) would overflow. */
+    model->x_center = x_min + x_span * 0.5;
+    model->y_center = y_min + y_span * 0.5;
+    model->x_span = x_span;
+    model->y_span = y_span;
     model->trace_x = model->x_center;
     model->table_x = x_min;
     graph_model_clear_analysis(model);

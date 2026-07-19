@@ -82,6 +82,11 @@ void board_beep(uint16_t frequency_hz, uint16_t duration_ms) {
 
     uint32_t clock = 125000000u;
     uint32_t divider16 = clock / frequency_hz / 4096u + 1u;
+    /* pwm_set_clkdiv_int_frac needs an integer part in 1..255: below 16
+     * the integer part would be 0 (invalid), above 4095 it would be
+     * silently truncated through the uint8_t parameter. */
+    if (divider16 < 16u) divider16 = 16u;
+    if (divider16 > 4095u) divider16 = 4095u;
     uint32_t wrap = clock * 16u / divider16 / frequency_hz - 1u;
     if (wrap > 65535u) {
         wrap = 65535u;

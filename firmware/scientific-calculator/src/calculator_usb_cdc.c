@@ -10,13 +10,22 @@
 #define USB_INPUT_BUDGET_PER_TASK 32u
 
 static calculator_usb_line_reader_t line_reader;
+static bool was_connected;
 
 void calculator_usb_cdc_init(void) {
     calculator_usb_line_reader_init(&line_reader);
+    was_connected = false;
 }
 
 void calculator_usb_cdc_task(calculator_usb_command_handler_t handler) {
-    if (!handler || !stdio_usb_connected()) return;
+    bool connected = stdio_usb_connected();
+    if (was_connected && !connected) {
+        /* Drop any partial line so it cannot corrupt the first command
+         * of the next session. */
+        calculator_usb_line_reader_init(&line_reader);
+    }
+    was_connected = connected;
+    if (!handler || !connected) return;
     for (unsigned int count = 0; count < USB_INPUT_BUDGET_PER_TASK; ++count) {
         int character = getchar_timeout_us(0);
         if (character < 0) return;

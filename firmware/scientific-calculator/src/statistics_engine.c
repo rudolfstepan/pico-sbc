@@ -85,6 +85,9 @@ statistics_status_t statistics_engine_summary(
         if (values[i] < minimum) minimum = values[i];
         if (values[i] > maximum) maximum = values[i];
     }
+    /* Rounding in the Welford update can leave a tiny negative sum for
+     * near-constant data; clamp so sqrt() below cannot produce NaN. */
+    if (squared < 0.0) squared = 0.0;
     sort_values(sorted, dataset->count);
     size_t middle = dataset->count / 2;
     double median = dataset->count & 1u
@@ -153,12 +156,14 @@ statistics_status_t statistics_engine_histogram(
     memset(counts, 0, STATISTICS_HISTOGRAM_BINS * sizeof counts[0]);
     *minimum = summary.minimum;
     *maximum = summary.maximum;
-    if (summary.minimum == summary.maximum) {
+    double width = (summary.maximum - summary.minimum) /
+                   (double)STATISTICS_HISTOGRAM_BINS;
+    /* width can round to 0 for subnormal spans even when min != max;
+     * dividing by it would cast NaN to size_t (undefined behaviour). */
+    if (!(width > 0.0)) {
         counts[STATISTICS_HISTOGRAM_BINS / 2] = dataset->count;
         return STATISTICS_STATUS_OK;
     }
-    double width = (summary.maximum - summary.minimum) /
-                   (double)STATISTICS_HISTOGRAM_BINS;
     for (size_t i = 0; i < dataset->count; ++i) {
         size_t bin = (size_t)((dataset->x[i] - summary.minimum) / width);
         if (bin >= STATISTICS_HISTOGRAM_BINS) {

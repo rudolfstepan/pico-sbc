@@ -120,6 +120,13 @@ int main(void) {
         failures++;
     }
 
+    /* Regression: finite bounds whose span overflows to infinity must be
+     * rejected instead of poisoning the model. */
+    if (graph_model_set_range(&model, -1.7e308, 1.7e308, -1.0, 1.0)) {
+        printf("FAIL: infinite span accepted\n");
+        failures++;
+    }
+
     if (failures) {
         printf("%d graph model test(s) failed\n", failures);
         return 1;

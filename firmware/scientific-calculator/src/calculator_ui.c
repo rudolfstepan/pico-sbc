@@ -23,6 +23,7 @@
 #include "touch_gt911.h"
 #include "pico/stdlib.h"
 
+#include <math.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -432,6 +433,9 @@ static void activate_format_key(const calc_key_t *key) {
         snprintf(message, sizeof message, "Q%u FORMAT", fixed_fraction_bits);
     } else if (strcmp(key->token, "A32") == 0) {
         programmer_engine_set_word_bits(&programmer, 32);
+        if (fixed_fraction_bits >= programmer.word_bits) {
+            fixed_fraction_bits = programmer.word_bits - 1u;
+        }
         set_programmer_value(number_format_float32_bits(ans));
         programmer_engine_set_base(&programmer, PROGRAMMER_HEX);
         snprintf(message, sizeof message, "ANS TO FLOAT32");
@@ -443,13 +447,24 @@ static void activate_format_key(const calc_key_t *key) {
         snprintf(message, sizeof message, "ANS TO FLOAT64");
         render_keypad();
     } else if (strcmp(key->token, "32A") == 0) {
-        ans = number_format_bits_float32((uint32_t)programmer.value);
-        snprintf(result_text, sizeof result_text, "%.12g", ans);
-        snprintf(message, sizeof message, "FLOAT32 TO ANS");
+        double converted = number_format_bits_float32(
+            (uint32_t)programmer.value);
+        if (isfinite(converted)) {
+            ans = converted;
+            snprintf(result_text, sizeof result_text, "%.12g", ans);
+            snprintf(message, sizeof message, "FLOAT32 TO ANS");
+        } else {
+            snprintf(message, sizeof message, "NOT FINITE");
+        }
     } else if (strcmp(key->token, "64A") == 0) {
-        ans = number_format_bits_float64(programmer.value);
-        snprintf(result_text, sizeof result_text, "%.12g", ans);
-        snprintf(message, sizeof message, "FLOAT64 TO ANS");
+        double converted = number_format_bits_float64(programmer.value);
+        if (isfinite(converted)) {
+            ans = converted;
+            snprintf(result_text, sizeof result_text, "%.12g", ans);
+            snprintf(message, sizeof message, "FLOAT64 TO ANS");
+        } else {
+            snprintf(message, sizeof message, "NOT FINITE");
+        }
     } else if (strcmp(key->token, "ZERO") == 0) {
         set_programmer_value(0);
         snprintf(message, sizeof message, "ZERO");
@@ -518,11 +533,21 @@ static void activate_format_key(const calc_key_t *key) {
 
 static void activate_memory_key(const calc_key_t *key) {
     if (strcmp(key->token, "M+") == 0) {
-        memory_value += ans;
-        snprintf(message, sizeof message, "MEMORY PLUS");
+        double updated = memory_value + ans;
+        if (isfinite(updated)) {
+            memory_value = updated;
+            snprintf(message, sizeof message, "MEMORY PLUS");
+        } else {
+            snprintf(message, sizeof message, "MEMORY RANGE");
+        }
     } else if (strcmp(key->token, "M-") == 0) {
-        memory_value -= ans;
-        snprintf(message, sizeof message, "MEMORY MINUS");
+        double updated = memory_value - ans;
+        if (isfinite(updated)) {
+            memory_value = updated;
+            snprintf(message, sizeof message, "MEMORY MINUS");
+        } else {
+            snprintf(message, sizeof message, "MEMORY RANGE");
+        }
     } else if (strcmp(key->token, "MR") == 0) {
         char token[32];
         snprintf(token, sizeof token, "%.12g", memory_value);

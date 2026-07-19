@@ -406,8 +406,10 @@ static bool implicant_covers(const implicant_t *implicant,
 static logic_status_t collect_prime_implicants(
     const logic_program_t *program, bool target_value,
     implicant_t *primes, size_t *prime_count, uint64_t *target_rows) {
-    implicant_t current[IMPLICANT_CAPACITY];
-    implicant_t next[IMPLICANT_CAPACITY];
+    /* Static: ~12 KB combined would overflow the 2 KB RP2040 stack.
+     * The firmware is single-threaded, so this is safe. */
+    static implicant_t current[IMPLICANT_CAPACITY];
+    static implicant_t next[IMPLICANT_CAPACITY];
     size_t current_count = 0;
     *prime_count = 0;
     *target_rows = 0;
@@ -495,7 +497,8 @@ logic_status_t logic_engine_format_simplified(
     if (!program || !program->node_count || !output || output_size == 0) {
         return LOGIC_STATUS_EMPTY;
     }
-    implicant_t primes[IMPLICANT_CAPACITY];
+    /* Static: too large for the 2 KB RP2040 stack (single-threaded). */
+    static implicant_t primes[IMPLICANT_CAPACITY];
     size_t prime_count = 0;
     uint64_t target_rows = 0;
     logic_status_t status = collect_prime_implicants(
@@ -511,8 +514,9 @@ logic_status_t logic_engine_format_simplified(
         return output_size >= 2 ? LOGIC_STATUS_OK : LOGIC_STATUS_OUTPUT_FULL;
     }
 
-    uint64_t prime_rows[IMPLICANT_CAPACITY];
-    bool selected[IMPLICANT_CAPACITY] = {false};
+    static uint64_t prime_rows[IMPLICANT_CAPACITY];
+    static bool selected[IMPLICANT_CAPACITY];
+    memset(selected, 0, sizeof selected);
     for (size_t i = 0; i < prime_count; ++i) {
         prime_rows[i] = implicant_rows(program, &primes[i], target_rows);
     }

@@ -78,6 +78,30 @@ int main(void) {
     CHECK(statistics_engine_add(&data, INFINITY, 0.0) ==
           STATISTICS_STATUS_NONFINITE);
 
+    /* Regression: Welford rounding on near-constant data must not yield a
+     * NaN standard deviation. */
+    statistics_engine_clear(&data);
+    CHECK(statistics_engine_add(&data, 1e16, 0.0) == STATISTICS_STATUS_OK);
+    CHECK(statistics_engine_add(&data, 1e16 + 2.0, 0.0) ==
+          STATISTICS_STATUS_OK);
+    CHECK(statistics_engine_add(&data, 1e16 + 4.0, 0.0) ==
+          STATISTICS_STATUS_OK);
+    CHECK(statistics_engine_summary(&data, false, &summary) ==
+          STATISTICS_STATUS_OK);
+    CHECK(isfinite(summary.population_stddev));
+    CHECK(isfinite(summary.sample_stddev));
+    CHECK(summary.population_stddev >= 0.0);
+
+    /* Regression: subnormal span must not divide by a zero bin width. */
+    statistics_engine_clear(&data);
+    CHECK(statistics_engine_add(&data, 0.0, 0.0) == STATISTICS_STATUS_OK);
+    CHECK(statistics_engine_add(&data, 5e-324, 0.0) == STATISTICS_STATUS_OK);
+    CHECK(statistics_engine_histogram(&data, bins, &minimum, &maximum) ==
+          STATISTICS_STATUS_OK);
+    total = 0;
+    for (size_t i = 0; i < STATISTICS_HISTOGRAM_BINS; ++i) total += bins[i];
+    CHECK(total == 2);
+
     puts("statistics engine tests passed");
     return 0;
 }

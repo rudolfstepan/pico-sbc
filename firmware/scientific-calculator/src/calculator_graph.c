@@ -725,7 +725,11 @@ void calculator_graph_render(const calculator_graph_t *graph,
     }
 
     if (!compiled_count) {
-        snprintf(message, message_size, "SET FUNCTION IN TOOLS");
+        /* Keep a compile error (e.g. "F1 SYNTAX 3") visible instead of
+         * claiming that no function is set. */
+        if (!message[0]) {
+            snprintf(message, message_size, "SET FUNCTION IN TOOLS");
+        }
     } else if (!message[0]) {
         snprintf(message, message_size, "GRAPH READY");
     }
