@@ -12,7 +12,7 @@ ein Test auf dem echten LCD erfolgreich sind.
 | 0 | Technische Grundlage | keine | abgeschlossen |
 | 1 | Graph 2.0 | Phase 0 | abgeschlossen |
 | 2 | Numerische Analyse | Phase 1 | abgeschlossen |
-| 3 | Variablen und Benutzerfunktionen | Phase 2 | geplant |
+| 3 | Variablen und Benutzerfunktionen | Phase 2 | abgeschlossen |
 | 4 | Permanente Speicherung | Phase 3 | geplant |
 | 5 | Programmer-Erweiterungen | Phase 0 | geplant |
 | 6 | Einheiten und Konstanten | Phase 3 | geplant |
@@ -71,14 +71,19 @@ Lesbarkeit und Laufzeit wurden anschliessend erfolgreich auf dem Pico geprueft.
 
 ## Phase 3: Variablen und Benutzerfunktionen
 
-- [ ] Variablen `A` bis `F` speichern und in Ausdruecken verwenden.
-- [ ] Benutzerfunktionen wie `F1(x)=...` bearbeiten und aufrufen.
-- [ ] Favoritentasten mit haeufig verwendeten Funktionen belegen.
-- [ ] Variablen und Funktionen in einer uebersichtlichen Liste verwalten.
-- [ ] Rekursive oder ungueltige Funktionsdefinitionen sicher ablehnen.
+- [x] Variablen `A` bis `F` speichern und in Ausdruecken verwenden.
+- [x] Benutzerfunktionen wie `F1(x)=...` bearbeiten und aufrufen.
+- [x] Favoritentasten mit haeufig verwendeten Funktionen belegen.
+- [x] Variablen und Funktionen in einer uebersichtlichen Liste verwalten.
+- [x] Rekursive oder ungueltige Funktionsdefinitionen sicher ablehnen.
 
 **Fertig, wenn:** Variablen und Funktionen in BASIC, SCIENTIFIC, TOOLS und
 GRAPH konsistent verwendet werden koennen.
+
+Abschlussstand: Das Symbolmodell, die TinyExpr-Anbindung, Navigation,
+Tastenbelegung und LCD-Grenzen werden durch Host-Tests abgedeckt. Beide
+Firmware-Ziele bauen. Variablen, Benutzerfunktionen, Favoriten, Graphanbindung,
+Fehlerbehandlung und Touchbedienung wurden auf dem Pico erfolgreich geprueft.
 
 ## Phase 4: Permanente Speicherung
 

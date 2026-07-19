@@ -31,12 +31,15 @@ Der Rechner trennt Darstellung und Rechenlogik:
 - `graph_model`: drei Funktionsplaetze, Viewport, Trace, Tabelle,
   Auto-Skalierung sowie Nullstellen- und Schnittpunktsuche
 - `calculator_graph`: TinyExpr-Anbindung und LCD-Darstellung des Graphmodells
+- `calculator_symbols`: Variablen A-F, Benutzerfunktionen F1-F3,
+  Favoritenbelegung und Rekursionserkennung
 - `numerical_analysis`: hardwareunabhaengige Nullstellen-, Schnittpunkt-,
   Ableitungs-, Integral- und Extremumsalgorithmen mit Toleranzgrenzen
 - `expression_editor`, `calculator_list` und `calculator_dialog`:
   hardwareunabhaengige Eingabe-, Listen- und Dialogzustaende
 - `calculation_status`: gemeinsame Fehlercodes und lesbare Meldungen
-- `calculator_engine`: mathematische Ausdruecke und TinyExpr-Anbindung
+- `calculator_engine`: mathematische Ausdruecke, Symbolauflosung und
+  TinyExpr-Anbindung mit geschuetzten Benutzerfunktionsaufrufen
 - `programmer_engine`: 64-Bit-Zahlenbasen und Bitoperationen
 - `number_formats`: Zweierkomplement, Festkomma und IEEE-754
 

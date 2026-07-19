@@ -89,7 +89,7 @@ void calculator_page_render_format(const programmer_engine_t *programmer,
     char signed_text[24];
     char status[48];
     char raw_line[24];
-    char fixed_line[48];
+    char fixed_line[52];
     char float_line[64];
 
     programmer_engine_format(raw, PROGRAMMER_HEX,
@@ -149,5 +149,38 @@ void calculator_page_render_tools(double memory_value, const char *message,
                   COL_TEXT, COL_BG, 1);
     lcd_draw_text(6, 64, calculator_widget_tail(result_line, 78),
                   COL_MUTED, COL_BG, 1);
+    finish_display();
+}
+
+void calculator_page_render_symbols(const calculator_symbols_t *symbols,
+                                    size_t selected_function,
+                                    const char *message) {
+    char status[64];
+    char variables[2][80];
+    char function[CALCULATOR_USER_FUNCTION_COUNT][79];
+
+    snprintf(status, sizeof status, "SYMBOLS  F%u  %s",
+             (unsigned int)(selected_function + 1), message);
+    snprintf(variables[0], sizeof variables[0], "A %.5g   B %.5g   C %.5g",
+             symbols->variables[0], symbols->variables[1],
+             symbols->variables[2]);
+    snprintf(variables[1], sizeof variables[1], "D %.5g   E %.5g   F %.5g",
+             symbols->variables[3], symbols->variables[4],
+             symbols->variables[5]);
+    for (size_t i = 0; i < CALCULATOR_USER_FUNCTION_COUNT; ++i) {
+        snprintf(function[i], sizeof function[i], "F%u(x)=%.71s",
+                 (unsigned int)(i + 1),
+                 symbols->functions[i][0] ? symbols->functions[i] : "<empty>");
+    }
+
+    clear_display();
+    lcd_draw_text(6, 3, status, COL_MUTED, COL_BG, 1);
+    lcd_draw_text(6, 16, variables[0], COL_TEXT, COL_BG, 1);
+    lcd_draw_text(6, 29, variables[1], COL_TEXT, COL_BG, 1);
+    for (size_t i = 0; i < CALCULATOR_USER_FUNCTION_COUNT; ++i) {
+        lcd_draw_text(6, 42 + (int)i * 13, function[i],
+                      i == selected_function ? COL_TEXT : COL_MUTED,
+                      COL_BG, 1);
+    }
     finish_display();
 }

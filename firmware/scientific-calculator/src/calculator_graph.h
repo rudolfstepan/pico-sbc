@@ -2,6 +2,7 @@
 #define CALCULATOR_GRAPH_H
 
 #include "calculator_widgets.h"
+#include "calculator_symbols.h"
 #include "graph_model.h"
 
 #include <stddef.h>
@@ -22,11 +23,14 @@ void calculator_graph_pan(calculator_graph_t *graph,
                           double vertical_fraction);
 void calculator_graph_zoom(calculator_graph_t *graph, double factor);
 calc_status_t calculator_graph_auto_scale(calculator_graph_t *graph,
-                                          double ans);
+                                          double ans,
+                                          const calculator_symbols_t *symbols);
 calc_status_t calculator_graph_analyze(calculator_graph_t *graph, double ans,
+                                       const calculator_symbols_t *symbols,
                                        calculator_graph_analysis_t analysis);
 void calculator_graph_render(const calculator_graph_t *graph,
                              double ans,
+                             const calculator_symbols_t *symbols,
                              const calculator_widget_state_t *widget_state,
                              char *message, size_t message_size);
 

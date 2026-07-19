@@ -8,6 +8,7 @@ add_executable(lafvin_scientific_calculator
     src/calculator_list.c
     src/calculator_navigation.c
     src/calculator_pages.c
+    src/calculator_symbols.c
     src/calculator_widgets.c
     src/number_formats.c
     src/programmer_engine.c

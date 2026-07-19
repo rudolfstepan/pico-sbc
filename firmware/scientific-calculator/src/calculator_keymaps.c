@@ -149,7 +149,7 @@ static const calc_key_t format_keys[] = {
 };
 
 static const calc_key_t tools_keys[] = {
-    {"BASIC", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"SYMBOLS", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
     {"GRAPH", "", 1, 0, ACT_GOTO_GRAPH, STYLE_COMMAND},
     {"M+", "M+", 2, 0, ACT_MEMORY, STYLE_FUNCTION},
     {"M-", "M-", 3, 0, ACT_MEMORY, STYLE_FUNCTION},
@@ -183,6 +183,43 @@ static const calc_key_t tools_keys[] = {
     {"-", "-", 3, 4, ACT_INSERT, STYLE_FUNCTION},
     {"*", "*", 4, 4, ACT_INSERT, STYLE_FUNCTION},
     {"/", "/", 5, 4, ACT_INSERT, STYLE_FUNCTION},
+};
+
+static const calc_key_t symbol_keys[] = {
+    {"BASIC", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"A", "A", 1, 0, ACT_INSERT, STYLE_NUMBER},
+    {"B", "B", 2, 0, ACT_INSERT, STYLE_NUMBER},
+    {"C", "C", 3, 0, ACT_INSERT, STYLE_NUMBER},
+    {"D", "D", 4, 0, ACT_INSERT, STYLE_NUMBER},
+    {"E", "E", 5, 0, ACT_INSERT, STYLE_NUMBER},
+
+    {"F", "F", 0, 1, ACT_INSERT, STYLE_NUMBER},
+    {"A=ANS", "A", 1, 1, ACT_SYMBOL_STORE, STYLE_FUNCTION},
+    {"B=ANS", "B", 2, 1, ACT_SYMBOL_STORE, STYLE_FUNCTION},
+    {"C=ANS", "C", 3, 1, ACT_SYMBOL_STORE, STYLE_FUNCTION},
+    {"D=ANS", "D", 4, 1, ACT_SYMBOL_STORE, STYLE_FUNCTION},
+    {"E=ANS", "E", 5, 1, ACT_SYMBOL_STORE, STYLE_FUNCTION},
+
+    {"F=ANS", "F", 0, 2, ACT_SYMBOL_STORE, STYLE_FUNCTION},
+    {"F1", "0", 1, 2, ACT_SYMBOL_FUNCTION, STYLE_FUNCTION},
+    {"F2", "1", 2, 2, ACT_SYMBOL_FUNCTION, STYLE_FUNCTION},
+    {"F3", "2", 3, 2, ACT_SYMBOL_FUNCTION, STYLE_FUNCTION},
+    {"EDIT", "", 4, 2, ACT_SYMBOL_EDIT, STYLE_COMMAND},
+    {"SAVE", "", 5, 2, ACT_SYMBOL_SAVE, STYLE_EQUALS},
+
+    {"FAV1", "0", 0, 3, ACT_FAVORITE, STYLE_FUNCTION},
+    {"FAV2", "1", 1, 3, ACT_FAVORITE, STYLE_FUNCTION},
+    {"FAV3", "2", 2, 3, ACT_FAVORITE, STYLE_FUNCTION},
+    {"FAV4", "3", 3, 3, ACT_FAVORITE, STYLE_FUNCTION},
+    {"FAV5", "4", 4, 3, ACT_FAVORITE, STYLE_FUNCTION},
+    {"FAV6", "5", 5, 3, ACT_FAVORITE, STYLE_FUNCTION},
+
+    {"SET1", "0", 0, 4, ACT_FAVORITE_SET, STYLE_COMMAND},
+    {"SET2", "1", 1, 4, ACT_FAVORITE_SET, STYLE_COMMAND},
+    {"SET3", "2", 2, 4, ACT_FAVORITE_SET, STYLE_COMMAND},
+    {"SET4", "3", 3, 4, ACT_FAVORITE_SET, STYLE_COMMAND},
+    {"SET5", "4", 4, 4, ACT_FAVORITE_SET, STYLE_COMMAND},
+    {"SET6", "5", 5, 4, ACT_FAVORITE_SET, STYLE_COMMAND},
 };
 
 static const calc_key_t graph_plot_keys[] = {
@@ -278,6 +315,9 @@ const calc_key_t *calculator_keymap(calc_page_t page, size_t *count) {
         case PAGE_TOOLS:
             *count = sizeof tools_keys / sizeof tools_keys[0];
             return tools_keys;
+        case PAGE_SYMBOLS:
+            *count = sizeof symbol_keys / sizeof symbol_keys[0];
+            return symbol_keys;
         case PAGE_GRAPH:
             return calculator_graph_keymap(GRAPH_VIEW_PLOT, count);
         case PAGE_BASIC:

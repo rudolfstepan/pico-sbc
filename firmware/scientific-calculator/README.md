@@ -11,7 +11,8 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 - `sinh`, `cosh`, `tanh`, `ln`, `log`, `exp`, `sqrt`
 - Betrag, Abrunden, Fakultaet, Kombinationen und Permutationen
 - Konstanten Pi und e
-- Fuenf Touch-Ebenen: `BASIC`, `SCIENTIFIC`, `PROGRAMMER`, `FORMAT` und `TOOLS`
+- Sechs Touch-Ebenen: `BASIC`, `SCIENTIFIC`, `PROGRAMMER`, `FORMAT`, `TOOLS`
+  und `SYMBOLS`
 - `PROGRAMMER`-Ebene fuer exakte 64-Bit-Werte
 - Direkte Umwandlung zwischen Dezimal, Hexadezimal und Binaer
 - Bitoperationen `AND`, `OR`, `XOR`, `NOT`, Schieben und Zweierkomplement
@@ -22,6 +23,8 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 - Ausdruckseditor mit sichtbarem Cursor und Joystick-Navigation
 - Acht Eintraege Rechenverlauf mit erneutem Laden
 - Speicherregister mit `M+`, `M-`, `MR` und `MC`
+- Sechs Variablen `A` bis `F`, drei Benutzerfunktionen `F1(x)` bis `F3(x)`
+  und sechs frei belegbare Favoritentasten
 - Graphenmodus fuer Ausdruecke mit `x`, inklusive dynamischem Koordinatengitter,
   Achsenbeschriftung, Verschieben und Zoom
 - Drei einzeln aktivierbare Graphfunktionen `F1`, `F2` und `F3` in Cyan,
@@ -31,7 +34,7 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 - K1 berechnet, K2 loescht das letzte Zeichen
 
 Die Seitentaste wechselt
-`BASIC -> SCIENTIFIC -> PROGRAMMER -> FORMAT -> TOOLS -> BASIC`.
+`BASIC -> SCIENTIFIC -> PROGRAMMER -> FORMAT -> TOOLS -> SYMBOLS -> BASIC`.
 Der Graphenmodus wird von `TOOLS` aus geoeffnet. Der Joystick bewegt im
 Editor den Cursor und im Graphenmodus den sichtbaren Ausschnitt.
 Funktionen setzen automatisch eine oeffnende Klammer. Die schliessende Klammer
@@ -92,6 +95,26 @@ Ergebnisse enthalten die benoetigte Iterationszahl. Fehler wie ungueltige
 Wertebereiche oder fehlende Konvergenz werden direkt im Graphkopf angezeigt.
 Mit `RANGE` und dem Joystick lassen sich Intervall und Startwert vor der
 Berechnung anpassen.
+
+## Variablen, Funktionen und Favoriten
+
+Auf `SYMBOLS` werden A-F sowie die drei Funktionsdefinitionen gemeinsam
+angezeigt.
+
+- `A=ANS` bis `F=ANS` speichern das aktuelle Ergebnis in der Variablen.
+- `A` bis `F` fuegen die Variable in den Ausdruck ein und wechseln zu `TOOLS`.
+- `F1`, `F2` oder `F3` waehlt eine Benutzerfunktion aus.
+- `EDIT` laedt ihre Definition nach `TOOLS`. Dort wird sie bearbeitet; danach
+  wechselt `SYMBOLS` zurueck zur Liste und `SAVE` uebernimmt sie.
+- Eine leere Definition kann mit `AC -> SYMBOLS -> SAVE` geloescht werden.
+- Die sechs Favoritentasten fuegen ihren Text in den Ausdruck ein. `SET1` bis
+  `SET6` belegen sie mit dem aktuellen Ausdruck neu.
+
+Benutzerfunktionen duerfen A-F, `ANS`, `x`, alle normalen mathematischen
+Funktionen und bereits definierte F1-F3 verwenden. Direkte und indirekte
+Rekursion sowie Syntaxfehler werden beim Speichern abgelehnt. Gespeicherte
+Funktionen koennen beispielsweise als `f1(2)` in BASIC, SCIENTIFIC und TOOLS
+aufgerufen oder in weiteren Graphfunktionen verwendet werden.
 
 ## Build
 

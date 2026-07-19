@@ -25,12 +25,15 @@ static calculator_widget_state_t widget_state(const graph_model_t *graph) {
     return state;
 }
 
-static void expect_render_in_bounds(graph_model_t *graph, graph_view_t view) {
+static void expect_render_in_bounds(graph_model_t *graph,
+                                    const calculator_symbols_t *symbols,
+                                    graph_view_t view) {
     char message[24] = "READY";
     graph_model_set_view(graph, view);
     calculator_widget_state_t state = widget_state(graph);
     mock_lcd_reset();
-    calculator_graph_render(graph, 0.0, &state, message, sizeof message);
+    calculator_graph_render(graph, 0.0, symbols, &state, message,
+                            sizeof message);
     if (mock_lcd_had_out_of_bounds_draw()) {
         printf("FAIL: out-of-bounds drawing in graph view %d\n", view);
         failures++;
@@ -43,11 +46,13 @@ static void expect_render_in_bounds(graph_model_t *graph, graph_view_t view) {
 
 int main(void) {
     graph_model_t graph;
+    calculator_symbols_t symbols;
+    calculator_symbols_init(&symbols);
     calculator_graph_init(&graph);
     graph_model_set_function(&graph, 0, "sin(x)");
 
     calc_engine_set_degrees(true);
-    if (calculator_graph_auto_scale(&graph, 0.0) != CALC_OK) {
+    if (calculator_graph_auto_scale(&graph, 0.0, &symbols) != CALC_OK) {
         printf("FAIL: sine auto scale\n");
         failures++;
     }
@@ -60,10 +65,28 @@ int main(void) {
         failures++;
     }
 
+    calculator_symbols_set_variable(&symbols, 0, 2.0);
+    calculator_symbols_set_function(&symbols, 0, "x+A");
+    graph_model_set_function(&graph, 0, "f1(x)");
+    calc_compiled_t *symbol_graph = calc_engine_compile_x_symbols(
+        graph.functions[0].expression, 0.0, &symbols, NULL);
+    double symbol_value = 0.0;
+    if (!symbol_graph ||
+        !calc_engine_evaluate_x(symbol_graph, 3.0, &symbol_value) ||
+        fabs(symbol_value - 5.0) > 1e-12) {
+        printf("FAIL: graph does not use shared symbols, value=%.12g\n",
+               symbol_value);
+        failures++;
+    }
+    calc_engine_free(symbol_graph);
+    calculator_symbols_set_function(&symbols, 0, "");
+    graph_model_set_function(&graph, 0, "sin(x)");
+
     char message[24] = "READY";
     calculator_widget_state_t state = widget_state(&graph);
     mock_lcd_reset();
-    calculator_graph_render(&graph, 0.0, &state, message, sizeof message);
+    calculator_graph_render(&graph, 0.0, &symbols, &state, message,
+                            sizeof message);
     if (!calc_engine_uses_degrees()) {
         printf("FAIL: render did not restore DEG mode\n");
         failures++;
@@ -93,7 +116,8 @@ int main(void) {
         failures++;
     }
 
-    if (calculator_graph_analyze(&graph, 0.0, CALCULATOR_GRAPH_ROOT) !=
+    if (calculator_graph_analyze(&graph, 0.0, &symbols,
+                                 CALCULATOR_GRAPH_ROOT) !=
             CALC_OK ||
         strstr(graph.analysis_text, "ROOT F1") == NULL ||
         fabs(graph.trace_x) > 1e-8) {
@@ -101,13 +125,13 @@ int main(void) {
         failures++;
     }
     graph.trace_x = 0.0;
-    if (calculator_graph_analyze(&graph, 0.0,
+    if (calculator_graph_analyze(&graph, 0.0, &symbols,
                                  CALCULATOR_GRAPH_DERIVATIVE) != CALC_OK ||
         strstr(graph.analysis_text, "DERIV F1") == NULL) {
         printf("FAIL: graph derivative analysis: %s\n", graph.analysis_text);
         failures++;
     }
-    if (calculator_graph_analyze(&graph, 0.0,
+    if (calculator_graph_analyze(&graph, 0.0, &symbols,
                                  CALCULATOR_GRAPH_INTEGRAL) != CALC_OK ||
         strstr(graph.analysis_text, "INTEGR F1") == NULL) {
         printf("FAIL: graph integral analysis: %s\n", graph.analysis_text);
@@ -115,14 +139,14 @@ int main(void) {
     }
     graph_model_set_analysis_bound(&graph, true, 0.0);
     graph_model_set_analysis_bound(&graph, false, 3.14159265358979323846);
-    if (calculator_graph_analyze(&graph, 0.0,
+    if (calculator_graph_analyze(&graph, 0.0, &symbols,
                                  CALCULATOR_GRAPH_INTEGRAL) != CALC_OK ||
         strstr(graph.analysis_text, "= 2") == NULL) {
         printf("FAIL: custom interval integral: %s\n", graph.analysis_text);
         failures++;
     }
     graph_model_use_view_interval(&graph);
-    if (calculator_graph_analyze(&graph, 0.0,
+    if (calculator_graph_analyze(&graph, 0.0, &symbols,
                                  CALCULATOR_GRAPH_EXTREMA) != CALC_OK ||
         strstr(graph.analysis_text, "EXT F1") == NULL) {
         printf("FAIL: graph extrema analysis: %s\n", graph.analysis_text);
@@ -131,7 +155,7 @@ int main(void) {
     graph_model_set_function(&graph, 1, "0");
     graph_model_select_function(&graph, 0);
     graph.trace_x = 0.0;
-    if (calculator_graph_analyze(&graph, 0.0,
+    if (calculator_graph_analyze(&graph, 0.0, &symbols,
                                  CALCULATOR_GRAPH_INTERSECTION) != CALC_OK ||
         strstr(graph.analysis_text, "XING F1/F2") == NULL) {
         printf("FAIL: graph intersection analysis: %s\n", graph.analysis_text);
@@ -145,15 +169,15 @@ int main(void) {
     graph_model_set_function(&graph, 1, "");
     graph_model_set_range(&graph, 0.0, 3.14159265358979323846, -1.5, 1.5);
     graph.trace_x = 0.0;
-    calculator_graph_analyze(&graph, 0.0, CALCULATOR_GRAPH_ROOT);
+    calculator_graph_analyze(&graph, 0.0, &symbols, CALCULATOR_GRAPH_ROOT);
     graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS);
-    expect_render_in_bounds(&graph, GRAPH_VIEW_ANALYSIS);
-    expect_render_in_bounds(&graph, GRAPH_VIEW_ANALYSIS_MORE);
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_ANALYSIS);
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_ANALYSIS_MORE);
 
-    expect_render_in_bounds(&graph, GRAPH_VIEW_MENU);
-    expect_render_in_bounds(&graph, GRAPH_VIEW_ANALYSIS);
-    expect_render_in_bounds(&graph, GRAPH_VIEW_TABLE);
-    expect_render_in_bounds(&graph, GRAPH_VIEW_RANGE);
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_MENU);
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_ANALYSIS);
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_TABLE);
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_RANGE);
 
     if (failures) {
         printf("%d graph renderer test(s) failed\n", failures);

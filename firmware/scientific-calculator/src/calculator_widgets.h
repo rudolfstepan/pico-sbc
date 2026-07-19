@@ -24,6 +24,7 @@ typedef struct {
     graph_view_t graph_view;
     unsigned int graph_active_mask;
     size_t graph_selected_function;
+    const char *favorites[6];
 } calculator_widget_state_t;
 
 void calculator_widget_draw_key(const calc_key_t *key, bool pressed,

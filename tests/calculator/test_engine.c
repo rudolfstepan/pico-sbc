@@ -57,6 +57,50 @@ int main(void) {
     }
     calc_engine_free(graph);
 
+    calculator_symbols_t symbols;
+    calculator_symbols_init(&symbols);
+    calculator_symbols_set_variable(&symbols, 0, 5.0);
+    calculator_symbols_set_variable(&symbols, 1, 3.0);
+    if (calculator_symbols_set_function(&symbols, 0, "x^2+A") !=
+            CALCULATOR_SYMBOL_OK ||
+        calculator_symbols_set_function(&symbols, 1, "f1(x)+B") !=
+            CALCULATOR_SYMBOL_OK) {
+        printf("FAIL: could not define user functions\n");
+        failures++;
+    }
+
+    double symbol_result = 0.0;
+    int symbol_error = 0;
+    calc_status_t symbol_status = calc_engine_evaluate_symbols(
+        "f2(4)+A", 0.0, &symbols, &symbol_result, &symbol_error);
+    if (symbol_status != CALC_OK || fabs(symbol_result - 29.0) > 1e-12) {
+        printf("FAIL: symbol evaluation, status=%d result=%.12g error=%d\n",
+               symbol_status, symbol_result, symbol_error);
+        failures++;
+    }
+
+    graph = calc_engine_compile_x_symbols("f1(x)+B", 0.0, &symbols,
+                                          &symbol_error);
+    graph_result = 0.0;
+    if (!graph || !calc_engine_evaluate_x(graph, 2.0, &graph_result) ||
+        fabs(graph_result - 12.0) > 1e-12) {
+        printf("FAIL: symbol graph expression, error=%d result=%.12g\n",
+               symbol_error, graph_result);
+        failures++;
+    }
+    calc_engine_free(graph);
+
+    calculator_symbols_t invalid = symbols;
+    snprintf(invalid.functions[2], sizeof invalid.functions[2], "sqrt(");
+    size_t invalid_function = 99;
+    if (calc_engine_validate_symbols(&invalid, &invalid_function,
+                                     &symbol_error) != CALC_PARSE_ERROR ||
+        invalid_function != 2 || symbol_error == 0) {
+        printf("FAIL: invalid function validation, function=%zu error=%d\n",
+               invalid_function, symbol_error);
+        failures++;
+    }
+
     graph_error = 0;
     graph = calc_engine_compile_x("sin(x)", 0.0, &graph_error);
     graph_result = 0.0;

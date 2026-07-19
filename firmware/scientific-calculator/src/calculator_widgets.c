@@ -3,6 +3,7 @@
 #include "calculator_keymaps.h"
 #include "lcd_st7796.h"
 
+#include <stdio.h>
 #include <string.h>
 
 #define COL_BG       RGB565(0, 0, 0)
@@ -62,8 +63,18 @@ void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
                                 const calculator_widget_state_t *state) {
     int x = key_x(key);
     int y = key_y(key);
+    char favorite_label[12];
     const char *label = key->action == ACT_ANGLE
         ? (state->degrees ? "DEG" : "RAD") : key->label;
+    if (key->action == ACT_FAVORITE && key->token[0] >= '0' &&
+        key->token[0] <= '5' && key->token[1] == '\0') {
+        size_t index = (size_t)(key->token[0] - '0');
+        if (state->favorites[index] && state->favorites[index][0]) {
+            snprintf(favorite_label, sizeof favorite_label, "%.11s",
+                     state->favorites[index]);
+            label = favorite_label;
+        }
+    }
     uint16_t fill = key_fill(key, pressed, state);
     bool disabled = false;
     if (state->page == PAGE_PROGRAMMER && key->action == ACT_PROG_DIGIT) {

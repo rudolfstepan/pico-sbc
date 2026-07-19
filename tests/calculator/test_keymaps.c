@@ -34,6 +34,7 @@ int main(void) {
     CHECK(check_page(PAGE_PROGRAMMER, 30) == 0);
     CHECK(check_page(PAGE_FORMAT, 30) == 0);
     CHECK(check_page(PAGE_TOOLS, 30) == 0);
+    CHECK(check_page(PAGE_SYMBOLS, 30) == 0);
     CHECK(check_page(PAGE_GRAPH, 6) == 0);
     for (graph_view_t view = GRAPH_VIEW_PLOT; view <= GRAPH_VIEW_RANGE;
          view = (graph_view_t)(view + 1)) {

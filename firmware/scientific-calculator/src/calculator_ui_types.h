@@ -23,6 +23,12 @@ typedef enum {
     ACT_MEMORY,
     ACT_HISTORY,
     ACT_CURSOR,
+    ACT_SYMBOL_STORE,
+    ACT_SYMBOL_FUNCTION,
+    ACT_SYMBOL_EDIT,
+    ACT_SYMBOL_SAVE,
+    ACT_FAVORITE,
+    ACT_FAVORITE_SET,
     ACT_GRAPH
 } calc_action_t;
 
@@ -32,6 +38,7 @@ typedef enum {
     PAGE_PROGRAMMER,
     PAGE_FORMAT,
     PAGE_TOOLS,
+    PAGE_SYMBOLS,
     PAGE_GRAPH
 } calc_page_t;
 

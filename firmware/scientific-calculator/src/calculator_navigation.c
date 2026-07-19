@@ -6,7 +6,8 @@ calc_page_t calculator_navigation_next(calc_page_t page) {
         case PAGE_SCIENTIFIC: return PAGE_PROGRAMMER;
         case PAGE_PROGRAMMER: return PAGE_FORMAT;
         case PAGE_FORMAT: return PAGE_TOOLS;
-        case PAGE_TOOLS:
+        case PAGE_TOOLS: return PAGE_SYMBOLS;
+        case PAGE_SYMBOLS:
         case PAGE_GRAPH:
         default:
             return PAGE_BASIC;
@@ -28,6 +29,7 @@ const char *calculator_page_message(calc_page_t page) {
         case PAGE_PROGRAMMER: return "64-BIT MODE";
         case PAGE_FORMAT: return "NUMBER FORMATS";
         case PAGE_TOOLS: return "TOOLS";
+        case PAGE_SYMBOLS: return "VARIABLES AND FUNCTIONS";
         case PAGE_GRAPH: return "GRAPH";
         default: return "READY";
     }

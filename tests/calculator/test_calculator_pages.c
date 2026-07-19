@@ -1,0 +1,25 @@
+#include "calculator_pages.h"
+#include "calculator_symbols.h"
+#include "mock_lcd.h"
+
+#include <stdio.h>
+
+int main(void) {
+    calculator_symbols_t symbols;
+    calculator_symbols_init(&symbols);
+    calculator_symbols_set_variable(&symbols, 0, 123456.0);
+    calculator_symbols_set_variable(&symbols, 5, -0.000012345);
+    calculator_symbols_set_function(
+        &symbols, 0,
+        "sin(x)+cos(x)+A+B+C+D+E+F+sqrt(abs(x))+x^2+x^3+x^4+x^5");
+
+    mock_lcd_reset();
+    calculator_page_render_symbols(&symbols, 0, "F1 SAVED");
+    if (mock_lcd_had_out_of_bounds_draw()) {
+        puts("FAIL: out-of-bounds drawing on symbols page");
+        return 1;
+    }
+
+    puts("calculator page tests passed");
+    return 0;
+}

@@ -16,12 +16,14 @@ int main(void) {
     CHECK(calculator_navigation_next(PAGE_SCIENTIFIC) == PAGE_PROGRAMMER);
     CHECK(calculator_navigation_next(PAGE_PROGRAMMER) == PAGE_FORMAT);
     CHECK(calculator_navigation_next(PAGE_FORMAT) == PAGE_TOOLS);
-    CHECK(calculator_navigation_next(PAGE_TOOLS) == PAGE_BASIC);
+    CHECK(calculator_navigation_next(PAGE_TOOLS) == PAGE_SYMBOLS);
+    CHECK(calculator_navigation_next(PAGE_SYMBOLS) == PAGE_BASIC);
     CHECK(calculator_navigation_next(PAGE_GRAPH) == PAGE_BASIC);
 
     CHECK(calculator_page_accepts_expression(PAGE_BASIC));
     CHECK(calculator_page_accepts_expression(PAGE_SCIENTIFIC));
     CHECK(calculator_page_accepts_expression(PAGE_TOOLS));
+    CHECK(!calculator_page_accepts_expression(PAGE_SYMBOLS));
     CHECK(!calculator_page_accepts_expression(PAGE_PROGRAMMER));
     CHECK(!calculator_page_accepts_expression(PAGE_FORMAT));
     CHECK(!calculator_page_accepts_expression(PAGE_GRAPH));

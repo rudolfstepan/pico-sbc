@@ -23,6 +23,7 @@ add_executable(calculator_engine_tests
     calculator/test_engine.c
     ${CALCULATOR_SRC}/calculation_status.c
     ${CALCULATOR_SRC}/calculator_engine.c
+    ${CALCULATOR_SRC}/calculator_symbols.c
     ${TINYEXPR_SRC}/tinyexpr.c
 )
 target_include_directories(calculator_engine_tests PRIVATE
@@ -111,6 +112,7 @@ add_executable(graph_renderer_tests
     calculator/mock_lcd.c
     ${CALCULATOR_SRC}/calculation_status.c
     ${CALCULATOR_SRC}/calculator_engine.c
+    ${CALCULATOR_SRC}/calculator_symbols.c
     ${CALCULATOR_SRC}/calculator_graph.c
     ${CALCULATOR_SRC}/calculator_keymaps.c
     ${CALCULATOR_SRC}/calculator_widgets.c
@@ -136,3 +138,30 @@ add_executable(numerical_analysis_tests
 target_include_directories(numerical_analysis_tests PRIVATE ${CALCULATOR_SRC})
 enable_project_warnings(numerical_analysis_tests)
 add_test(NAME numerical_analysis COMMAND numerical_analysis_tests)
+
+add_executable(calculator_symbols_tests
+    calculator/test_calculator_symbols.c
+    ${CALCULATOR_SRC}/calculator_symbols.c
+)
+target_include_directories(calculator_symbols_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(calculator_symbols_tests)
+add_test(NAME calculator_symbols COMMAND calculator_symbols_tests)
+
+add_executable(calculator_pages_tests
+    calculator/test_calculator_pages.c
+    calculator/mock_lcd.c
+    ${CALCULATOR_SRC}/calculator_keymaps.c
+    ${CALCULATOR_SRC}/calculator_pages.c
+    ${CALCULATOR_SRC}/calculator_symbols.c
+    ${CALCULATOR_SRC}/calculator_widgets.c
+    ${CALCULATOR_SRC}/expression_editor.c
+    ${CALCULATOR_SRC}/number_formats.c
+    ${CALCULATOR_SRC}/programmer_engine.c
+)
+target_include_directories(calculator_pages_tests PRIVATE
+    ${CALCULATOR_SRC}
+    ${PROJECT_ROOT}/lib/board/include
+    calculator
+)
+enable_project_warnings(calculator_pages_tests)
+add_test(NAME calculator_pages COMMAND calculator_pages_tests)

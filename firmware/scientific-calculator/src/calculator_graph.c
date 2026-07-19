@@ -58,6 +58,7 @@ static bool graph_evaluate(void *context, size_t function_index,
 }
 
 static size_t compile_functions(const calculator_graph_t *graph, double ans,
+                                const calculator_symbols_t *symbols,
                                 graph_evaluation_t *evaluation,
                                 char *message, size_t message_size) {
     memset(evaluation, 0, sizeof *evaluation);
@@ -68,8 +69,8 @@ static size_t compile_functions(const calculator_graph_t *graph, double ans,
             continue;
         }
         int error_position = 0;
-        evaluation->compiled[i] = calc_engine_compile_x(
-            graph->functions[i].expression, ans, &error_position);
+        evaluation->compiled[i] = calc_engine_compile_x_symbols(
+            graph->functions[i].expression, ans, symbols, &error_position);
         if (evaluation->compiled[i]) {
             compiled_count++;
         } else {
@@ -88,12 +89,13 @@ static void free_functions(graph_evaluation_t *evaluation) {
 }
 
 calc_status_t calculator_graph_auto_scale(calculator_graph_t *graph,
-                                          double ans) {
+                                          double ans,
+                                          const calculator_symbols_t *symbols) {
     bool previous_degrees = calc_engine_uses_degrees();
     calc_engine_set_degrees(false);
     graph_evaluation_t evaluation;
     char ignored_message[24];
-    size_t count = compile_functions(graph, ans, &evaluation,
+    size_t count = compile_functions(graph, ans, symbols, &evaluation,
                                      ignored_message, sizeof ignored_message);
     calc_status_t status = count
         ? graph_model_auto_scale(graph, graph_evaluate, &evaluation)
@@ -205,6 +207,7 @@ static void set_analysis_error(calculator_graph_t *graph,
 }
 
 calc_status_t calculator_graph_analyze(calculator_graph_t *graph, double ans,
+                                       const calculator_symbols_t *symbols,
                                        calculator_graph_analysis_t analysis) {
     numerical_options_t options = numerical_default_options();
     options.tolerance = graph->analysis_tolerance;
@@ -213,7 +216,7 @@ calc_status_t calculator_graph_analyze(calculator_graph_t *graph, double ans,
     calc_engine_set_degrees(false);
     graph_evaluation_t evaluation;
     char compile_message[24] = "";
-    compile_functions(graph, ans, &evaluation,
+    compile_functions(graph, ans, symbols, &evaluation,
                       compile_message, sizeof compile_message);
 
     size_t selected = graph->selected_function;
@@ -706,6 +709,7 @@ static void render_table(const calculator_graph_t *graph,
 
 void calculator_graph_render(const calculator_graph_t *graph,
                              double ans,
+                             const calculator_symbols_t *symbols,
                              const calculator_widget_state_t *widget_state,
                              char *message, size_t message_size) {
     bool previous_degrees = calc_engine_uses_degrees();
@@ -713,7 +717,7 @@ void calculator_graph_render(const calculator_graph_t *graph,
 
     graph_evaluation_t evaluation;
     message[0] = '\0';
-    size_t compiled_count = compile_functions(graph, ans, &evaluation,
+    size_t compiled_count = compile_functions(graph, ans, symbols, &evaluation,
                                               message, message_size);
     if (graph->view == GRAPH_VIEW_TABLE) {
         render_table(graph, &evaluation);

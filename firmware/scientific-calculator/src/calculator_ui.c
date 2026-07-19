@@ -5,6 +5,7 @@
 #include "calculator_list.h"
 #include "calculator_navigation.h"
 #include "calculator_pages.h"
+#include "calculator_symbols.h"
 #include "calculator_ui_types.h"
 #include "calculator_widgets.h"
 #include "expression_editor.h"
@@ -44,6 +45,7 @@ static history_entry_t history[HISTORY_MAX];
 static calculator_list_t history_list;
 static double memory_value;
 static calculator_graph_t graph;
+static calculator_symbols_t symbols;
 
 static calculator_widget_state_t current_widget_state(void) {
     unsigned int active_mask = 0;
@@ -61,6 +63,9 @@ static calculator_widget_state_t current_widget_state(void) {
         .graph_active_mask = active_mask,
         .graph_selected_function = graph.selected_function,
     };
+    for (size_t i = 0; i < CALCULATOR_FAVORITE_COUNT; ++i) {
+        state.favorites[i] = symbols.favorites[i];
+    }
     return state;
 }
 
@@ -89,6 +94,11 @@ static void render_display(void) {
                                      formula, history_result, result_text);
         return;
     }
+    if (page == PAGE_SYMBOLS) {
+        calculator_page_render_symbols(&symbols, graph.selected_function,
+                                       message);
+        return;
+    }
     if (page == PAGE_GRAPH) return;
     calculator_page_render_expression(page, calc_engine_uses_degrees(),
                                       message, &expression_state, result_text);
@@ -101,7 +111,8 @@ static void render_keypad(void) {
 
 static void render_graph(void) {
     calculator_widget_state_t state = current_widget_state();
-    calculator_graph_render(&graph, ans, &state, message, sizeof message);
+    calculator_graph_render(&graph, ans, &symbols, &state, message,
+                            sizeof message);
 }
 
 static bool token_is_operator(const char *token) {
@@ -153,8 +164,8 @@ static void add_history(double value) {
 static void evaluate_expression(void) {
     double value = 0.0;
     int error_position = 0;
-    calc_status_t status = calc_engine_evaluate(expression_state.text, ans,
-                                                 &value, &error_position);
+    calc_status_t status = calc_engine_evaluate_symbols(
+        expression_state.text, ans, &symbols, &value, &error_position);
     if (status == CALC_OK) {
         ans = value;
         snprintf(result_text, sizeof result_text, "%.12g", value);
@@ -393,6 +404,110 @@ static void activate_cursor_key(const calc_key_t *key) {
              (unsigned int)expression_state.cursor);
 }
 
+static bool save_function(size_t function, const char *expression) {
+    calculator_symbols_t candidate = symbols;
+    calculator_symbol_status_t symbol_status =
+        calculator_symbols_set_function(&candidate, function, expression);
+    if (symbol_status != CALCULATOR_SYMBOL_OK) {
+        snprintf(message, sizeof message, "%s",
+                 calculator_symbol_status_text(symbol_status));
+        return false;
+    }
+
+    size_t invalid_function = CALCULATOR_USER_FUNCTION_COUNT;
+    int error_position = 0;
+    if (calc_engine_validate_symbols(&candidate, &invalid_function,
+                                     &error_position) != CALC_OK) {
+        size_t shown_function = invalid_function < CALCULATOR_USER_FUNCTION_COUNT
+            ? invalid_function : function;
+        if (error_position > 0) {
+            snprintf(message, sizeof message, "F%u SYNTAX %d",
+                     (unsigned int)(shown_function + 1), error_position);
+        } else {
+            snprintf(message, sizeof message, "F%u INVALID DEF",
+                     (unsigned int)(shown_function + 1));
+        }
+        return false;
+    }
+
+    symbols = candidate;
+    graph_model_set_function(&graph, function, symbols.functions[function]);
+    snprintf(message, sizeof message, "F%u SAVED",
+             (unsigned int)(function + 1));
+    return true;
+}
+
+static void activate_symbol_key(const calc_key_t *key) {
+    size_t index;
+    switch (key->action) {
+        case ACT_SYMBOL_STORE:
+            index = (size_t)(key->token[0] - 'A');
+            if (calculator_symbols_set_variable(&symbols, index, ans)) {
+                snprintf(message, sizeof message, "%s = %.10g",
+                         calculator_variable_name(index), ans);
+            } else {
+                snprintf(message, sizeof message, "STORE FAILED");
+            }
+            break;
+        case ACT_SYMBOL_FUNCTION:
+            index = (size_t)(key->token[0] - '0');
+            graph_model_select_function(&graph, index);
+            snprintf(message, sizeof message, "F%u SELECTED",
+                     (unsigned int)(index + 1));
+            break;
+        case ACT_SYMBOL_EDIT:
+            expression_editor_set(
+                &expression_state,
+                symbols.functions[graph.selected_function]);
+            just_evaluated = false;
+            page = PAGE_TOOLS;
+            snprintf(message, sizeof message, "EDIT F%u",
+                     (unsigned int)(graph.selected_function + 1));
+            render_keypad();
+            break;
+        case ACT_SYMBOL_SAVE:
+            if (save_function(graph.selected_function,
+                              expression_state.text)) {
+                just_evaluated = true;
+            }
+            break;
+        case ACT_FAVORITE:
+            index = (size_t)(key->token[0] - '0');
+            if (symbols.favorites[index][0]) {
+                insert_token(symbols.favorites[index]);
+                page = PAGE_TOOLS;
+                snprintf(message, sizeof message, "FAVORITE %u",
+                         (unsigned int)(index + 1));
+                render_keypad();
+            } else {
+                snprintf(message, sizeof message, "FAVORITE %u EMPTY",
+                         (unsigned int)(index + 1));
+            }
+            break;
+        case ACT_FAVORITE_SET:
+            index = (size_t)(key->token[0] - '0');
+            if (!expression_state.length) {
+                snprintf(message, sizeof message, "EXPRESSION EMPTY");
+                break;
+            }
+            calculator_symbol_status_t status =
+                calculator_symbols_set_favorite(&symbols, index,
+                                                 expression_state.text);
+            if (status == CALCULATOR_SYMBOL_OK) {
+                just_evaluated = true;
+                snprintf(message, sizeof message, "FAVORITE %u SET",
+                         (unsigned int)(index + 1));
+                render_keypad();
+            } else {
+                snprintf(message, sizeof message, "%s",
+                         calculator_symbol_status_text(status));
+            }
+            break;
+        default:
+            break;
+    }
+}
+
 static void activate_graph_key(const calc_key_t *key) {
     if (key->token[0] == 'F' && key->token[1] >= '1' &&
         key->token[1] <= '3' && key->token[2] == '\0') {
@@ -434,28 +549,30 @@ static void activate_graph_key(const calc_key_t *key) {
         snprintf(message, sizeof message, "TRACE %s",
                  graph.trace_enabled ? "ON" : "OFF");
     } else if (strcmp(key->token, "AUTO") == 0) {
-        calc_status_t status = calculator_graph_auto_scale(&graph, ans);
+        calc_status_t status = calculator_graph_auto_scale(&graph, ans,
+                                                           &symbols);
         snprintf(message, sizeof message, "%s",
                  status == CALC_OK ? "AUTO SCALE" :
                  calc_engine_status_text(status));
         graph_model_set_view(&graph, GRAPH_VIEW_PLOT);
     } else if (strcmp(key->token, "ROOT") == 0) {
-        calculator_graph_analyze(&graph, ans, CALCULATOR_GRAPH_ROOT);
+        calculator_graph_analyze(&graph, ans, &symbols,
+                                 CALCULATOR_GRAPH_ROOT);
         graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS);
     } else if (strcmp(key->token, "XING") == 0) {
-        calculator_graph_analyze(&graph, ans,
+        calculator_graph_analyze(&graph, ans, &symbols,
                                  CALCULATOR_GRAPH_INTERSECTION);
         graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS);
     } else if (strcmp(key->token, "DERIV") == 0) {
-        calculator_graph_analyze(&graph, ans,
+        calculator_graph_analyze(&graph, ans, &symbols,
                                  CALCULATOR_GRAPH_DERIVATIVE);
         graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS);
     } else if (strcmp(key->token, "INTEGR") == 0) {
-        calculator_graph_analyze(&graph, ans,
+        calculator_graph_analyze(&graph, ans, &symbols,
                                  CALCULATOR_GRAPH_INTEGRAL);
         graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS);
     } else if (strcmp(key->token, "EXTREM") == 0) {
-        calculator_graph_analyze(&graph, ans,
+        calculator_graph_analyze(&graph, ans, &symbols,
                                  CALCULATOR_GRAPH_EXTREMA);
         graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS);
     } else if (strcmp(key->token, "A=ANS") == 0) {
@@ -509,6 +626,10 @@ static void activate_key(const calc_key_t *key) {
     switch (key->action) {
         case ACT_INSERT:
             insert_token(key->token);
+            if (page == PAGE_SYMBOLS) {
+                page = PAGE_TOOLS;
+                render_keypad();
+            }
             break;
         case ACT_EVALUATE:
             if (page == PAGE_PROGRAMMER) {
@@ -575,11 +696,21 @@ static void activate_key(const calc_key_t *key) {
         case ACT_CURSOR:
             activate_cursor_key(key);
             break;
+        case ACT_SYMBOL_STORE:
+        case ACT_SYMBOL_FUNCTION:
+        case ACT_SYMBOL_EDIT:
+        case ACT_SYMBOL_SAVE:
+        case ACT_FAVORITE:
+        case ACT_FAVORITE_SET:
+            activate_symbol_key(key);
+            break;
         case ACT_GOTO_GRAPH:
             if (expression_state.length) {
-                graph_model_set_function(&graph, graph.selected_function,
-                                         expression_state.text);
-                calculator_graph_auto_scale(&graph, ans);
+                if (!save_function(graph.selected_function,
+                                   expression_state.text)) {
+                    break;
+                }
+                calculator_graph_auto_scale(&graph, ans, &symbols);
             }
             page = PAGE_GRAPH;
             graph_model_set_view(&graph, GRAPH_VIEW_PLOT);
@@ -588,7 +719,7 @@ static void activate_key(const calc_key_t *key) {
         case ACT_GOTO_TOOLS:
             expression_editor_set(
                 &expression_state,
-                graph.functions[graph.selected_function].expression);
+                symbols.functions[graph.selected_function]);
             page = PAGE_TOOLS;
             snprintf(message, sizeof message, "%s", calculator_page_message(page));
             render_keypad();
@@ -611,6 +742,7 @@ void calculator_ui_init(void) {
     expression_editor_init(&expression_state);
     calculator_list_init(&history_list);
     programmer_engine_init(&programmer);
+    calculator_symbols_init(&symbols);
     calculator_graph_init(&graph);
     snprintf(message, sizeof message, "%s",
              touch_is_ready() ? "READY" : "TOUCH ERROR");
