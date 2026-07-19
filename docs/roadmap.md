@@ -196,8 +196,9 @@ X und Y, lineare Regression mit `r` und `r^2`, Histogramm und Streudiagramm
 sind implementiert. Datensaetze werden im CRC-gesicherten Flashformat
 gespeichert; Version 2 liest bestehende Version-1-Daten weiterhin. Alle 23
 Host-Tests und der RP2040-Release-Build laufen erfolgreich. Touchbedienung,
-Lesbarkeit der Diagramme, K2-Layoutumschaltung und Wiederherstellung nach einem
-Neustart stehen noch als Hardwaretest aus.
+Lesbarkeit der Diagramme und Wiederherstellung nach einem Neustart stehen noch
+als Hardwaretest aus. K2-Layoutumschaltung, doppelte Anzeigehoehe und
+vergroesserte Datenschrift wurden auf dem Pico erfolgreich bestaetigt.
 
 ## Phase 10: USB-Datenaustausch
 
