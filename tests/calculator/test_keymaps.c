@@ -37,6 +37,7 @@ int main(void) {
     CHECK(check_page(PAGE_SYMBOLS, 30) == 0);
     CHECK(check_page(PAGE_GRAPH, 6) == 0);
     CHECK(check_page(PAGE_LOGIC, 30) == 0);
+    CHECK(check_page(PAGE_UNITS, 30) == 0);
     for (calculator_format_view_t view = FORMAT_VIEW_CONVERSIONS;
          view <= FORMAT_VIEW_IEEE64;
          view = (calculator_format_view_t)(view + 1)) {

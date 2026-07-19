@@ -15,8 +15,8 @@ ein Test auf dem echten LCD erfolgreich sind.
 | 3 | Variablen und Benutzerfunktionen | Phase 2 | abgeschlossen |
 | 4 | Permanente Speicherung | Phase 3 | Hardwaretest offen |
 | 5 | Programmer-Erweiterungen | Phase 0 | Hardwaretest offen |
-| 6 | Schaltalgebra und Gatter | Phase 5 | Hardwaretest offen |
-| 7 | Einheiten und Konstanten | Phase 3 | geplant |
+| 6 | Schaltalgebra und Gatter | Phase 5 | abgeschlossen |
+| 7 | Einheiten und Konstanten | Phase 3 | Hardwaretest offen |
 | 8 | Komplexe Zahlen | Phase 3 | geplant |
 | 9 | Statistikmodus | Phasen 2 und 3 | geplant |
 | 10 | USB-Datenaustausch | Phasen 4 und 9 | geplant |
@@ -136,21 +136,27 @@ auf dem Pico steht noch aus.
 dieselben Eingangswerte identische Ergebnisse liefern und die wichtigsten
 Gatterkombinationen durch Host-Tests abgesichert sind.
 
-Softwarestand: Der getrennte Logikkern, Editor, Wahrheitstabelle, KNF/DNF und
-die Live-Gatteransicht sind implementiert. Alle 17 Host-Tests und der
-Scientific-Calculator-Firmware-Build laufen erfolgreich. Touchbedienung und
-Lesbarkeit auf dem Pico stehen noch aus.
+Abschlussstand: Der getrennte Logikkern, Editor, Wahrheitstabelle, KNF/DNF und
+die Live-Gatteransicht sind implementiert und durch Host-Tests abgesichert.
+Touchbedienung, Wahrheitstabelle und Gattereingaben wurden anschliessend auf
+dem Pico erfolgreich geprueft.
 
 ## Phase 7: Einheiten und Konstanten
 
-- [ ] Kategorien fuer Laenge, Flaeche, Volumen, Masse und Zeit anlegen.
-- [ ] Temperatur, Winkel, Druck, Energie und Leistung ergaenzen.
-- [ ] Umrechnungen ueber eine gemeinsame Basiseinheit modellieren.
-- [ ] Physikalische Konstanten mit Einheit und Quellenhinweis hinterlegen.
-- [ ] Ergebnisse direkt an `ANS` oder den Ausdruckseditor uebergeben.
+- [x] Kategorien fuer Laenge, Flaeche, Volumen, Masse und Zeit anlegen.
+- [x] Temperatur, Winkel, Druck, Energie und Leistung ergaenzen.
+- [x] Umrechnungen ueber eine gemeinsame Basiseinheit modellieren.
+- [x] Physikalische Konstanten mit Einheit und Quellenhinweis hinterlegen.
+- [x] Ergebnisse direkt an `ANS` oder den Ausdruckseditor uebergeben.
 
 **Fertig, wenn:** Hin- und Rueckumwandlungen innerhalb definierter Toleranzen
 getestet sind und inkompatible Einheiten nicht kombiniert werden.
+
+Softwarestand: Zehn Kategorien, affine Temperaturumrechnung, 68 Einheiten und
+zwoelf Konstanten sind implementiert. Hin- und Rueckumwandlungen,
+Kategoriefehler, absoluter Nullpunkt, Touchbelegung und LCD-Grenzen werden von
+19 Host-Tests abgedeckt. Der Firmware-Build ist erfolgreich; Touchbedienung
+und Lesbarkeit auf dem Pico stehen noch aus.
 
 ## Phase 8: Komplexe Zahlen
 

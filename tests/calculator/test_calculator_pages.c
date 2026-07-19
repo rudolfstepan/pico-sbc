@@ -63,6 +63,22 @@ int main(void) {
         return 1;
     }
 
+    calculator_units_t units;
+    double units_output = 0.0;
+    calculator_units_init(&units);
+    calculator_units_activate(&units, "ANSIN", 123456789.0,
+                              &units_output, logic_message,
+                              sizeof logic_message);
+    calculator_page_render_units(&units, logic_message);
+    calculator_units_activate(&units, "CONST", 0.0,
+                              &units_output, logic_message,
+                              sizeof logic_message);
+    calculator_page_render_units(&units, logic_message);
+    if (mock_lcd_had_out_of_bounds_draw()) {
+        puts("FAIL: out-of-bounds drawing on units pages");
+        return 1;
+    }
+
     puts("calculator page tests passed");
     return 0;
 }

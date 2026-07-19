@@ -391,3 +391,64 @@ void calculator_page_render_logic(const calculator_logic_t *logic,
     }
     finish_display();
 }
+
+void calculator_page_render_units(const calculator_units_t *units,
+                                  const char *message) {
+    char status[79];
+    clear_display();
+    if (units->view == UNITS_VIEW_CONSTANTS) {
+        const physical_constant_t *constant =
+            unit_engine_constant(units->constant_index);
+        size_t count = unit_engine_constant_count();
+        snprintf(status, sizeof status, "CONSTANT %u/%u  %.54s",
+                 (unsigned int)(units->constant_index + 1),
+                 (unsigned int)count, message);
+        lcd_draw_text(6, 3, status, COL_MUTED, COL_BG, 1);
+        if (constant) {
+            char value[79];
+            char unit[79];
+            lcd_draw_text(6, 18, constant->name, COL_TEXT, COL_BG, 2);
+            snprintf(value, sizeof value, "%s = %.12g",
+                     constant->symbol, constant->value);
+            snprintf(unit, sizeof unit, "UNIT %s", constant->unit);
+            lcd_draw_text(6, 47, value, COL_TEXT, COL_BG, 1);
+            lcd_draw_text(6, 61, unit, COL_MUTED, COL_BG, 1);
+            lcd_draw_text(6, 72, constant->source, COL_MUTED, COL_BG, 1);
+        }
+        finish_display();
+        return;
+    }
+
+    const unit_definition_t *from =
+        unit_engine_unit(units->category, units->from_index);
+    const unit_definition_t *to =
+        unit_engine_unit(units->category, units->to_index);
+    char names[79];
+    char input[48];
+    char output[48];
+    snprintf(status, sizeof status, "UNITS %s  %.55s",
+             unit_engine_category_name(units->category), message);
+    snprintf(names, sizeof names, "%s [%s]  ->  %s [%s]",
+             from ? from->name : "?", from ? from->symbol : "?",
+             to ? to->name : "?", to ? to->symbol : "?");
+    if (units->has_input && from) {
+        snprintf(input, sizeof input, "IN  %.12g %s",
+                 units->input, from->symbol);
+    } else {
+        snprintf(input, sizeof input, "IN  --");
+    }
+    if (units->has_result && to) {
+        snprintf(output, sizeof output, "OUT %.12g %s",
+                 units->result, to->symbol);
+    } else {
+        snprintf(output, sizeof output, "OUT --");
+    }
+
+    lcd_draw_text(6, 3, status, COL_MUTED, COL_BG, 1);
+    lcd_draw_text(6, 18, names, COL_MUTED, COL_BG, 1);
+    lcd_draw_text(6, 34, calculator_widget_tail(input, 38),
+                  COL_TEXT, COL_BG, 2);
+    lcd_draw_text(6, 59, calculator_widget_tail(output, 38),
+                  COL_TEXT, COL_BG, 2);
+    finish_display();
+}

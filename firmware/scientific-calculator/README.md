@@ -11,8 +11,8 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 - `sinh`, `cosh`, `tanh`, `ln`, `log`, `exp`, `sqrt`
 - Betrag, Abrunden, Fakultaet, Kombinationen und Permutationen
 - Konstanten Pi und e
-- Sieben Touch-Ebenen: `BASIC`, `SCIENTIFIC`, `PROGRAMMER`, `FORMAT`, `TOOLS`,
-  `SYMBOLS` und `LOGIC`
+- Acht Touch-Ebenen: `BASIC`, `SCIENTIFIC`, `PROGRAMMER`, `FORMAT`, `TOOLS`,
+  `SYMBOLS`, `LOGIC` und `UNITS`
 - `PROGRAMMER`-Ebene fuer exakte 64-Bit-Werte
 - Direkte Umwandlung zwischen Dezimal, Hexadezimal und Binaer
 - Bitoperationen `AND`, `OR`, `XOR`, `NOT`, Schieben und Zweierkomplement
@@ -25,6 +25,8 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
   Klassifikation als Normal, Subnormal, Null, Unendlich oder NaN
 - Schaltalgebra mit Wahrheitstabelle, vereinfachter und kanonischer KNF/DNF
   sowie Live-Simulation fuer bis zu sechs Eingaenge
+- 68 Einheiten in zehn Kategorien sowie zwoelf physikalische Konstanten mit
+  Einheit und Quellenangabe
 - Automatisch maximal skalierte Tastenbeschriftungen
 - Ausdruckseditor mit sichtbarem Cursor und Joystick-Navigation
 - Acht Eintraege Rechenverlauf mit erneutem Laden
@@ -42,7 +44,7 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 - K1 berechnet, K2 loescht das letzte Zeichen
 
 Die Seitentaste wechselt
-`BASIC -> SCIENTIFIC -> PROGRAMMER -> FORMAT -> TOOLS -> SYMBOLS -> LOGIC -> BASIC`.
+`BASIC -> SCIENTIFIC -> PROGRAMMER -> FORMAT -> TOOLS -> SYMBOLS -> LOGIC -> UNITS -> BASIC`.
 Der Graphenmodus wird von `TOOLS` aus geoeffnet. Der Joystick bewegt im
 Editor den Cursor und im Graphenmodus den sichtbaren Ausschnitt.
 Funktionen setzen automatisch eine oeffnende Klammer. Die schliessende Klammer
@@ -124,6 +126,28 @@ Exklusiv-Oder ist `A -> XOR -> B -> CHECK`.
 Die Logik wird als Ausdrucksbaum aufgebaut. Dadurch sind offene Verbindungen
 und zyklische Netze nicht darstellbar; unvollstaendige Ausdruecke werden mit
 der Fehlerposition abgelehnt.
+
+## Einheiten und Konstanten
+
+Auf `UNITS` stehen Laenge, Flaeche, Volumen, Masse, Zeit, Temperatur, Winkel,
+Druck, Energie und Leistung zur Wahl. Die aktuelle Quell- und Zieleinheit
+steht ausgeschrieben im Display.
+
+1. Den Ausgangswert im normalen Rechner berechnen.
+2. Zu `UNITS` wechseln und die Kategorie auswaehlen.
+3. Mit `<FROM`/`FROM>` und `<TO`/`TO>` die Einheiten einstellen.
+4. `ANS>IN` und danach bei Bedarf `CONVERT` druecken.
+5. Das Ergebnis mit `OUT>ANS` uebernehmen oder mit `OUT>EDIT` in einen neuen
+   Rechenausdruck laden.
+
+`SWAP` vertauscht Quell- und Zieleinheit. Temperaturen unter dem absoluten
+Nullpunkt werden abgelehnt. `CONST` oeffnet die Konstantenliste; `C-` und `C+`
+blaettern, `C>ANS` und `C>EDIT` uebernehmen den Wert. `INFO` zeigt die Quelle.
+
+Exakte SI-Definitionswerte stammen aus der
+[BIPM SI Brochure](https://www.bipm.org/en/publications/si-brochure/).
+Weitere Werte folgen den
+[NIST CODATA 2022 constants](https://physics.nist.gov/cuu/Constants/index.html).
 
 ## Erweiterte Programmer-Werkzeuge
 

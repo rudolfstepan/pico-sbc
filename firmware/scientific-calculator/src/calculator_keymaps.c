@@ -297,7 +297,7 @@ static const calc_key_t symbol_keys[] = {
 };
 
 static const calc_key_t logic_keys[] = {
-    {"BASIC", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"UNITS", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
     {"CHECK", "CHECK", 1, 0, ACT_LOGIC, STYLE_COMMAND},
     {"TABLE", "TABLE", 2, 0, ACT_LOGIC, STYLE_COMMAND},
     {"DNF", "DNF", 3, 0, ACT_LOGIC, STYLE_COMMAND},
@@ -331,6 +331,43 @@ static const calc_key_t logic_keys[] = {
     {"UP", "UP", 3, 4, ACT_LOGIC, STYLE_FUNCTION},
     {"DOWN", "DOWN", 4, 4, ACT_LOGIC, STYLE_FUNCTION},
     {"USE", "USE", 5, 4, ACT_LOGIC, STYLE_EQUALS},
+};
+
+static const calc_key_t unit_keys[] = {
+    {"BASIC", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"<CAT", "CAT-", 1, 0, ACT_UNITS, STYLE_COMMAND},
+    {"CAT>", "CAT+", 2, 0, ACT_UNITS, STYLE_COMMAND},
+    {"<FROM", "FROM-", 3, 0, ACT_UNITS, STYLE_COMMAND},
+    {"FROM>", "FROM+", 4, 0, ACT_UNITS, STYLE_COMMAND},
+    {"SWAP", "SWAP", 5, 0, ACT_UNITS, STYLE_EQUALS},
+
+    {"LEN", "LENGTH", 0, 1, ACT_UNITS, STYLE_NUMBER},
+    {"AREA", "AREA", 1, 1, ACT_UNITS, STYLE_NUMBER},
+    {"VOL", "VOLUME", 2, 1, ACT_UNITS, STYLE_NUMBER},
+    {"MASS", "MASS", 3, 1, ACT_UNITS, STYLE_NUMBER},
+    {"TIME", "TIME", 4, 1, ACT_UNITS, STYLE_NUMBER},
+    {"TEMP", "TEMPERATURE", 5, 1, ACT_UNITS, STYLE_NUMBER},
+
+    {"ANGLE", "ANGLE", 0, 2, ACT_UNITS, STYLE_FUNCTION},
+    {"PRESS", "PRESSURE", 1, 2, ACT_UNITS, STYLE_FUNCTION},
+    {"ENERGY", "ENERGY", 2, 2, ACT_UNITS, STYLE_FUNCTION},
+    {"POWER", "POWER", 3, 2, ACT_UNITS, STYLE_FUNCTION},
+    {"CONV", "CONV", 4, 2, ACT_UNITS, STYLE_COMMAND},
+    {"CONST", "CONST", 5, 2, ACT_UNITS, STYLE_COMMAND},
+
+    {"ANS>IN", "ANSIN", 0, 3, ACT_UNITS, STYLE_FUNCTION},
+    {"<TO", "TO-", 1, 3, ACT_UNITS, STYLE_FUNCTION},
+    {"TO>", "TO+", 2, 3, ACT_UNITS, STYLE_FUNCTION},
+    {"CONVERT", "CONVERT", 3, 3, ACT_UNITS, STYLE_EQUALS},
+    {"OUT>ANS", "OUTANS", 4, 3, ACT_UNITS, STYLE_FUNCTION},
+    {"OUT>EDIT", "OUTEDIT", 5, 3, ACT_UNITS, STYLE_FUNCTION},
+
+    {"C-", "C-", 0, 4, ACT_UNITS, STYLE_FUNCTION},
+    {"C+", "C+", 1, 4, ACT_UNITS, STYLE_FUNCTION},
+    {"C>ANS", "CANS", 2, 4, ACT_UNITS, STYLE_FUNCTION},
+    {"C>EDIT", "CEDIT", 3, 4, ACT_UNITS, STYLE_FUNCTION},
+    {"INFO", "INFO", 4, 4, ACT_UNITS, STYLE_COMMAND},
+    {"RESET", "RESET", 5, 4, ACT_UNITS, STYLE_COMMAND},
 };
 
 static const calc_key_t graph_plot_keys[] = {
@@ -447,6 +484,9 @@ const calc_key_t *calculator_keymap(calc_page_t page, size_t *count) {
         case PAGE_LOGIC:
             *count = sizeof logic_keys / sizeof logic_keys[0];
             return logic_keys;
+        case PAGE_UNITS:
+            *count = sizeof unit_keys / sizeof unit_keys[0];
+            return unit_keys;
         case PAGE_BASIC:
         default:
             *count = sizeof basic_keys / sizeof basic_keys[0];

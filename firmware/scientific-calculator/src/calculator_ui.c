@@ -4,6 +4,7 @@
 #include "calculator_graph.h"
 #include "calculator_list.h"
 #include "calculator_logic.h"
+#include "calculator_units.h"
 #include "calculator_navigation.h"
 #include "calculator_pages.h"
 #include "calculator_persistence.h"
@@ -48,6 +49,7 @@ static double memory_value;
 static calculator_graph_t graph;
 static calculator_symbols_t symbols;
 static calculator_logic_t logic;
+static calculator_units_t units;
 static bool persistence_dirty;
 static absolute_time_t persistence_deadline;
 
@@ -140,6 +142,8 @@ static calculator_widget_state_t current_widget_state(void) {
         .logic_view = logic.view,
         .logic_variable_mask = logic.compiled ? logic.program.variable_mask : 0,
         .logic_assignment = logic.assignment,
+        .unit_category = units.category,
+        .units_view = units.view,
     };
     for (size_t i = 0; i < CALCULATOR_FAVORITE_COUNT; ++i) {
         state.favorites[i] = symbols.favorites[i];
@@ -179,6 +183,10 @@ static void render_display(void) {
     }
     if (page == PAGE_LOGIC) {
         calculator_page_render_logic(&logic, message);
+        return;
+    }
+    if (page == PAGE_UNITS) {
+        calculator_page_render_units(&units, message);
         return;
     }
     if (page == PAGE_GRAPH) return;
@@ -770,6 +778,26 @@ static void activate_logic_key(const calc_key_t *key) {
     render_keypad();
 }
 
+static void activate_units_key(const calc_key_t *key) {
+    double output = 0.0;
+    calculator_units_output_t action = calculator_units_activate(
+        &units, key->token, ans, &output, message, sizeof message);
+    if (action == UNITS_OUTPUT_ANS) {
+        ans = output;
+        snprintf(result_text, sizeof result_text, "%.12g", ans);
+        snprintf(message, sizeof message, "VALUE TO ANS");
+    } else if (action == UNITS_OUTPUT_EDITOR) {
+        char token[32];
+        snprintf(token, sizeof token, "%.12g", output);
+        insert_token(token);
+        if (strcmp(message, "INPUT FULL") != 0) {
+            page = PAGE_BASIC;
+            snprintf(message, sizeof message, "VALUE TO EDITOR");
+        }
+    }
+    render_keypad();
+}
+
 static void activate_key(const calc_key_t *key) {
     switch (key->action) {
         case ACT_INSERT:
@@ -879,6 +907,9 @@ static void activate_key(const calc_key_t *key) {
         case ACT_LOGIC:
             activate_logic_key(key);
             break;
+        case ACT_UNITS:
+            activate_units_key(key);
+            break;
     }
     render_display();
     mark_persistence_dirty();
@@ -895,6 +926,7 @@ void calculator_ui_init(void) {
     calculator_list_init(&history_list);
     programmer_engine_init(&programmer);
     calculator_logic_init(&logic);
+    calculator_units_init(&units);
 
     calculator_persisted_state_t persisted;
     calculator_storage_load_status_t load_status =

@@ -26,6 +26,15 @@ static int key_y(const calc_key_t *key) {
            key->row * (CALCULATOR_KEY_HEIGHT + CALCULATOR_KEY_GAP_Y);
 }
 
+static const char *unit_category_token(unit_category_t category) {
+    static const char *const tokens[] = {
+        "LENGTH", "AREA", "VOLUME", "MASS", "TIME", "TEMPERATURE",
+        "ANGLE", "PRESSURE", "ENERGY", "POWER"
+    };
+    return category >= UNIT_CATEGORY_LENGTH && category < UNIT_CATEGORY_COUNT
+        ? tokens[category] : "";
+}
+
 static uint16_t key_fill(const calc_key_t *key, bool pressed,
                          const calculator_widget_state_t *state) {
     if (pressed) return COL_BG;
@@ -67,6 +76,16 @@ static uint16_t key_fill(const calc_key_t *key, bool pressed,
         uint8_t bit = (uint8_t)(1u << (key->token[0] - 'A'));
         if (!(state->logic_variable_mask & bit)) return COL_COMMAND;
         if (state->logic_assignment & bit) return COL_TEXT;
+    }
+    if (state->page == PAGE_UNITS && key->action == ACT_UNITS) {
+        bool selected_category =
+            strcmp(key->token, unit_category_token(state->unit_category)) == 0;
+        bool selected_view =
+            (strcmp(key->token, "CONV") == 0 &&
+             state->units_view == UNITS_VIEW_CONVERTER) ||
+            (strcmp(key->token, "CONST") == 0 &&
+             state->units_view == UNITS_VIEW_CONSTANTS);
+        if (selected_category || selected_view) return COL_TEXT;
     }
     switch (key->style) {
         case STYLE_NUMBER: return COL_KEY;

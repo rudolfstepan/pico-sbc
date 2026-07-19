@@ -7,6 +7,7 @@ add_executable(lafvin_scientific_calculator
     src/calculator_keymaps.c
     src/calculator_list.c
     src/calculator_logic.c
+    src/calculator_units.c
     src/calculator_navigation.c
     src/calculator_pages.c
     src/calculator_persistence.c
@@ -19,6 +20,7 @@ add_executable(lafvin_scientific_calculator
     src/graph_model.c
     src/logic_engine.c
     src/numerical_analysis.c
+    src/unit_engine.c
     src/calculator_ui.c
     ${PROJECT_SOURCE_DIR}/third_party/tinyexpr/tinyexpr.c
 )

@@ -3,6 +3,7 @@
 
 #include "calculator_ui_types.h"
 #include "calculator_logic.h"
+#include "calculator_units.h"
 #include "graph_model.h"
 
 #include <stdbool.h>
@@ -30,6 +31,8 @@ typedef struct {
     calculator_logic_view_t logic_view;
     uint8_t logic_variable_mask;
     uint8_t logic_assignment;
+    unit_category_t unit_category;
+    calculator_units_view_t units_view;
     const char *favorites[6];
 } calculator_widget_state_t;
 

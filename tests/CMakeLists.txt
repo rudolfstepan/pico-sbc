@@ -153,6 +153,7 @@ add_executable(calculator_pages_tests
     calculator/mock_lcd.c
     ${CALCULATOR_SRC}/calculator_keymaps.c
     ${CALCULATOR_SRC}/calculator_logic.c
+    ${CALCULATOR_SRC}/calculator_units.c
     ${CALCULATOR_SRC}/calculator_pages.c
     ${CALCULATOR_SRC}/calculator_symbols.c
     ${CALCULATOR_SRC}/calculator_widgets.c
@@ -160,6 +161,7 @@ add_executable(calculator_pages_tests
     ${CALCULATOR_SRC}/number_formats.c
     ${CALCULATOR_SRC}/logic_engine.c
     ${CALCULATOR_SRC}/programmer_engine.c
+    ${CALCULATOR_SRC}/unit_engine.c
 )
 target_include_directories(calculator_pages_tests PRIVATE
     ${CALCULATOR_SRC}
@@ -199,3 +201,20 @@ add_executable(calculator_logic_tests
 target_include_directories(calculator_logic_tests PRIVATE ${CALCULATOR_SRC})
 enable_project_warnings(calculator_logic_tests)
 add_test(NAME calculator_logic COMMAND calculator_logic_tests)
+
+add_executable(unit_engine_tests
+    calculator/test_unit_engine.c
+    ${CALCULATOR_SRC}/unit_engine.c
+)
+target_include_directories(unit_engine_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(unit_engine_tests)
+add_test(NAME unit_engine COMMAND unit_engine_tests)
+
+add_executable(calculator_units_tests
+    calculator/test_calculator_units.c
+    ${CALCULATOR_SRC}/calculator_units.c
+    ${CALCULATOR_SRC}/unit_engine.c
+)
+target_include_directories(calculator_units_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(calculator_units_tests)
+add_test(NAME calculator_units COMMAND calculator_units_tests)
