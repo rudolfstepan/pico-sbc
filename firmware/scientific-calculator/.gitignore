@@ -1,0 +1,22 @@
+# Project-local build directories
+/build/
+/build-*/
+/out/
+
+# CMake and Ninja output
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+*.ninja
+*.o
+*.obj
+*.d
+
+# Generated firmware
+*.uf2
+*.elf
+*.elf.map
+*.bin
+*.hex
+*.dis

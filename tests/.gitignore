@@ -1,0 +1,20 @@
+# Project-local build directories
+/build/
+/build-*/
+/out/
+
+# CMake, CTest and Ninja output
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+Testing/
+cmake_install.cmake
+compile_commands.json
+*.ninja
+*.o
+*.obj
+*.d
+
+# Host test executables
+*.exe
+*.out
