@@ -1,0 +1,23 @@
+name: Host tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out sources
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Configure
+        run: cmake -S tests -B out/tests -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build out/tests --parallel
+
+      - name: Test
+        run: ctest --test-dir out/tests --output-on-failure

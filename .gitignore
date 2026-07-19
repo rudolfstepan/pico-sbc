@@ -1,0 +1,30 @@
+# Local dependencies
+/pico-sdk/
+
+# Build trees and generated firmware
+/build/
+/build-*/
+/out/
+cmake-build-*/
+*.uf2
+*.elf
+*.elf.map
+*.bin
+*.hex
+*.dis
+*.o
+*.obj
+*.d
+*.ninja
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+compile_commands.json
+
+# Editor and OS files
+/.agents/
+/.vscode/
+/.idea/
+*.user
+.DS_Store
+Thumbs.db
