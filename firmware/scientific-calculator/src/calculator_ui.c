@@ -1082,7 +1082,9 @@ void calculator_ui_init(void) {
     calculator_complex_init(&complex);
     calculator_statistics_init(&statistics);
     calculator_program_init(&basic_program_ui);
-    calculator_widget_set_data_focus(false);
+    calculator_widget_set_layout(CALCULATOR_LAYOUT_STANDARD);
+    calculator_program_set_layout(&basic_program_ui,
+                                  CALCULATOR_LAYOUT_STANDARD);
 
     calculator_storage_load_status_t load_status =
         calculator_storage_load(&persistence_io_state);
@@ -1170,14 +1172,18 @@ void calculator_ui_task(void) {
     }
     if (button2 && !old_button2 && time_reached(button2_debounce_until)) {
         button2_debounce_until = make_timeout_time_ms(250);
+        calculator_layout_t layout = calculator_widget_cycle_layout();
+        calculator_program_set_layout(&basic_program_ui, layout);
+        const char *layout_message =
+            layout == CALCULATOR_LAYOUT_DATA_FOCUS ? "KEYBOARD SMALL" :
+            (layout == CALCULATOR_LAYOUT_FULLSCREEN
+                 ? "KEYBOARD HIDDEN" : "KEYBOARD LARGE");
         if (page == PAGE_BASIC_PROGRAM) {
-            apply_program_effects(
-                calculator_program_toggle_view(&basic_program_ui));
+            snprintf(basic_program_ui.notice,
+                     sizeof basic_program_ui.notice, "%s", layout_message);
+            apply_program_effects(CALCULATOR_PROGRAM_RENDER);
         } else {
-            bool data_focus = !calculator_widget_data_focus();
-            calculator_widget_set_data_focus(data_focus);
-            snprintf(message, sizeof message,
-                     data_focus ? "DATA DISPLAY LARGE" : "KEYPAD LARGE");
+            snprintf(message, sizeof message, "%s", layout_message);
             if (page == PAGE_GRAPH) {
                 render_graph();
             } else {

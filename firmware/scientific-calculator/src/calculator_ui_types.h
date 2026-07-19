@@ -60,6 +60,13 @@ typedef enum {
 } calculator_format_view_t;
 
 typedef enum {
+    CALCULATOR_LAYOUT_STANDARD,
+    CALCULATOR_LAYOUT_DATA_FOCUS,
+    CALCULATOR_LAYOUT_FULLSCREEN,
+    CALCULATOR_LAYOUT_COUNT
+} calculator_layout_t;
+
+typedef enum {
     STYLE_NUMBER,
     STYLE_FUNCTION,
     STYLE_COMMAND,

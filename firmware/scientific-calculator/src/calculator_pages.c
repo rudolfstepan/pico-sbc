@@ -14,13 +14,16 @@
 #define COL_MUTED RGB565(170, 170, 170)
 
 static int display_y(int logical_y) {
+    if (calculator_widget_fullscreen()) {
+        return logical_y > 4 ? 4 + (logical_y - 4) * 4 : logical_y;
+    }
     return calculator_widget_data_focus() ? logical_y * 2 : logical_y;
 }
 
 static void page_draw_text(int x, int y, const char *text,
                            uint16_t foreground, uint16_t background,
                            uint8_t scale) {
-    if (calculator_widget_data_focus() && y > 4) {
+    if (calculator_widget_layout() != CALCULATOR_LAYOUT_STANDARD && y > 4) {
         uint8_t enlarged = scale < 2 ? 2 : (scale < 3 ? 3 : scale);
         size_t max_chars = (size_t)(LCD_WIDTH - x) /
                            ((size_t)enlarged * 6u);
@@ -30,7 +33,13 @@ static void page_draw_text(int x, int y, const char *text,
     lcd_draw_text(x, display_y(y), text, foreground, background, scale);
 }
 
-/* Page renderers retain their 84-pixel logical y coordinates in both modes. */
+static void page_draw_text_absolute(int x, int y, const char *text,
+                                    uint16_t foreground,
+                                    uint16_t background, uint8_t scale) {
+    lcd_draw_text(x, y, text, foreground, background, scale);
+}
+
+/* Page renderers retain their 84-pixel logical coordinates in every layout. */
 #define lcd_draw_text page_draw_text
 
 static void clear_display(void) {
@@ -55,8 +64,9 @@ void calculator_page_render_expression(calc_page_t page, bool degrees,
              degrees ? "DEG" : "RAD",
              page == PAGE_SCIENTIFIC ? "SCIENTIFIC" : "BASIC", message);
     snprintf(shown_result, sizeof shown_result, "=%s", result_text);
-    size_t visible_chars = calculator_widget_data_focus() ? 26u : 38u;
-    int result_scale = calculator_widget_data_focus() ? 3 : 2;
+    bool enlarged = calculator_widget_layout() != CALCULATOR_LAYOUT_STANDARD;
+    size_t visible_chars = enlarged ? 26u : 38u;
+    int result_scale = enlarged ? 3 : 2;
     const char *visible = calculator_widget_tail(shown_result, visible_chars);
     int width = (int)strlen(visible) * 6 * result_scale;
     int x = LCD_WIDTH - width - 6;
@@ -344,10 +354,17 @@ static void render_logic_table(const calculator_logic_t *logic) {
         append_char(header, sizeof header, &header_length, ' ');
     }
     snprintf(header + header_length, sizeof header - header_length, "| Y");
-    lcd_draw_text(6, 17, header, COL_TEXT, COL_BG, 1);
+    bool fullscreen = calculator_widget_fullscreen();
+    if (fullscreen) {
+        page_draw_text_absolute(6, 22, header, COL_TEXT, COL_BG, 2);
+    } else {
+        lcd_draw_text(6, 17, header, COL_TEXT, COL_BG, 1);
+    }
 
     size_t rows = logic_engine_truth_row_count(&logic->program);
-    for (size_t line = 0; line < 4 && logic->scroll + line < rows; ++line) {
+    size_t visible_lines = fullscreen ? 16u : 4u;
+    for (size_t line = 0;
+         line < visible_lines && logic->scroll + line < rows; ++line) {
         size_t row = logic->scroll + line;
         uint8_t assignment = logic_engine_assignment_for_row(&logic->program,
                                                               row);
@@ -363,22 +380,36 @@ static void render_logic_table(const calculator_logic_t *logic) {
         }
         snprintf(text + length, sizeof text - length, "| %u",
                  logic_engine_evaluate(&logic->program, assignment) ? 1u : 0u);
-        lcd_draw_text(6, 30 + (int)line * 13, text, COL_MUTED, COL_BG, 1);
+        if (fullscreen) {
+            page_draw_text_absolute(6, 46 + (int)line * 17, text,
+                                    COL_MUTED, COL_BG, 2);
+        } else {
+            lcd_draw_text(6, 30 + (int)line * 13, text,
+                          COL_MUTED, COL_BG, 1);
+        }
     }
 }
 
 static void render_logic_form(const calculator_logic_t *logic) {
     size_t length = strlen(logic->form);
     size_t offset = logic->scroll < length ? logic->scroll : length;
-    for (size_t line = 0; line < 5 && offset < length; ++line) {
+    bool fullscreen = calculator_widget_fullscreen();
+    size_t visible_lines = fullscreen ? 16u : 5u;
+    size_t line_capacity = fullscreen ? 39u : 78u;
+    for (size_t line = 0; line < visible_lines && offset < length; ++line) {
         char text[79];
         size_t remaining = length - offset;
-        size_t count = remaining < sizeof text - 1
-            ? remaining : sizeof text - 1;
+        size_t count = remaining < line_capacity ? remaining : line_capacity;
         memcpy(text, logic->form + offset, count);
         text[count] = '\0';
-        lcd_draw_text(6, 17 + (int)line * 13, text,
-                      line ? COL_MUTED : COL_TEXT, COL_BG, 1);
+        if (fullscreen) {
+            page_draw_text_absolute(6, 22 + (int)line * 18, text,
+                                    line ? COL_MUTED : COL_TEXT,
+                                    COL_BG, 2);
+        } else {
+            lcd_draw_text(6, 17 + (int)line * 13, text,
+                          line ? COL_MUTED : COL_TEXT, COL_BG, 1);
+        }
         offset += count;
     }
 }

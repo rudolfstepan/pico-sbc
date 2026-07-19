@@ -51,7 +51,7 @@ Installation, Bedienung, alle Rechnermodi und die PC-Anwendung.
 - Trace-Cursor, scrollbare Wertetabelle, automatische Skalierung sowie Marker
   fuer Nullstellen und Schnittpunkte
 - K1 berechnet, fuegt Statistikdaten hinzu oder bestaetigt eine CODE-Zeile;
-  K2 schaltet das Displaylayout beziehungsweise die CODE-Ansicht um
+  K2 schaltet das Displaylayout in drei Stufen um
 - USB-CDC-Protokoll und Python-CLI fuer Berechnung, Diagnose sowie
   JSON-Import und -Export
 
@@ -65,19 +65,22 @@ Beispiel `ncr(6,2)`.
 
 ## Displaylayout
 
-Ausserhalb der CODE-Seite wechselt K2 zwischen zwei Ansichten. Die
-Standardansicht verwendet
-einen 84 Pixel hohen Datenbereich und grosse Touch-Tasten. Im Datenfokus ist
-der Datenbereich mit 168 Pixeln doppelt so hoch; Inhalte, Diagramme und
-Datenschrift nutzen den zusaetzlichen Platz. Normale Datenzeilen wachsen von
-Schriftfaktor 1 auf 2, grosse Eingaben und Ergebnisse von Faktor 2 auf 3. Das
-fuenfzeilige Tastenfeld ist mit 113 statt 226 Pixeln halb so hoch. Zeichnung
-und Touch-Hitboxen werden gemeinsam umgeschaltet.
+K2 durchlaeuft auf allen Seiten drei Ansichten:
 
-Die aktive Ansicht bleibt bis zum naechsten Druck auf K2 erhalten und startet
-nach einem Neustart wieder im Standardlayout. `DEL` auf dem Touchscreen
-uebernimmt in beiden Ansichten das Loeschen. K1 bleibt fuer `=`, Programmer-
-Operationen und `ADD` im Statistikmodus reserviert.
+1. Die Standardansicht verwendet einen 84 Pixel hohen Datenbereich und grosse
+   Touch-Tasten.
+2. Im Datenfokus ist der Datenbereich mit 168 Pixeln doppelt so hoch. Inhalte,
+   Diagramme und Datenschrift nutzen den zusaetzlichen Platz; das Tastenfeld
+   ist etwa halb so hoch.
+3. Im Vollbild wird das Tastenfeld vollstaendig ausgeblendet und der gesamte
+   480x320-Bildschirm steht fuer Daten, Diagramme, Wahrheitstabellen oder die
+   BASIC-Ausgabe bereit.
+
+Zeichnung und Touch-Hitboxen werden gemeinsam umgeschaltet; im Vollbild sind
+keine unsichtbaren Tasten aktiv. Ein weiterer Druck auf K2 kehrt zur
+Standardansicht zurueck. Nach einem Neustart startet der Rechner ebenfalls im
+Standardlayout. K1 bleibt fuer `=`, Programmer-Operationen, `ADD` und CODE-
+Eingaben verfuegbar.
 
 ## Graph 2.0
 
@@ -245,8 +248,12 @@ Ein direkt eintippbares Beispiel ist:
   Bildschirm.
 - `INPUT A` wartet auf eine Zahl oder einen Rechenausdruck und speichert das
   Ergebnis in `A`.
-- `K1` entspricht `ENTER`; `K2` und ein Druck auf den oberen Bildschirmbereich
-  wechseln zwischen Programmliste und Ausgabe.
+- `K1` entspricht `ENTER`; `K2` durchlaeuft grosse, kompakte und ausgeblendete
+  Tastatur.
+- Ein Druck auf den oberen Bildschirmbereich wechselt zwischen Programmliste
+  und Ausgabe.
+- Im Vollbild werden bis zu 16 BASIC-Ausgabezeilen gleichzeitig dargestellt;
+  in der Standardansicht sind es bis zu sechs.
 - Der Joystick bewegt den Eingabecursor und scrollt die Programmliste.
 - `NEW` muss zur Sicherheit zweimal gedrueckt werden. `CALC` beendet den
   Programmiermodus und kehrt zum normalen Rechner zurueck.

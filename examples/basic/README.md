@@ -3,7 +3,8 @@
 Diese Programme koennen im BASIC-Tab von `Pico Calculator Link` mit
 `Datei laden` geoeffnet, zum Pico uebertragen und mit `Ausfuehren` gestartet
 werden. Die Sammlung bleibt innerhalb der Grenzen des Rechners: maximal
-20 Zeilen, 63 Zeichen pro Anweisung und sechs sichtbare Ausgabezeilen.
+20 Zeilen, 63 Zeichen pro Anweisung und 16 gepufferte Ausgabezeilen. Im
+Standardlayout sind davon sechs, im Vollbild alle 16 gleichzeitig sichtbar.
 
 | Datei | Test | Eingabe | Letzte Ausgabe |
 |---|---|---:|---:|

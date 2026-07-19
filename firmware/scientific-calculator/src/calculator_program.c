@@ -15,7 +15,10 @@
 #define COL_COMMAND  RGB565(60, 60, 60)
 
 #define PROGRAM_KEYBOARD_Y 136
-#define PROGRAM_VISIBLE_LINES 6u
+#define PROGRAM_COMPACT_KEYBOARD_Y 188
+#define PROGRAM_KEYBOARD_HEIGHT (LCD_HEIGHT - PROGRAM_KEYBOARD_Y)
+#define PROGRAM_COMPACT_KEYBOARD_HEIGHT \
+    (LCD_HEIGHT - PROGRAM_COMPACT_KEYBOARD_Y)
 
 typedef enum {
     PROGRAM_KEY_INSERT,
@@ -132,6 +135,62 @@ static const program_key_t symbol_keys[] = {
     {380, 268, 92, 28, "CALC", "", PROGRAM_KEY_EXIT},
 };
 
+static int program_keyboard_top(const calculator_program_t *program) {
+    switch (program->layout) {
+        case CALCULATOR_LAYOUT_DATA_FOCUS:
+            return PROGRAM_COMPACT_KEYBOARD_Y;
+        case CALCULATOR_LAYOUT_FULLSCREEN:
+            return LCD_HEIGHT;
+        case CALCULATOR_LAYOUT_STANDARD:
+        default:
+            return PROGRAM_KEYBOARD_Y;
+    }
+}
+
+static size_t program_editor_visible_lines(
+    const calculator_program_t *program) {
+    switch (program->layout) {
+        case CALCULATOR_LAYOUT_DATA_FOCUS: return 10u;
+        case CALCULATOR_LAYOUT_FULLSCREEN: return 19u;
+        case CALCULATOR_LAYOUT_STANDARD:
+        default: return 6u;
+    }
+}
+
+static int program_prompt_top(const calculator_program_t *program) {
+    switch (program->layout) {
+        case CALCULATOR_LAYOUT_DATA_FOCUS: return 155;
+        case CALCULATOR_LAYOUT_FULLSCREEN: return 286;
+        case CALCULATOR_LAYOUT_STANDARD:
+        default: return 103;
+    }
+}
+
+static size_t program_output_visible_lines(
+    const calculator_program_t *program) {
+    bool input = program->engine.state == BASIC_RUN_INPUT;
+    switch (program->layout) {
+        case CALCULATOR_LAYOUT_DATA_FOCUS: return input ? 7u : 9u;
+        case CALCULATOR_LAYOUT_FULLSCREEN: return input ? 15u : 16u;
+        case CALCULATOR_LAYOUT_STANDARD:
+        default: return input ? 5u : 6u;
+    }
+}
+
+static program_key_t program_key_geometry(
+    const calculator_program_t *program, const program_key_t *source) {
+    program_key_t key = *source;
+    if (program->layout == CALCULATOR_LAYOUT_DATA_FOCUS) {
+        key.y = PROGRAM_COMPACT_KEYBOARD_Y +
+            (source->y - PROGRAM_KEYBOARD_Y) *
+            PROGRAM_COMPACT_KEYBOARD_HEIGHT / PROGRAM_KEYBOARD_HEIGHT;
+        key.h = source->h * PROGRAM_COMPACT_KEYBOARD_HEIGHT /
+            PROGRAM_KEYBOARD_HEIGHT;
+        if (key.h < 16) key.h = 16;
+    }
+    return key;
+}
+
 static void keymap(const calculator_program_t *program,
                    const program_key_t **keys, size_t *count) {
     if (program->symbol_layer) {
@@ -161,37 +220,44 @@ static uint16_t key_fill(const program_key_t *key, bool pressed) {
 
 static void draw_key(const calculator_program_t *program,
                      const program_key_t *key, bool pressed) {
-    const char *label = key->label;
-    if (key->action == PROGRAM_KEY_RUN && program_is_active(program)) {
+    if (program->layout == CALCULATOR_LAYOUT_FULLSCREEN) return;
+    program_key_t geometry = program_key_geometry(program, key);
+    const program_key_t *visible_key = &geometry;
+    const char *label = visible_key->label;
+    if (visible_key->action == PROGRAM_KEY_RUN && program_is_active(program)) {
         label = "STOP";
     }
-    uint16_t fill = key_fill(key, pressed);
+    uint16_t fill = key_fill(visible_key, pressed);
     bool dark = fill == COL_BG || fill == COL_COMMAND;
     uint16_t foreground = dark ? COL_TEXT : COL_BG;
     size_t length = strlen(label);
-    int scale_x = (key->w - 6) / ((int)length * 6);
-    int scale_y = (key->h - 6) / 8;
+    int scale_x = (visible_key->w - 6) / ((int)length * 6);
+    int scale_y = (visible_key->h - 6) / 8;
     uint8_t scale = (uint8_t)(scale_x < scale_y ? scale_x : scale_y);
     if (scale > 3) scale = 3;
     if (scale < 1) scale = 1;
     int text_width = (int)length * 6 * scale;
     int text_height = 8 * scale;
-    lcd_fill_rect(key->x, key->y, key->w, key->h, fill);
-    lcd_draw_rect(key->x, key->y, key->w, key->h,
+    lcd_fill_rect(visible_key->x, visible_key->y,
+                  visible_key->w, visible_key->h, fill);
+    lcd_draw_rect(visible_key->x, visible_key->y,
+                  visible_key->w, visible_key->h,
                   dark ? COL_TEXT : COL_BG);
-    lcd_draw_rect(key->x + 1, key->y + 1, key->w - 2, key->h - 2,
+    lcd_draw_rect(visible_key->x + 1, visible_key->y + 1,
+                  visible_key->w - 2, visible_key->h - 2,
                   dark ? COL_TEXT : COL_BG);
-    lcd_draw_text(key->x + (key->w - text_width) / 2,
-                  key->y + (key->h - text_height) / 2,
+    lcd_draw_text(visible_key->x + (visible_key->w - text_width) / 2,
+                  visible_key->y + (visible_key->h - text_height) / 2,
                   label, foreground, fill, scale);
 }
 
 static void render_keyboard(const calculator_program_t *program) {
+    if (program->layout == CALCULATOR_LAYOUT_FULLSCREEN) return;
     const program_key_t *keys = NULL;
     size_t count = 0;
     keymap(program, &keys, &count);
-    lcd_fill_rect(0, PROGRAM_KEYBOARD_Y, LCD_WIDTH,
-                  LCD_HEIGHT - PROGRAM_KEYBOARD_Y, COL_BG);
+    int top = program_keyboard_top(program);
+    lcd_fill_rect(0, top, LCD_WIDTH, LCD_HEIGHT - top, COL_BG);
     for (size_t i = 0; i < count; ++i) draw_key(program, &keys[i], false);
 }
 
@@ -218,12 +284,13 @@ static void render_status(const calculator_program_t *program) {
 static void render_editor(calculator_program_t *program) {
     char line[BASIC_LINE_TEXT_CAPACITY + 8];
     size_t count = program->engine.program.count;
-    size_t maximum_scroll = count > PROGRAM_VISIBLE_LINES
-        ? count - PROGRAM_VISIBLE_LINES : 0;
+    size_t visible_lines = program_editor_visible_lines(program);
+    size_t maximum_scroll = count > visible_lines
+        ? count - visible_lines : 0;
     if (program->list_scroll > maximum_scroll) {
         program->list_scroll = maximum_scroll;
     }
-    for (size_t row = 0; row < PROGRAM_VISIBLE_LINES; ++row) {
+    for (size_t row = 0; row < visible_lines; ++row) {
         size_t index = program->list_scroll + row;
         if (index >= count) break;
         snprintf(line, sizeof line, "%u %s",
@@ -235,9 +302,10 @@ static void render_editor(calculator_program_t *program) {
     char prompt[44];
     snprintf(prompt, sizeof prompt, ">%.39s",
              expression_editor_view(&program->editor, input, sizeof input, 39));
-    lcd_fill_rect(0, 103, LCD_WIDTH, 33, COL_BG);
-    lcd_fill_rect(0, 103, LCD_WIDTH, 2, COL_MUTED);
-    lcd_draw_text(6, 112, prompt, COL_TEXT, COL_BG, 2);
+    int prompt_top = program_prompt_top(program);
+    lcd_fill_rect(0, prompt_top, LCD_WIDTH, LCD_HEIGHT - prompt_top, COL_BG);
+    lcd_fill_rect(0, prompt_top, LCD_WIDTH, 2, COL_MUTED);
+    lcd_draw_text(6, prompt_top + 9, prompt, COL_TEXT, COL_BG, 2);
 }
 
 static void visible_output(char *destination, size_t capacity,
@@ -246,7 +314,7 @@ static void visible_output(char *destination, size_t capacity,
 }
 
 static void render_output(const calculator_program_t *program) {
-    size_t visible_lines = program->engine.state == BASIC_RUN_INPUT ? 5u : 6u;
+    size_t visible_lines = program_output_visible_lines(program);
     size_t start = program->engine.output_count > visible_lines
         ? program->engine.output_count - visible_lines : 0;
     char output[40];
@@ -262,9 +330,11 @@ static void render_output(const calculator_program_t *program) {
         snprintf(prompt, sizeof prompt, "? %.37s",
                  expression_editor_view(&program->editor, input,
                                         sizeof input, 37));
-        lcd_fill_rect(0, 103, LCD_WIDTH, 33, COL_BG);
-        lcd_fill_rect(0, 103, LCD_WIDTH, 2, COL_MUTED);
-        lcd_draw_text(6, 112, prompt, COL_TEXT, COL_BG, 2);
+        int prompt_top = program_prompt_top(program);
+        lcd_fill_rect(0, prompt_top, LCD_WIDTH,
+                      LCD_HEIGHT - prompt_top, COL_BG);
+        lcd_fill_rect(0, prompt_top, LCD_WIDTH, 2, COL_MUTED);
+        lcd_draw_text(6, prompt_top + 9, prompt, COL_TEXT, COL_BG, 2);
     }
 }
 
@@ -273,6 +343,19 @@ void calculator_program_init(calculator_program_t *program) {
     basic_engine_init(&program->engine);
     expression_editor_init(&program->editor);
     snprintf(program->notice, sizeof program->notice, "READY");
+}
+
+void calculator_program_set_layout(calculator_program_t *program,
+                                   calculator_layout_t layout) {
+    program->layout = layout < CALCULATOR_LAYOUT_COUNT
+        ? layout : CALCULATOR_LAYOUT_STANDARD;
+    size_t visible_lines = program_editor_visible_lines(program);
+    size_t count = program->engine.program.count;
+    size_t maximum_scroll = count > visible_lines
+        ? count - visible_lines : 0;
+    if (program->list_scroll > maximum_scroll) {
+        program->list_scroll = maximum_scroll;
+    }
 }
 
 void calculator_program_set_source(calculator_program_t *program,
@@ -316,8 +399,9 @@ static unsigned int enter_input(calculator_program_t *program) {
             expression_editor_clear(&program->editor);
             program->output_view = false;
             size_t count = program->engine.program.count;
-            program->list_scroll = count > PROGRAM_VISIBLE_LINES
-                ? count - PROGRAM_VISIBLE_LINES : 0;
+            size_t visible_lines = program_editor_visible_lines(program);
+            program->list_scroll = count > visible_lines
+                ? count - visible_lines : 0;
             effects |= CALCULATOR_PROGRAM_DIRTY;
         }
     }
@@ -407,7 +491,7 @@ static unsigned int activate_key(calculator_program_t *program,
 
 unsigned int calculator_program_touch(calculator_program_t *program,
                                       uint16_t x, uint16_t y) {
-    if (y < PROGRAM_KEYBOARD_Y) {
+    if (y < program_keyboard_top(program)) {
         return calculator_program_toggle_view(program) |
                CALCULATOR_PROGRAM_BEEP;
     }
@@ -416,8 +500,9 @@ unsigned int calculator_program_touch(calculator_program_t *program,
     keymap(program, &keys, &count);
     for (size_t i = 0; i < count; ++i) {
         const program_key_t *key = &keys[i];
-        if (x >= key->x && x < key->x + key->w &&
-            y >= key->y && y < key->y + key->h) {
+        program_key_t geometry = program_key_geometry(program, key);
+        if (x >= geometry.x && x < geometry.x + geometry.w &&
+            y >= geometry.y && y < geometry.y + geometry.h) {
             draw_key(program, key, true);
             sleep_ms(25);
             return activate_key(program, key);
@@ -444,8 +529,9 @@ unsigned int calculator_program_move(calculator_program_t *program,
     }
     if (!program->output_view && program->engine.state != BASIC_RUN_INPUT) {
         size_t count = program->engine.program.count;
-        size_t maximum_scroll = count > PROGRAM_VISIBLE_LINES
-            ? count - PROGRAM_VISIBLE_LINES : 0;
+        size_t visible_lines = program_editor_visible_lines(program);
+        size_t maximum_scroll = count > visible_lines
+            ? count - visible_lines : 0;
         if (vertical < 0 && program->list_scroll) program->list_scroll--;
         if (vertical > 0 && program->list_scroll < maximum_scroll) {
             program->list_scroll++;

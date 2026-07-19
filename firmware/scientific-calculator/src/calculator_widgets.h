@@ -47,8 +47,13 @@ typedef struct {
     const char *favorites[6];
 } calculator_widget_state_t;
 
+void calculator_widget_set_layout(calculator_layout_t layout);
+calculator_layout_t calculator_widget_layout(void);
+calculator_layout_t calculator_widget_cycle_layout(void);
 void calculator_widget_set_data_focus(bool enabled);
 bool calculator_widget_data_focus(void);
+bool calculator_widget_fullscreen(void);
+bool calculator_widget_keypad_visible(void);
 int calculator_widget_display_height(void);
 int calculator_widget_key_top(unsigned int row);
 int calculator_widget_key_height(void);

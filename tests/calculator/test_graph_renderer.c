@@ -187,7 +187,17 @@ int main(void) {
     expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_PLOT);
     expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_TABLE);
     expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_ANALYSIS);
-    calculator_widget_set_data_focus(false);
+
+    calculator_widget_set_layout(CALCULATOR_LAYOUT_FULLSCREEN);
+    if (calculator_widget_key_top(4) != LCD_HEIGHT ||
+        calculator_widget_key_height() != 0) {
+        printf("FAIL: fullscreen graph keypad geometry\n");
+        failures++;
+    }
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_PLOT);
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_TABLE);
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_ANALYSIS);
+    calculator_widget_set_layout(CALCULATOR_LAYOUT_STANDARD);
 
     if (failures) {
         printf("%d graph renderer test(s) failed\n", failures);

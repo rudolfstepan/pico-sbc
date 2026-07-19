@@ -178,10 +178,40 @@ int main(void) {
     CHECK(gap == NULL);
     CHECK(last && last->row == 4 && last->col == 0);
 
-    calculator_widget_set_data_focus(false);
+    calculator_widget_set_layout(CALCULATOR_LAYOUT_FULLSCREEN);
+    CHECK(calculator_widget_fullscreen());
+    CHECK(!calculator_widget_keypad_visible());
+    CHECK(calculator_widget_display_height() == 320);
+    CHECK(calculator_widget_key_top(0) == 320);
+    CHECK(calculator_widget_key_height() == 0);
+    CHECK(calculator_widget_hit_key(PAGE_STATISTICS, &widget_state,
+                                    5, 300) == NULL);
+
+    calculator_logic_activate(&logic, "TABLE", logic_message,
+                              sizeof logic_message);
+    mock_lcd_reset();
+    calculator_page_render_programmer(&programmer, "FULL DISPLAY");
+    calculator_page_render_format(&programmer, 24, FORMAT_VIEW_IEEE64,
+                                  "FULL DISPLAY");
+    calculator_page_render_symbols(&symbols, 0, "FULL DISPLAY");
+    calculator_page_render_logic(&logic, "FULL DISPLAY");
+    calculator_page_render_units(&units, "FULL DISPLAY");
+    calculator_page_render_complex(&complex, true, "FULL DISPLAY");
+    calculator_page_render_statistics(&statistics, "FULL DISPLAY");
+    calculator_widget_render_keypad(PAGE_STATISTICS, &widget_state);
+    CHECK(!mock_lcd_had_out_of_bounds_draw());
+    CHECK(mock_lcd_drew_text(" 15 "));
+
+    calculator_widget_set_layout(CALCULATOR_LAYOUT_STANDARD);
     CHECK(calculator_widget_display_height() == 84);
     CHECK(calculator_widget_key_top(4) == 272);
     CHECK(calculator_widget_key_height() == 42);
+    CHECK(calculator_widget_cycle_layout() ==
+          CALCULATOR_LAYOUT_DATA_FOCUS);
+    CHECK(calculator_widget_cycle_layout() ==
+          CALCULATOR_LAYOUT_FULLSCREEN);
+    CHECK(calculator_widget_cycle_layout() ==
+          CALCULATOR_LAYOUT_STANDARD);
 
     puts("calculator page tests passed");
     return 0;

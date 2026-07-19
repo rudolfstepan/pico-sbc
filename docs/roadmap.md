@@ -199,8 +199,10 @@ sind implementiert. Datensaetze werden im CRC-gesicherten Flashformat
 gespeichert; Version 2 liest bestehende Version-1-Daten weiterhin. Alle 23
 Host-Tests und der RP2040-Release-Build laufen erfolgreich. Touchbedienung,
 Lesbarkeit der Diagramme und Wiederherstellung nach einem Neustart stehen noch
-als Hardwaretest aus. K2-Layoutumschaltung, doppelte Anzeigehoehe und
-vergroesserte Datenschrift wurden auf dem Pico erfolgreich bestaetigt.
+als Hardwaretest aus. K2 durchlaeuft Standardlayout, Datenfokus und Vollbild;
+im Vollbild wird die Tastatur samt Touch-Hitboxen ausgeblendet. Doppelte
+Anzeigehoehe und vergroesserte Datenschrift wurden auf dem Pico erfolgreich
+bestaetigt.
 
 ## Phase 10: USB-Datenaustausch
 
@@ -217,7 +219,7 @@ vergroesserte Datenschrift wurden auf dem Pico erfolgreich bestaetigt.
 **Fertig, wenn:** Daten zwischen Rechner und PC in beide Richtungen uebertragen
 werden koennen, ohne Touchbedienung oder Berechnungen zu blockieren.
 
-Softwarestand: Protokollversion 3 und Firmware 1.4.0 stellen einen begrenzten
+Softwarestand: Protokollversion 3 und Firmware 1.4.2 stellen einen begrenzten
 ASCII-Zeilenparser, verlustfreie Dezimalergebnisse, transaktionale
 Funktionsimporte, Statistik- und BASIC-Programmlisten sowie Firmware- und
 Diagnoseinformationen bereit. CLI und
@@ -244,14 +246,15 @@ gleichzeitiger Touchbedienung steht noch als Hardwaretest aus.
 **Fertig, wenn:** Programme vollstaendig per Touch eingegeben, bearbeitet,
 ausgefuehrt und nach einem Neustart wieder geladen werden koennen.
 
-Softwarestand: 20 Programmzeilen, 26 Variablen, sechs sichtbare Ausgabezeilen,
-eine QWERTZ- und eine dedizierte `TOK`-Tastatur sind implementiert. Die Python-
-GUI verwaltet `.bas`-Dateien, Geraetesynchronisation, Run/Stop, Ausgabe und
-`INPUT`. Das Flashformat Version 4 migriert bestehende Version-1- bis
-Version-3-Daten. Alle 29 Host-Tests und der RP2040-Release-Build laufen
-erfolgreich. Touchpositionen,
-Lesbarkeit, `INPUT` und Wiederherstellung nach einem Neustart stehen noch als
-Hardwaretest aus.
+Softwarestand: 20 Programmzeilen, 26 Variablen, 16 gepufferte Ausgabezeilen,
+eine QWERTZ- und eine dedizierte `TOK`-Tastatur sind implementiert. Die
+CODE-Tastatur folgt der dreistufigen K2-Umschaltung; im Vollbild stehen alle
+16 Ausgabezeilen zur Verfuegung. Die Python-GUI verwaltet `.bas`-Dateien,
+Geraetesynchronisation, Run/Stop, Ausgabe und `INPUT`. Das Flashformat Version
+4 migriert bestehende Version-1- bis Version-3-Daten. Alle 29 Host-Tests und
+der RP2040-Release-Build laufen erfolgreich. Touchpositionen, Lesbarkeit,
+`INPUT` und Wiederherstellung nach einem Neustart stehen noch als Hardwaretest
+aus.
 
 ## Phase 12: Exakte Dezimalarithmetik
 

@@ -56,6 +56,36 @@ int main(void) {
     CHECK(calculator_program_touch(&program, 400, 280) &
           CALCULATOR_PROGRAM_EXIT);
 
+    calculator_program_t layout_program;
+    calculator_program_init(&layout_program);
+    calculator_program_set_layout(&layout_program,
+                                  CALCULATOR_LAYOUT_DATA_FOCUS);
+    mock_lcd_reset();
+    calculator_program_render(&layout_program);
+    CHECK(!mock_lcd_had_out_of_bounds_draw());
+    CHECK(calculator_program_touch(&layout_program, 12, 192) &
+          CALCULATOR_PROGRAM_RENDER);
+    CHECK(strcmp(layout_program.editor.text, "1") == 0);
+
+    calculator_program_set_layout(&layout_program,
+                                  CALCULATOR_LAYOUT_FULLSCREEN);
+    layout_program.output_view = true;
+    layout_program.engine.output_count = BASIC_OUTPUT_LINES;
+    for (size_t i = 0; i < BASIC_OUTPUT_LINES; ++i) {
+        snprintf(layout_program.engine.output[i], BASIC_OUTPUT_CAPACITY,
+                 "LINE %u", (unsigned int)i);
+    }
+    mock_lcd_reset();
+    calculator_program_render(&layout_program);
+    CHECK(!mock_lcd_had_out_of_bounds_draw());
+    CHECK(mock_lcd_drew_text("LINE 15"));
+
+    size_t editor_length = layout_program.editor.length;
+    CHECK(calculator_program_touch(&layout_program, 12, 192) &
+          CALCULATOR_PROGRAM_RENDER);
+    CHECK(layout_program.editor.length == editor_length);
+    CHECK(!layout_program.output_view);
+
     puts("calculator program tests passed");
     return 0;
 }

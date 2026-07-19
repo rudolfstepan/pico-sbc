@@ -1,6 +1,6 @@
 # Benutzerhandbuch: Pico Scientific Calculator
 
-Gueltig fuer Firmware `1.4.1`, USB-Protokoll `3` und das LAFVIN Pico
+Gueltig fuer Firmware `1.4.2`, USB-Protokoll `3` und das LAFVIN Pico
 Development Kit mit RP2040, ST7796U-LCD und GT911-Touchscreen.
 
 ## Inhalt
@@ -108,7 +108,7 @@ werden.
 | Taste | Normale Seiten | STATS | CODE |
 |---|---|---|---|
 | `K1` | Entspricht `=` | Entspricht `ADD` | Speichert die Eingabezeile |
-| `K2` | Schaltet Standard-/Datenfokus um | Schaltet Standard-/Datenfokus um | Wechselt Programmliste/Ausgabe |
+| `K2` | Drei Displaylayouts | Drei Displaylayouts | Drei Displaylayouts |
 
 Werden `K1` und `K2` beim Einschalten gleichzeitig gehalten, wird nach etwa
 zwei Sekunden ein Werksreset ausgefuehrt.
@@ -124,14 +124,18 @@ Der Joystick ist kontextabhaengig:
 
 ### Displayansichten
 
-`K2` schaltet ausserhalb von `CODE` zwischen zwei Layouts:
+`K2` durchlaeuft auf allen Seiten drei Layouts:
 
 - **Standard:** grosseres Tastenfeld und kompakter Datenbereich.
 - **Datenfokus:** doppelt hoher Datenbereich mit groesserer Schrift und
   Diagrammflaeche; das Tastenfeld wird halb so hoch.
+- **Vollbild:** das Tastenfeld wird ausgeblendet und die Ausgabe verwendet die
+  gesamte 480x320-Anzeigeflaeche.
 
-Die Touchbereiche werden zusammen mit dem sichtbaren Layout umgestellt. Nach
-einem Neustart beginnt der Rechner wieder im Standardlayout.
+Die Touchbereiche werden zusammen mit dem sichtbaren Layout umgestellt. Im
+Vollbild reagieren keine unsichtbaren Tastaturfelder. Ein weiterer Druck auf
+`K2` kehrt zum Standardlayout zurueck. Nach einem Neustart beginnt der Rechner
+wieder im Standardlayout.
 
 ### Seitenfolge
 
@@ -610,8 +614,11 @@ Nur die Zeilennummer mit `ENTER` loescht die betreffende Zeile:
 10
 ```
 
-Der Joystick bewegt den Cursor und scrollt die Programmliste. `K2` oder ein
-Tippen auf den oberen Bildschirmbereich wechselt zwischen Liste und Ausgabe.
+Der Joystick bewegt den Cursor und scrollt die Programmliste. Ein Tippen auf
+den oberen Bildschirmbereich wechselt zwischen Liste und Ausgabe. `K2`
+durchlaeuft die grosse, kompakte und vollstaendig ausgeblendete Tastatur.
+Im Vollbild zeigt CODE bis zu 16 Ausgabezeilen, in der Standardansicht bis zu
+sechs.
 
 ### Tastaturebenen
 
@@ -793,14 +800,16 @@ normalen Verlauf, Statistikdaten und BASIC-Programme.
 1. Displayoberflaeche reinigen und nur mit einem Finger bedienen.
 2. Pico neu starten, damit der GT911 neu initialisiert wird.
 3. Pruefen, ob sichtbares und beruehrbares Layout mit `K2` gemeinsam wechseln.
+   Im dritten Zustand ist die Tastatur absichtlich vollstaendig ausgeblendet.
 4. Bei dauerhaft falschen Koordinaten Boardrevision und Touchverkabelung
    anhand von `docs/hardware.md` pruefen.
 
 ### Letzte Tastenzeile fehlt
 
-Mit `K2` pruefen, ob der Datenfokus aktiv ist. Dort ist das Tastenfeld bewusst
-halb so hoch, bleibt aber vollstaendig bedienbar. Fehlen Tasten wirklich,
-aktuelle Firmware neu flashen.
+Mit `K2` pruefen, welches der drei Layouts aktiv ist. Im Datenfokus ist das
+Tastenfeld bewusst halb so hoch; im Vollbild ist es vollstaendig ausgeblendet.
+Ein weiterer Druck kehrt zum Standardlayout mit grossen Tasten zurueck. Fehlen
+dort Tasten wirklich, aktuelle Firmware neu flashen.
 
 ### Ergebnis wirkt ungenau
 

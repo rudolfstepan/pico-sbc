@@ -2,6 +2,7 @@
 #define CALCULATOR_PROGRAM_H
 
 #include "basic_engine.h"
+#include "calculator_ui_types.h"
 #include "expression_editor.h"
 
 #include <stdbool.h>
@@ -17,6 +18,7 @@ typedef struct {
     basic_engine_t engine;
     expression_editor_t editor;
     size_t list_scroll;
+    calculator_layout_t layout;
     bool output_view;
     bool symbol_layer;
     bool clear_armed;
@@ -26,6 +28,8 @@ typedef struct {
 void calculator_program_init(calculator_program_t *program);
 void calculator_program_set_source(calculator_program_t *program,
                                    const basic_program_t *source);
+void calculator_program_set_layout(calculator_program_t *program,
+                                   calculator_layout_t layout);
 const basic_program_t *calculator_program_source(
     const calculator_program_t *program);
 void calculator_program_render(calculator_program_t *program);

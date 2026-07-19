@@ -16,33 +16,60 @@
 #define COL_GRAPH_F2 RGB565(255, 220, 0)
 #define COL_GRAPH_F3 RGB565(255, 80, 190)
 
-static bool data_focus;
+static calculator_layout_t layout;
+
+void calculator_widget_set_layout(calculator_layout_t next_layout) {
+    layout = next_layout < CALCULATOR_LAYOUT_COUNT
+        ? next_layout : CALCULATOR_LAYOUT_STANDARD;
+}
+
+calculator_layout_t calculator_widget_layout(void) {
+    return layout;
+}
+
+calculator_layout_t calculator_widget_cycle_layout(void) {
+    layout = (calculator_layout_t)((layout + 1) % CALCULATOR_LAYOUT_COUNT);
+    return layout;
+}
 
 void calculator_widget_set_data_focus(bool enabled) {
-    data_focus = enabled;
+    layout = enabled ? CALCULATOR_LAYOUT_DATA_FOCUS
+                     : CALCULATOR_LAYOUT_STANDARD;
 }
 
 bool calculator_widget_data_focus(void) {
-    return data_focus;
+    return layout == CALCULATOR_LAYOUT_DATA_FOCUS;
+}
+
+bool calculator_widget_fullscreen(void) {
+    return layout == CALCULATOR_LAYOUT_FULLSCREEN;
+}
+
+bool calculator_widget_keypad_visible(void) {
+    return layout != CALCULATOR_LAYOUT_FULLSCREEN;
 }
 
 int calculator_widget_display_height(void) {
-    return data_focus ? CALCULATOR_DATA_FOCUS_DISPLAY_HEIGHT
-                      : CALCULATOR_DISPLAY_HEIGHT;
+    if (layout == CALCULATOR_LAYOUT_FULLSCREEN) return LCD_HEIGHT;
+    return layout == CALCULATOR_LAYOUT_DATA_FOCUS
+        ? CALCULATOR_DATA_FOCUS_DISPLAY_HEIGHT : CALCULATOR_DISPLAY_HEIGHT;
 }
 
 int calculator_widget_key_top(unsigned int row) {
-    int top = data_focus ? CALCULATOR_DATA_FOCUS_KEY_Y : CALCULATOR_KEY_Y;
-    int height = data_focus ? CALCULATOR_DATA_FOCUS_KEY_HEIGHT
-                            : CALCULATOR_KEY_HEIGHT;
-    int gap = data_focus ? CALCULATOR_DATA_FOCUS_KEY_GAP_Y
-                         : CALCULATOR_KEY_GAP_Y;
+    if (layout == CALCULATOR_LAYOUT_FULLSCREEN) return LCD_HEIGHT;
+    bool compact = layout == CALCULATOR_LAYOUT_DATA_FOCUS;
+    int top = compact ? CALCULATOR_DATA_FOCUS_KEY_Y : CALCULATOR_KEY_Y;
+    int height = compact ? CALCULATOR_DATA_FOCUS_KEY_HEIGHT
+                         : CALCULATOR_KEY_HEIGHT;
+    int gap = compact ? CALCULATOR_DATA_FOCUS_KEY_GAP_Y
+                      : CALCULATOR_KEY_GAP_Y;
     return top + (int)row * (height + gap);
 }
 
 int calculator_widget_key_height(void) {
-    return data_focus ? CALCULATOR_DATA_FOCUS_KEY_HEIGHT
-                      : CALCULATOR_KEY_HEIGHT;
+    if (layout == CALCULATOR_LAYOUT_FULLSCREEN) return 0;
+    return layout == CALCULATOR_LAYOUT_DATA_FOCUS
+        ? CALCULATOR_DATA_FOCUS_KEY_HEIGHT : CALCULATOR_KEY_HEIGHT;
 }
 
 static int key_x(const calc_key_t *key) {
@@ -143,6 +170,7 @@ static uint16_t key_fill(const calc_key_t *key, bool pressed,
 
 void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
                                 const calculator_widget_state_t *state) {
+    if (!calculator_widget_keypad_visible()) return;
     int x = key_x(key);
     int y = key_y(key);
     char favorite_label[12];
@@ -206,6 +234,7 @@ void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
 
 void calculator_widget_render_keypad(calc_page_t page,
                                      const calculator_widget_state_t *state) {
+    if (!calculator_widget_keypad_visible()) return;
     size_t count;
     const calc_key_t *keys = page == PAGE_GRAPH
         ? calculator_graph_keymap(state->graph_view, &count)
@@ -225,6 +254,7 @@ void calculator_widget_render_keypad(calc_page_t page,
 const calc_key_t *calculator_widget_hit_key(calc_page_t page,
                                             const calculator_widget_state_t *state,
                                             uint16_t x, uint16_t y) {
+    if (!calculator_widget_keypad_visible()) return NULL;
     size_t count;
     const calc_key_t *keys = page == PAGE_GRAPH
         ? calculator_graph_keymap(state->graph_view, &count)
