@@ -72,6 +72,11 @@ Pinbelegung und technische Daten stehen in [docs/hardware.md](docs/hardware.md).
 Die Architektur der Firmware ist in
 [docs/architecture.md](docs/architecture.md) beschrieben.
 
+## Roadmap
+
+Die geplanten Rechner-Erweiterungen und ihre Umsetzungsreihenfolge stehen in
+[docs/roadmap.md](docs/roadmap.md).
+
 ## Lizenz
 
 Der eigene Projektcode steht unter der [MIT-Lizenz](LICENSE). TinyExpr ist ein
