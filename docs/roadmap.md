@@ -185,7 +185,8 @@ Lesbarkeit wurden anschliessend auf dem Pico erfolgreich geprueft.
 - [x] Lineare Regression mit Korrelationskoeffizient implementieren.
 - [x] Histogramm und Streudiagramm im Graphbereich darstellen.
 - [x] Zahlenlisten persistent speichern und beim Start wiederherstellen.
-- [x] Datenfokus mit doppelter Anzeigehoehe per Hardwaretaste bereitstellen.
+- [x] Datenfokus mit doppelter Anzeigehoehe und groesserer Datenschrift per
+  Hardwaretaste bereitstellen.
 
 **Fertig, wenn:** Listen bearbeitet, ausgewertet und grafisch dargestellt
 werden koennen und Ergebnisse gegen bekannte Datensaetze getestet sind.

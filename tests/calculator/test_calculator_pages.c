@@ -150,6 +150,7 @@ int main(void) {
     calculator_page_render_statistics(&statistics, "DATA DISPLAY LARGE");
     calculator_widget_render_keypad(PAGE_STATISTICS, &widget_state);
     CHECK(!mock_lcd_had_out_of_bounds_draw());
+    CHECK(mock_lcd_max_text_scale() >= 3);
 
     const calc_key_t *first = calculator_widget_hit_key(
         PAGE_STATISTICS, &widget_state, 5, 189);

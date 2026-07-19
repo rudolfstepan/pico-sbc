@@ -61,9 +61,10 @@ Beispiel `ncr(6,2)`.
 K2 wechselt jederzeit zwischen zwei Ansichten. Die Standardansicht verwendet
 einen 84 Pixel hohen Datenbereich und grosse Touch-Tasten. Im Datenfokus ist
 der Datenbereich mit 168 Pixeln doppelt so hoch; Inhalte, Diagramme und
-Zeilenabstaende nutzen den zusaetzlichen Platz. Das fuenfzeilige Tastenfeld
-ist mit 113 statt 226 Pixeln halb so hoch. Zeichnung und Touch-Hitboxen werden
-gemeinsam umgeschaltet.
+Datenschrift nutzen den zusaetzlichen Platz. Normale Datenzeilen wachsen von
+Schriftfaktor 1 auf 2, grosse Eingaben und Ergebnisse von Faktor 2 auf 3. Das
+fuenfzeilige Tastenfeld ist mit 113 statt 226 Pixeln halb so hoch. Zeichnung
+und Touch-Hitboxen werden gemeinsam umgeschaltet.
 
 Die aktive Ansicht bleibt bis zum naechsten Druck auf K2 erhalten und startet
 nach einem Neustart wieder im Standardlayout. `DEL` auf dem Touchscreen

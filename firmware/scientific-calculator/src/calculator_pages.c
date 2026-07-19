@@ -19,6 +19,13 @@ static int display_y(int logical_y) {
 static void page_draw_text(int x, int y, const char *text,
                            uint16_t foreground, uint16_t background,
                            uint8_t scale) {
+    if (calculator_widget_data_focus() && y > 4) {
+        uint8_t enlarged = scale < 2 ? 2 : (scale < 3 ? 3 : scale);
+        size_t max_chars = (size_t)(LCD_WIDTH - x) /
+                           ((size_t)enlarged * 6u);
+        text = calculator_widget_tail(text, max_chars);
+        scale = enlarged;
+    }
     lcd_draw_text(x, display_y(y), text, foreground, background, scale);
 }
 
@@ -47,8 +54,10 @@ void calculator_page_render_expression(calc_page_t page, bool degrees,
              degrees ? "DEG" : "RAD",
              page == PAGE_SCIENTIFIC ? "SCIENTIFIC" : "BASIC", message);
     snprintf(shown_result, sizeof shown_result, "=%s", result_text);
-    const char *visible = calculator_widget_tail(shown_result, 38);
-    int width = (int)strlen(visible) * 12;
+    size_t visible_chars = calculator_widget_data_focus() ? 26u : 38u;
+    int result_scale = calculator_widget_data_focus() ? 3 : 2;
+    const char *visible = calculator_widget_tail(shown_result, visible_chars);
+    int width = (int)strlen(visible) * 6 * result_scale;
     int x = LCD_WIDTH - width - 6;
     if (x < 6) x = 6;
 
@@ -56,7 +65,7 @@ void calculator_page_render_expression(calc_page_t page, bool degrees,
     lcd_draw_text(6, 4, status, COL_MUTED, COL_BG, 1);
     lcd_draw_text(6, 20,
                   expression_editor_view(editor, editor_text,
-                                         sizeof editor_text, 38),
+                                         sizeof editor_text, visible_chars),
                   COL_TEXT, COL_BG, 2);
     lcd_draw_text(x, 52, visible, COL_TEXT, COL_BG, 2);
     finish_display();
