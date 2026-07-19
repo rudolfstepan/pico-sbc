@@ -51,7 +51,8 @@ Installation, Bedienung, alle Rechnermodi und die PC-Anwendung.
 - Trace-Cursor, scrollbare Wertetabelle, automatische Skalierung sowie Marker
   fuer Nullstellen und Schnittpunkte
 - K1 berechnet, fuegt Statistikdaten hinzu oder bestaetigt eine CODE-Zeile;
-  K2 schaltet das Displaylayout in drei Stufen um
+  K2 schaltet kurz gedrueckt das Displaylayout in drei Stufen um und wechselt
+  lange gedrueckt zwischen Landscape und Portrait
 - USB-CDC-Protokoll und Python-CLI fuer Berechnung, Diagnose sowie
   JSON-Import und -Export
 
@@ -73,14 +74,20 @@ K2 durchlaeuft auf allen Seiten drei Ansichten:
    Diagramme und Datenschrift nutzen den zusaetzlichen Platz; das Tastenfeld
    ist etwa halb so hoch.
 3. Im Vollbild wird das Tastenfeld vollstaendig ausgeblendet und der gesamte
-   480x320-Bildschirm steht fuer Daten, Diagramme, Wahrheitstabellen oder die
-   BASIC-Ausgabe bereit.
+   Bildschirm steht fuer Daten, Diagramme, Wahrheitstabellen oder die BASIC-
+   Ausgabe bereit.
 
 Zeichnung und Touch-Hitboxen werden gemeinsam umgeschaltet; im Vollbild sind
 keine unsichtbaren Tasten aktiv. Ein weiterer Druck auf K2 kehrt zur
 Standardansicht zurueck. Nach einem Neustart startet der Rechner ebenfalls im
 Standardlayout. K1 bleibt fuer `=`, Programmer-Operationen, `ADD` und CODE-
 Eingaben verfuegbar.
+
+Wird K2 mindestens 0,8 Sekunden gehalten, wechselt die Firmware zwischen
+Landscape (`480x320`) und Portrait (`320x480`). Displayinhalt, Graphen,
+Tastenabmessungen und Touchkoordinaten werden gemeinsam umgestellt. Im
+Portraitmodus werden lange Tastenbezeichnungen passend gekuerzt. Die
+Orientierung startet nach einem Neustart wieder in Landscape.
 
 ## Graph 2.0
 

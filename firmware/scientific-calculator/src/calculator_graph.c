@@ -383,7 +383,7 @@ static double graph_grid_step(double span, int pixels, int target_pixels) {
 }
 
 static int graph_x_pixel(double value, double x_min, double x_span) {
-    return (int)(((value - x_min) * (LCD_WIDTH - 1) / x_span) + 0.5);
+    return (int)(((value - x_min) * (lcd_width() - 1) / x_span) + 0.5);
 }
 
 static int graph_y_pixel(double value, double y_max, double y_span,
@@ -427,7 +427,7 @@ static void draw_graph_grid(double x_min, double x_span,
         if (value > y_max + y_step * 0.001) break;
         int pixel_y = graph_y_pixel(value, y_max, y_span,
                                     GRAPH_PLOT_TOP, plot_height);
-        lcd_fill_rect(0, pixel_y, LCD_WIDTH, 1, COL_GRID);
+        lcd_fill_rect(0, pixel_y, lcd_width(), 1, COL_GRID);
     }
     if (x_min <= 0.0 && x_max >= 0.0) {
         int axis_x = graph_x_pixel(0.0, x_min, x_span);
@@ -436,7 +436,7 @@ static void draw_graph_grid(double x_min, double x_span,
     if (y_min <= 0.0 && y_max >= 0.0) {
         int axis_y = graph_y_pixel(0.0, y_max, y_span,
                                    GRAPH_PLOT_TOP, plot_height);
-        lcd_fill_rect(0, axis_y, LCD_WIDTH, 1, COL_MUTED);
+        lcd_fill_rect(0, axis_y, lcd_width(), 1, COL_MUTED);
     }
 }
 
@@ -466,7 +466,7 @@ static void draw_graph_axis_labels(double x_min, double x_span,
         int width = (int)strlen(label) * 6;
         int x = graph_x_pixel(value, x_min, x_span) - width / 2;
         if (x < 1) x = 1;
-        if (x + width >= LCD_WIDTH) x = LCD_WIDTH - width - 1;
+        if (x + width >= lcd_width()) x = lcd_width() - width - 1;
         lcd_draw_text(x, x_label_y, label, COL_MUTED, COL_BG, 1);
     }
 
@@ -479,7 +479,7 @@ static void draw_graph_axis_labels(double x_min, double x_span,
         format_graph_tick(label, sizeof label, value, y_step);
         int width = (int)strlen(label) * 6;
         int x = y_axis_visible ? axis_x + 4 : 2;
-        if (x + width >= LCD_WIDTH) x = axis_x - width - 3;
+        if (x + width >= lcd_width()) x = axis_x - width - 3;
         int y = graph_y_pixel(value, y_max, y_span,
                               GRAPH_PLOT_TOP, plot_height) - 4;
         if (y < GRAPH_PLOT_TOP) y = GRAPH_PLOT_TOP;
@@ -491,7 +491,7 @@ static void draw_graph_axis_labels(double x_min, double x_span,
         int y = x_label_y > axis_y ? axis_y - 10 : axis_y + 3;
         if (y < GRAPH_PLOT_TOP) y = GRAPH_PLOT_TOP;
         if (y + 8 > GRAPH_PLOT_BOTTOM) y = GRAPH_PLOT_BOTTOM - 8;
-        lcd_draw_text(LCD_WIDTH - 8, y, "X", COL_TEXT, COL_BG, 1);
+        lcd_draw_text(lcd_width() - 8, y, "X", COL_TEXT, COL_BG, 1);
     }
     if (y_axis_visible) {
         int x = axis_x >= 9 ? axis_x - 8 : axis_x + 4;
@@ -506,8 +506,8 @@ static void draw_function(const calculator_graph_t *graph,
     int plot_height = GRAPH_PLOT_BOTTOM - GRAPH_PLOT_TOP;
     bool previous_valid = false;
     int previous_y = 0;
-    for (int pixel_x = 0; pixel_x < LCD_WIDTH; ++pixel_x) {
-        double x = x_min + graph->x_span * pixel_x / (LCD_WIDTH - 1);
+    for (int pixel_x = 0; pixel_x < lcd_width(); ++pixel_x) {
+        double x = x_min + graph->x_span * pixel_x / (lcd_width() - 1);
         double y = 0.0;
         bool valid = graph_evaluate(evaluation, function, x, &y) &&
                      y >= y_min && y <= y_max;
@@ -543,7 +543,8 @@ static void draw_marker(const calculator_graph_t *graph,
     uint16_t color = marker->second_function < GRAPH_FUNCTION_COUNT
         ? COL_TEXT : function_colors[marker->first_function];
     int horizontal_left = x > 3 ? x - 3 : 0;
-    int horizontal_right = x + 3 < LCD_WIDTH ? x + 3 : LCD_WIDTH - 1;
+    int horizontal_right = x + 3 < lcd_width()
+        ? x + 3 : lcd_width() - 1;
     int vertical_top = y > GRAPH_PLOT_TOP + 3 ? y - 3 : GRAPH_PLOT_TOP;
     int vertical_bottom = y + 3 < GRAPH_PLOT_BOTTOM
         ? y + 3 : GRAPH_PLOT_BOTTOM - 1;
@@ -571,7 +572,7 @@ static void draw_trace(const calculator_graph_t *graph,
                                 GRAPH_PLOT_TOP, plot_height);
     lcd_fill_rect(x, GRAPH_PLOT_TOP, 1, plot_height, COL_MUTED);
     int left = x > 3 ? x - 3 : 0;
-    int right = x + 3 < LCD_WIDTH ? x + 3 : LCD_WIDTH - 1;
+    int right = x + 3 < lcd_width() ? x + 3 : lcd_width() - 1;
     int top = pixel_y > GRAPH_PLOT_TOP + 3
         ? pixel_y - 3 : GRAPH_PLOT_TOP;
     int bottom = pixel_y + 3 < GRAPH_PLOT_BOTTOM
@@ -579,7 +580,7 @@ static void draw_trace(const calculator_graph_t *graph,
     lcd_fill_rect(left, top, right - left + 1, bottom - top + 1,
                   function_colors[graph->selected_function]);
     int inner_left = x > 1 ? x - 1 : 0;
-    int inner_right = x + 1 < LCD_WIDTH ? x + 1 : LCD_WIDTH - 1;
+    int inner_right = x + 1 < lcd_width() ? x + 1 : lcd_width() - 1;
     int inner_top = pixel_y > GRAPH_PLOT_TOP + 1
         ? pixel_y - 1 : GRAPH_PLOT_TOP;
     int inner_bottom = pixel_y + 1 < GRAPH_PLOT_BOTTOM
@@ -595,7 +596,7 @@ static void render_plot(const calculator_graph_t *graph,
     double y_min = graph->y_center - graph->y_span * 0.5;
     double y_max = graph->y_center + graph->y_span * 0.5;
     int plot_height = GRAPH_PLOT_BOTTOM - GRAPH_PLOT_TOP;
-    double x_step = graph_grid_step(graph->x_span, LCD_WIDTH, 56);
+    double x_step = graph_grid_step(graph->x_span, lcd_width(), 56);
     double y_step = graph_grid_step(graph->y_span, plot_height, 44);
 
     lcd_fill(COL_BG);
@@ -633,7 +634,9 @@ static void render_plot(const calculator_graph_t *graph,
         snprintf(status, sizeof status, "X %.4g..%.4g  Y %.4g..%.4g  RAD",
                  x_min, x_min + graph->x_span, y_min, y_max);
     }
-    lcd_fill_rect(0, 0, LCD_WIDTH, GRAPH_PLOT_TOP, COL_BG);
+    lcd_fill_rect(0, 0, lcd_width(), GRAPH_PLOT_TOP, COL_BG);
+    size_t status_chars = (size_t)(lcd_width() - 8) / 6u;
+    if (status_chars < sizeof status) status[status_chars] = '\0';
     lcd_draw_text(4, 2, status, COL_TEXT, COL_BG, 1);
 
     char selected[84];
@@ -658,7 +661,8 @@ static void render_plot(const calculator_graph_t *graph,
                     ? graph->functions[graph->selected_function].expression
                     : "EMPTY - EDIT IN TOOLS");
     }
-    lcd_draw_text(4, 15, calculator_widget_tail(selected, 76),
+    size_t selected_chars = (size_t)(lcd_width() - 8) / 6u;
+    lcd_draw_text(4, 15, calculator_widget_tail(selected, selected_chars),
                   function_colors[graph->selected_function], COL_BG, 1);
 }
 
@@ -673,11 +677,15 @@ static void format_table_value(char *buffer, size_t size,
 
 static void render_table(const calculator_graph_t *graph,
                          graph_evaluation_t *evaluation) {
-    static const int columns[4] = {4, 104, 224, 344};
+    int column_width = lcd_width() / 4;
+    int columns[4] = {4, column_width + 4,
+                      column_width * 2 + 4, column_width * 3 + 4};
     lcd_fill(COL_BG);
     char status[64];
     snprintf(status, sizeof status, "VALUE TABLE  X0 %.7g  STEP %.7g  RAD",
              graph->table_x, graph->table_step);
+    size_t status_chars = (size_t)(lcd_width() - 8) / 6u;
+    if (status_chars < sizeof status) status[status_chars] = '\0';
     lcd_draw_text(4, 2, status, COL_TEXT, COL_BG, 1);
     lcd_draw_text(columns[0], 18, "X", COL_MUTED, COL_BG, 1);
     for (size_t function = 0; function < GRAPH_FUNCTION_COUNT; ++function) {
@@ -687,9 +695,11 @@ static void render_table(const calculator_graph_t *graph,
             ? function_colors[function] : COL_MUTED;
         lcd_draw_text(columns[function + 1], 18, label, color, COL_BG, 1);
     }
-    lcd_fill_rect(0, 28, LCD_WIDTH, 1, COL_GRID);
+    lcd_fill_rect(0, 28, lcd_width(), 1, COL_GRID);
 
-    for (int row = 0; row < 15; ++row) {
+    int table_bottom = calculator_widget_key_top(4) - 4;
+    int visible_rows = (table_bottom - 34) / 15;
+    for (int row = 0; row < visible_rows; ++row) {
         double x = graph->table_x + row * graph->table_step;
         char value[20];
         format_table_value(value, sizeof value, true, x);

@@ -33,6 +33,7 @@
 #define EXPR_MAX EXPRESSION_EDITOR_CAPACITY
 #define PERSISTENCE_DELAY_MS 3000u
 #define PERSISTENCE_RETRY_MS 10000u
+#define ORIENTATION_HOLD_MS 800u
 
 static expression_editor_t expression_state;
 static char result_text[CALCULATOR_RESULT_TEXT_CAPACITY] = "0";
@@ -1143,6 +1144,8 @@ void calculator_ui_task(void) {
     static bool old_button1;
     static bool old_button2;
     static bool joystick_locked;
+    static bool button2_long_handled;
+    static absolute_time_t button2_pressed_at;
     static absolute_time_t button2_debounce_until;
     bool button1 = board_button1_pressed();
     bool button2 = board_button2_pressed();
@@ -1170,7 +1173,40 @@ void calculator_ui_task(void) {
             mark_persistence_dirty();
         }
     }
-    if (button2 && !old_button2 && time_reached(button2_debounce_until)) {
+    if (button2 && !old_button2) {
+        button2_pressed_at = get_absolute_time();
+        button2_long_handled = false;
+    }
+    if (button2 && !button2_long_handled &&
+        absolute_time_diff_us(button2_pressed_at, get_absolute_time()) >=
+            (int64_t)ORIENTATION_HOLD_MS * 1000) {
+        button2_long_handled = true;
+        button2_debounce_until = make_timeout_time_ms(250);
+        lcd_orientation_t orientation =
+            lcd_orientation() == LCD_ORIENTATION_LANDSCAPE
+                ? LCD_ORIENTATION_PORTRAIT : LCD_ORIENTATION_LANDSCAPE;
+        lcd_set_orientation(orientation);
+        lcd_fill(COL_BG);
+        const char *orientation_message =
+            orientation == LCD_ORIENTATION_PORTRAIT
+                ? "PORTRAIT" : "LANDSCAPE";
+        if (page == PAGE_BASIC_PROGRAM) {
+            snprintf(basic_program_ui.notice,
+                     sizeof basic_program_ui.notice, "%s",
+                     orientation_message);
+            apply_program_effects(CALCULATOR_PROGRAM_RENDER);
+        } else if (page == PAGE_GRAPH) {
+            snprintf(message, sizeof message, "%s", orientation_message);
+            render_graph();
+        } else {
+            snprintf(message, sizeof message, "%s", orientation_message);
+            render_display();
+            render_keypad();
+        }
+        board_beep(1200, 20);
+    }
+    if (!button2 && old_button2 && !button2_long_handled &&
+        time_reached(button2_debounce_until)) {
         button2_debounce_until = make_timeout_time_ms(250);
         calculator_layout_t layout = calculator_widget_cycle_layout();
         calculator_program_set_layout(&basic_program_ui, layout);

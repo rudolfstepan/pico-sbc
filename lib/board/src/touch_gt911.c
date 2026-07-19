@@ -1,6 +1,7 @@
 #include "touch_gt911.h"
 
 #include "board.h"
+#include "lcd_st7796.h"
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
 #include "pico/stdlib.h"
@@ -111,9 +112,8 @@ bool touch_read(touch_point_t *point) {
             uint16_t raw_x = (uint16_t)data[1] << 8 | data[0];
             uint16_t raw_y = (uint16_t)data[3] << 8 | data[2];
 
-            if (raw_x < 320 && raw_y < 480) {
-                point->x = raw_y;
-                point->y = 319u - raw_x;
+            if (touch_map_raw_coordinates(raw_x, raw_y, lcd_orientation(),
+                                          &point->x, &point->y)) {
                 point->touched = true;
             }
         }

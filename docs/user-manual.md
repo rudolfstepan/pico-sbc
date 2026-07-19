@@ -1,6 +1,6 @@
 # Benutzerhandbuch: Pico Scientific Calculator
 
-Gueltig fuer Firmware `1.4.2`, USB-Protokoll `3` und das LAFVIN Pico
+Gueltig fuer Firmware `1.5.0`, USB-Protokoll `3` und das LAFVIN Pico
 Development Kit mit RP2040, ST7796U-LCD und GT911-Touchscreen.
 
 ## Inhalt
@@ -108,7 +108,8 @@ werden.
 | Taste | Normale Seiten | STATS | CODE |
 |---|---|---|---|
 | `K1` | Entspricht `=` | Entspricht `ADD` | Speichert die Eingabezeile |
-| `K2` | Drei Displaylayouts | Drei Displaylayouts | Drei Displaylayouts |
+| `K2` kurz | Drei Displaylayouts | Drei Displaylayouts | Drei Displaylayouts |
+| `K2` 0,8 s halten | Portrait/Landscape | Portrait/Landscape | Portrait/Landscape |
 
 Werden `K1` und `K2` beim Einschalten gleichzeitig gehalten, wird nach etwa
 zwei Sekunden ein Werksreset ausgefuehrt.
@@ -130,12 +131,25 @@ Der Joystick ist kontextabhaengig:
 - **Datenfokus:** doppelt hoher Datenbereich mit groesserer Schrift und
   Diagrammflaeche; das Tastenfeld wird halb so hoch.
 - **Vollbild:** das Tastenfeld wird ausgeblendet und die Ausgabe verwendet die
-  gesamte 480x320-Anzeigeflaeche.
+  gesamte Anzeigeflaeche.
 
 Die Touchbereiche werden zusammen mit dem sichtbaren Layout umgestellt. Im
 Vollbild reagieren keine unsichtbaren Tastaturfelder. Ein weiterer Druck auf
 `K2` kehrt zum Standardlayout zurueck. Nach einem Neustart beginnt der Rechner
 wieder im Standardlayout.
+
+### Displayorientierung
+
+K2 mindestens 0,8 Sekunden halten, bis ein kurzer Signalton erklingt. Die
+Anzeige wechselt dann zwischen:
+
+- **Landscape:** `480x320` Pixel.
+- **Portrait:** `320x480` Pixel.
+
+Renderer, Tasten und Touchkoordinaten drehen gemeinsam. Im schmaleren
+Portraitmodus werden lange Tastenbezeichnungen gekuerzt; ihre Funktion bleibt
+unveraendert. Ein kurzer K2-Druck schaltet weiterhin nur das Tastaturlayout.
+Nach einem Neustart beginnt die Firmware in Landscape.
 
 ### Seitenfolge
 

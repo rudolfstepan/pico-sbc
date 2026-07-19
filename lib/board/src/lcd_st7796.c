@@ -11,6 +11,8 @@
 #define LCD_SPI spi0
 #define LCD_SPI_BAUD (62500000u)
 
+static lcd_orientation_t current_orientation;
+
 static const uint8_t font_digits[10][5] = {
     {0x3e,0x51,0x49,0x45,0x3e}, {0x00,0x42,0x7f,0x40,0x00},
     {0x42,0x61,0x51,0x49,0x46}, {0x21,0x41,0x45,0x4b,0x31},
@@ -155,6 +157,7 @@ void lcd_init(void) {
     sleep_ms(120);
     lcd_write_cmd(0x11);
     sleep_ms(120);
+    current_orientation = LCD_ORIENTATION_LANDSCAPE;
     lcd_write_cmd(0x36);
     lcd_write_u8(0x28); /* landscape, RGB order */
     lcd_write_cmd(0x3a);
@@ -184,19 +187,41 @@ void lcd_init(void) {
     sleep_ms(20);
 }
 
+void lcd_set_orientation(lcd_orientation_t orientation) {
+    current_orientation = orientation == LCD_ORIENTATION_PORTRAIT
+        ? LCD_ORIENTATION_PORTRAIT : LCD_ORIENTATION_LANDSCAPE;
+    lcd_write_cmd(0x36);
+    lcd_write_u8(current_orientation == LCD_ORIENTATION_PORTRAIT
+        ? 0x48 : 0x28);
+}
+
+lcd_orientation_t lcd_orientation(void) {
+    return current_orientation;
+}
+
+int lcd_width(void) {
+    return current_orientation == LCD_ORIENTATION_PORTRAIT
+        ? LCD_PORTRAIT_WIDTH : LCD_LANDSCAPE_WIDTH;
+}
+
+int lcd_height(void) {
+    return current_orientation == LCD_ORIENTATION_PORTRAIT
+        ? LCD_PORTRAIT_HEIGHT : LCD_LANDSCAPE_HEIGHT;
+}
+
 void lcd_set_backlight(uint8_t percent) {
     (void)percent;
 }
 
 void lcd_fill(uint16_t color) {
-    lcd_fill_rect(0, 0, LCD_WIDTH, LCD_HEIGHT, color);
+    lcd_fill_rect(0, 0, lcd_width(), lcd_height(), color);
 }
 
 void lcd_fill_rect(int x, int y, int w, int h, uint16_t color) {
     if (x < 0) { w += x; x = 0; }
     if (y < 0) { h += y; y = 0; }
-    if (x + w > LCD_WIDTH) w = LCD_WIDTH - x;
-    if (y + h > LCD_HEIGHT) h = LCD_HEIGHT - y;
+    if (x + w > lcd_width()) w = lcd_width() - x;
+    if (y + h > lcd_height()) h = lcd_height() - y;
     if (w <= 0 || h <= 0) return;
 
     uint8_t pair[2] = {(uint8_t)(color >> 8), (uint8_t)color};
@@ -240,7 +265,7 @@ void lcd_draw_text(int x, int y, const char *text, uint16_t fg, uint16_t bg, uin
     while (*text) {
         lcd_draw_char(x, y, *text++, fg, bg, scale);
         x += 6 * scale;
-        if (x > LCD_WIDTH - 6 * scale) {
+        if (x > lcd_width() - 6 * scale) {
             break;
         }
     }

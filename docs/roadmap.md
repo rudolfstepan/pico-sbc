@@ -202,7 +202,8 @@ Lesbarkeit der Diagramme und Wiederherstellung nach einem Neustart stehen noch
 als Hardwaretest aus. K2 durchlaeuft Standardlayout, Datenfokus und Vollbild;
 im Vollbild wird die Tastatur samt Touch-Hitboxen ausgeblendet. Doppelte
 Anzeigehoehe und vergroesserte Datenschrift wurden auf dem Pico erfolgreich
-bestaetigt.
+bestaetigt. Firmware 1.5.0 ergaenzt eine per langem K2-Druck umschaltbare
+Landscape-/Portrait-Darstellung mit gemeinsam gedrehten Touchkoordinaten.
 
 ## Phase 10: USB-Datenaustausch
 
@@ -219,7 +220,7 @@ bestaetigt.
 **Fertig, wenn:** Daten zwischen Rechner und PC in beide Richtungen uebertragen
 werden koennen, ohne Touchbedienung oder Berechnungen zu blockieren.
 
-Softwarestand: Protokollversion 3 und Firmware 1.4.2 stellen einen begrenzten
+Softwarestand: Protokollversion 3 und Firmware 1.5.0 stellen einen begrenzten
 ASCII-Zeilenparser, verlustfreie Dezimalergebnisse, transaktionale
 Funktionsimporte, Statistik- und BASIC-Programmlisten sowie Firmware- und
 Diagnoseinformationen bereit. CLI und
@@ -285,7 +286,7 @@ Ergebnisstrings. Der Hardwaretest von Anzeige und Neustart steht noch aus.
 
 - [ ] Umfang und Bedienablauf vor der Implementierung festlegen.
 - [ ] Hardwareunabhaengige Logik mit Unit-Tests entwickeln.
-- [ ] Touchoberflaeche fuer 480 x 320 Pixel implementieren.
+- [ ] Touchoberflaeche fuer Landscape und Portrait implementieren.
 - [ ] Host-Tests und beide Firmware-Ziele bauen.
 - [ ] Touch, Lesbarkeit und Reaktionszeit auf dem Board pruefen.
 - [ ] README und Roadmap aktualisieren.

@@ -50,6 +50,10 @@ Das Board enthält ein **3,5-Zoll-TFT-LCD mit kapazitiver Touchschicht**.
 | Display-Schnittstelle | SPI0 |
 | Touchcontroller | GT911 |
 | Touch-Technik | kapazitiv |
+
+Die Rechnerfirmware kann den ST7796U zur Laufzeit zwischen Landscape
+(`480 x 320`) und Portrait (`320 x 480`) umschalten. Der GT911-Treiber bildet
+die Rohkoordinaten passend auf die jeweils aktive Orientierung ab.
 | Touch-Schnittstelle | I²C0 |
 | Touch-Unterstützung | Multi-Touch laut Hersteller |
 

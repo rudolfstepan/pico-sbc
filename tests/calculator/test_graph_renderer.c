@@ -199,6 +199,24 @@ int main(void) {
     expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_ANALYSIS);
     calculator_widget_set_layout(CALCULATOR_LAYOUT_STANDARD);
 
+    lcd_set_orientation(LCD_ORIENTATION_PORTRAIT);
+    if (lcd_width() != 320 || lcd_height() != 480 ||
+        calculator_widget_key_top(4) != 404) {
+        printf("FAIL: portrait graph geometry\n");
+        failures++;
+    }
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_PLOT);
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_TABLE);
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_ANALYSIS);
+    calculator_widget_set_layout(CALCULATOR_LAYOUT_DATA_FOCUS);
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_PLOT);
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_TABLE);
+    calculator_widget_set_layout(CALCULATOR_LAYOUT_FULLSCREEN);
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_PLOT);
+    expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_TABLE);
+    calculator_widget_set_layout(CALCULATOR_LAYOUT_STANDARD);
+    lcd_set_orientation(LCD_ORIENTATION_LANDSCAPE);
+
     if (failures) {
         printf("%d graph renderer test(s) failed\n", failures);
         return 1;

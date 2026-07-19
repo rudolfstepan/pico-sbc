@@ -15,7 +15,13 @@
 
 static int display_y(int logical_y) {
     if (calculator_widget_fullscreen()) {
-        return logical_y > 4 ? 4 + (logical_y - 4) * 4 : logical_y;
+        int factor = lcd_orientation() == LCD_ORIENTATION_PORTRAIT ? 6 : 4;
+        return logical_y > 4 ? 4 + (logical_y - 4) * factor : logical_y;
+    }
+    if (lcd_orientation() == LCD_ORIENTATION_PORTRAIT) {
+        if (calculator_widget_data_focus()) return logical_y * 3;
+        return logical_y > 4
+            ? 4 + (logical_y - 4) * 3 / 2 : logical_y;
     }
     return calculator_widget_data_focus() ? logical_y * 2 : logical_y;
 }
@@ -23,12 +29,22 @@ static int display_y(int logical_y) {
 static void page_draw_text(int x, int y, const char *text,
                            uint16_t foreground, uint16_t background,
                            uint8_t scale) {
+    char clipped[80];
     if (calculator_widget_layout() != CALCULATOR_LAYOUT_STANDARD && y > 4) {
         uint8_t enlarged = scale < 2 ? 2 : (scale < 3 ? 3 : scale);
-        size_t max_chars = (size_t)(LCD_WIDTH - x) /
-                           ((size_t)enlarged * 6u);
-        text = calculator_widget_tail(text, max_chars);
         scale = enlarged;
+    }
+    size_t max_chars = (size_t)(lcd_width() - x) / ((size_t)scale * 6u);
+    if (strlen(text) > max_chars) {
+        if (y <= 4) {
+            size_t count = max_chars < sizeof clipped - 1u
+                ? max_chars : sizeof clipped - 1u;
+            memcpy(clipped, text, count);
+            clipped[count] = '\0';
+            text = clipped;
+        } else {
+            text = calculator_widget_tail(text, max_chars);
+        }
     }
     lcd_draw_text(x, display_y(y), text, foreground, background, scale);
 }
@@ -43,13 +59,13 @@ static void page_draw_text_absolute(int x, int y, const char *text,
 #define lcd_draw_text page_draw_text
 
 static void clear_display(void) {
-    lcd_fill_rect(0, 0, LCD_WIDTH,
+    lcd_fill_rect(0, 0, lcd_width(),
                   calculator_widget_display_height(), COL_BG);
 }
 
 static void finish_display(void) {
     lcd_fill_rect(0, calculator_widget_display_height() - 2,
-                  LCD_WIDTH, 2, COL_MUTED);
+                  lcd_width(), 2, COL_MUTED);
 }
 
 void calculator_page_render_expression(calc_page_t page, bool degrees,
@@ -65,11 +81,14 @@ void calculator_page_render_expression(calc_page_t page, bool degrees,
              page == PAGE_SCIENTIFIC ? "SCIENTIFIC" : "BASIC", message);
     snprintf(shown_result, sizeof shown_result, "=%s", result_text);
     bool enlarged = calculator_widget_layout() != CALCULATOR_LAYOUT_STANDARD;
-    size_t visible_chars = enlarged ? 26u : 38u;
     int result_scale = enlarged ? 3 : 2;
+    size_t visible_chars = (size_t)(lcd_width() - 12) /
+                           ((size_t)result_scale * 6u);
+    size_t maximum_chars = enlarged ? 26u : 38u;
+    if (visible_chars > maximum_chars) visible_chars = maximum_chars;
     const char *visible = calculator_widget_tail(shown_result, visible_chars);
     int width = (int)strlen(visible) * 6 * result_scale;
-    int x = LCD_WIDTH - width - 6;
+    int x = lcd_width() - width - 6;
     if (x < 6) x = 6;
 
     clear_display();
@@ -362,7 +381,8 @@ static void render_logic_table(const calculator_logic_t *logic) {
     }
 
     size_t rows = logic_engine_truth_row_count(&logic->program);
-    size_t visible_lines = fullscreen ? 16u : 4u;
+    size_t visible_lines = fullscreen
+        ? (size_t)(lcd_height() - 48) / 17u : 4u;
     for (size_t line = 0;
          line < visible_lines && logic->scroll + line < rows; ++line) {
         size_t row = logic->scroll + line;
@@ -394,8 +414,10 @@ static void render_logic_form(const calculator_logic_t *logic) {
     size_t length = strlen(logic->form);
     size_t offset = logic->scroll < length ? logic->scroll : length;
     bool fullscreen = calculator_widget_fullscreen();
-    size_t visible_lines = fullscreen ? 16u : 5u;
-    size_t line_capacity = fullscreen ? 39u : 78u;
+    size_t visible_lines = fullscreen
+        ? (size_t)(lcd_height() - 24) / 18u : 5u;
+    size_t line_capacity = fullscreen
+        ? (size_t)(lcd_width() - 12) / 12u : 78u;
     for (size_t line = 0; line < visible_lines && offset < length; ++line) {
         char text[79];
         size_t remaining = length - offset;
@@ -718,7 +740,7 @@ static void render_statistics_histogram(const calculator_statistics_t *stats) {
     const int left = 30;
     const int top = display_y(16);
     const int bottom = display_y(79);
-    const int width = 446;
+    int width = lcd_width() - left - 4;
     const int bar_width = width / (int)STATISTICS_HISTOGRAM_BINS;
     const int plot_height = bottom - top - 7;
     lcd_fill_rect(left, top, 1, bottom - top + 1, COL_MUTED);
@@ -748,7 +770,7 @@ static void render_statistics_scatter(const calculator_statistics_t *stats) {
     if (x_min == x_max) { x_min -= 1.0; x_max += 1.0; }
     if (y_min == y_max) { y_min -= 1.0; y_max += 1.0; }
     const int left = 30;
-    const int right = 476;
+    int right = lcd_width() - 4;
     const int top = display_y(16);
     const int bottom = display_y(80);
     lcd_fill_rect(left, top, 1, bottom - top + 1, COL_MUTED);

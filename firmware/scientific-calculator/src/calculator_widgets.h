@@ -56,6 +56,7 @@ bool calculator_widget_fullscreen(void);
 bool calculator_widget_keypad_visible(void);
 int calculator_widget_display_height(void);
 int calculator_widget_key_top(unsigned int row);
+int calculator_widget_key_width(void);
 int calculator_widget_key_height(void);
 void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
                                 const calculator_widget_state_t *state);

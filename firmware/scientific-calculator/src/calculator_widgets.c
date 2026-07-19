@@ -16,6 +16,15 @@
 #define COL_GRAPH_F2 RGB565(255, 220, 0)
 #define COL_GRAPH_F3 RGB565(255, 80, 190)
 
+#define PORTRAIT_DISPLAY_HEIGHT 126
+#define PORTRAIT_DATA_FOCUS_DISPLAY_HEIGHT 252
+#define PORTRAIT_KEY_Y 132
+#define PORTRAIT_DATA_FOCUS_KEY_Y 258
+#define PORTRAIT_KEY_HEIGHT 64
+#define PORTRAIT_DATA_FOCUS_KEY_HEIGHT 39
+#define PORTRAIT_KEY_GAP_Y 4
+#define PORTRAIT_DATA_FOCUS_KEY_GAP_Y 3
+
 static calculator_layout_t layout;
 
 void calculator_widget_set_layout(calculator_layout_t next_layout) {
@@ -50,31 +59,51 @@ bool calculator_widget_keypad_visible(void) {
 }
 
 int calculator_widget_display_height(void) {
-    if (layout == CALCULATOR_LAYOUT_FULLSCREEN) return LCD_HEIGHT;
+    if (layout == CALCULATOR_LAYOUT_FULLSCREEN) return lcd_height();
+    if (lcd_orientation() == LCD_ORIENTATION_PORTRAIT) {
+        return layout == CALCULATOR_LAYOUT_DATA_FOCUS
+            ? PORTRAIT_DATA_FOCUS_DISPLAY_HEIGHT : PORTRAIT_DISPLAY_HEIGHT;
+    }
     return layout == CALCULATOR_LAYOUT_DATA_FOCUS
         ? CALCULATOR_DATA_FOCUS_DISPLAY_HEIGHT : CALCULATOR_DISPLAY_HEIGHT;
 }
 
 int calculator_widget_key_top(unsigned int row) {
-    if (layout == CALCULATOR_LAYOUT_FULLSCREEN) return LCD_HEIGHT;
+    if (layout == CALCULATOR_LAYOUT_FULLSCREEN) return lcd_height();
     bool compact = layout == CALCULATOR_LAYOUT_DATA_FOCUS;
-    int top = compact ? CALCULATOR_DATA_FOCUS_KEY_Y : CALCULATOR_KEY_Y;
-    int height = compact ? CALCULATOR_DATA_FOCUS_KEY_HEIGHT
-                         : CALCULATOR_KEY_HEIGHT;
-    int gap = compact ? CALCULATOR_DATA_FOCUS_KEY_GAP_Y
-                      : CALCULATOR_KEY_GAP_Y;
+    bool portrait = lcd_orientation() == LCD_ORIENTATION_PORTRAIT;
+    int top = portrait
+        ? (compact ? PORTRAIT_DATA_FOCUS_KEY_Y : PORTRAIT_KEY_Y)
+        : (compact ? CALCULATOR_DATA_FOCUS_KEY_Y : CALCULATOR_KEY_Y);
+    int height = portrait
+        ? (compact ? PORTRAIT_DATA_FOCUS_KEY_HEIGHT : PORTRAIT_KEY_HEIGHT)
+        : (compact ? CALCULATOR_DATA_FOCUS_KEY_HEIGHT
+                   : CALCULATOR_KEY_HEIGHT);
+    int gap = portrait
+        ? (compact ? PORTRAIT_DATA_FOCUS_KEY_GAP_Y : PORTRAIT_KEY_GAP_Y)
+        : (compact ? CALCULATOR_DATA_FOCUS_KEY_GAP_Y
+                   : CALCULATOR_KEY_GAP_Y);
     return top + (int)row * (height + gap);
+}
+
+int calculator_widget_key_width(void) {
+    return (lcd_width() - 2 * CALCULATOR_KEY_X -
+            5 * CALCULATOR_KEY_GAP_X) / 6;
 }
 
 int calculator_widget_key_height(void) {
     if (layout == CALCULATOR_LAYOUT_FULLSCREEN) return 0;
+    if (lcd_orientation() == LCD_ORIENTATION_PORTRAIT) {
+        return layout == CALCULATOR_LAYOUT_DATA_FOCUS
+            ? PORTRAIT_DATA_FOCUS_KEY_HEIGHT : PORTRAIT_KEY_HEIGHT;
+    }
     return layout == CALCULATOR_LAYOUT_DATA_FOCUS
         ? CALCULATOR_DATA_FOCUS_KEY_HEIGHT : CALCULATOR_KEY_HEIGHT;
 }
 
 static int key_x(const calc_key_t *key) {
     return CALCULATOR_KEY_X +
-           key->col * (CALCULATOR_KEY_WIDTH + CALCULATOR_KEY_GAP_X);
+           key->col * (calculator_widget_key_width() + CALCULATOR_KEY_GAP_X);
 }
 
 static int key_y(const calc_key_t *key) {
@@ -197,6 +226,15 @@ void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
         strcmp(key->token, "XY") == 0) {
         label = state->statistics_active_y ? "Y" : "X";
     }
+    char fitted_label[16];
+    int key_width = calculator_widget_key_width();
+    size_t max_label_chars = key_width > 6
+        ? (size_t)(key_width - 6) / 6u : 1u;
+    if (strlen(label) > max_label_chars) {
+        snprintf(fitted_label, sizeof fitted_label, "%.*s",
+                 (int)max_label_chars, label);
+        label = fitted_label;
+    }
     uint16_t fill = key_fill(key, pressed, state);
     bool disabled = false;
     if (state->page == PAGE_PROGRAMMER && key->action == ACT_PROG_DIGIT) {
@@ -215,7 +253,7 @@ void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
         (dark ? COL_TEXT : COL_BG);
     size_t label_length = strlen(label);
     int key_height = calculator_widget_key_height();
-    int scale_x = (CALCULATOR_KEY_WIDTH - 8) / ((int)label_length * 6);
+    int scale_x = (key_width - 8) / ((int)label_length * 6);
     int scale_y = (key_height - 8) / 8;
     uint8_t scale = (uint8_t)(scale_x < scale_y ? scale_x : scale_y);
     if (scale > 4) scale = 4;
@@ -223,11 +261,11 @@ void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
     int text_width = (int)label_length * 6 * scale;
     int text_height = 8 * scale;
 
-    lcd_fill_rect(x, y, CALCULATOR_KEY_WIDTH, key_height, fill);
-    lcd_draw_rect(x, y, CALCULATOR_KEY_WIDTH, key_height, border);
-    lcd_draw_rect(x + 1, y + 1, CALCULATOR_KEY_WIDTH - 2,
+    lcd_fill_rect(x, y, key_width, key_height, fill);
+    lcd_draw_rect(x, y, key_width, key_height, border);
+    lcd_draw_rect(x + 1, y + 1, key_width - 2,
                   key_height - 2, border);
-    lcd_draw_text(x + (CALCULATOR_KEY_WIDTH - text_width) / 2,
+    lcd_draw_text(x + (key_width - text_width) / 2,
                   y + (key_height - text_height) / 2,
                   label, foreground, fill, scale);
 }
@@ -244,8 +282,8 @@ void calculator_widget_render_keypad(calc_page_t page,
            ? calculator_format_keymap(state->format_view, &count)
            : calculator_keymap(page, &count)));
     int display_height = calculator_widget_display_height();
-    lcd_fill_rect(0, display_height, LCD_WIDTH,
-                  LCD_HEIGHT - display_height, COL_BG);
+    lcd_fill_rect(0, display_height, lcd_width(),
+                  lcd_height() - display_height, COL_BG);
     for (size_t i = 0; i < count; ++i) {
         calculator_widget_draw_key(&keys[i], false, state);
     }
@@ -266,8 +304,9 @@ const calc_key_t *calculator_widget_hit_key(calc_page_t page,
     for (size_t i = 0; i < count; ++i) {
         int left = key_x(&keys[i]);
         int top = key_y(&keys[i]);
+        int key_width = calculator_widget_key_width();
         int key_height = calculator_widget_key_height();
-        if (x >= left && x < left + CALCULATOR_KEY_WIDTH &&
+        if (x >= left && x < left + key_width &&
             y >= top && y < top + key_height) {
             return &keys[i];
         }

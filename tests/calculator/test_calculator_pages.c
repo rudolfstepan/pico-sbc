@@ -1,7 +1,9 @@
 #include "calculator_pages.h"
 #include "calculator_symbols.h"
 #include "calculator_widgets.h"
+#include "lcd_st7796.h"
 #include "mock_lcd.h"
+#include "touch_gt911.h"
 
 #include <stdio.h>
 
@@ -14,6 +16,22 @@
 } while (0)
 
 int main(void) {
+    uint16_t touch_x = 0;
+    uint16_t touch_y = 0;
+    CHECK(touch_map_raw_coordinates(0, 0, LCD_ORIENTATION_PORTRAIT,
+                                    &touch_x, &touch_y));
+    CHECK(touch_x == 0 && touch_y == 0);
+    CHECK(touch_map_raw_coordinates(319, 479, LCD_ORIENTATION_PORTRAIT,
+                                    &touch_x, &touch_y));
+    CHECK(touch_x == 319 && touch_y == 479);
+    CHECK(touch_map_raw_coordinates(0, 0, LCD_ORIENTATION_LANDSCAPE,
+                                    &touch_x, &touch_y));
+    CHECK(touch_x == 0 && touch_y == 319);
+    CHECK(touch_map_raw_coordinates(319, 479,
+                                    LCD_ORIENTATION_LANDSCAPE,
+                                    &touch_x, &touch_y));
+    CHECK(touch_x == 479 && touch_y == 0);
+
     calculator_symbols_t symbols;
     calculator_symbols_init(&symbols);
     calculator_symbols_set_variable(&symbols, 0, 123456.0);
@@ -212,6 +230,84 @@ int main(void) {
           CALCULATOR_LAYOUT_FULLSCREEN);
     CHECK(calculator_widget_cycle_layout() ==
           CALCULATOR_LAYOUT_STANDARD);
+
+    lcd_set_orientation(LCD_ORIENTATION_PORTRAIT);
+    CHECK(lcd_width() == 320);
+    CHECK(lcd_height() == 480);
+    CHECK(calculator_widget_display_height() == 126);
+    CHECK(calculator_widget_key_width() == 48);
+    CHECK(calculator_widget_key_top(0) == 132);
+    CHECK(calculator_widget_key_top(4) == 404);
+    CHECK(calculator_widget_key_height() == 64);
+
+    expression_editor_t expression;
+    expression_editor_init(&expression);
+    expression_editor_set(&expression, "123456789+987654321");
+    mock_lcd_reset();
+    calculator_page_render_expression(PAGE_SCIENTIFIC, true, "PORTRAIT",
+                                      &expression, "1111111110");
+    calculator_page_render_programmer(&programmer, "PORTRAIT");
+    calculator_page_render_format(&programmer, 24, FORMAT_VIEW_IEEE64,
+                                  "PORTRAIT");
+    calculator_page_render_symbols(&symbols, 0, "PORTRAIT");
+    calculator_page_render_logic(&logic, "PORTRAIT");
+    calculator_page_render_units(&units, "PORTRAIT");
+    calculator_page_render_complex(&complex, true, "PORTRAIT");
+    calculator_page_render_statistics(&statistics, "PORTRAIT");
+    calculator_widget_render_keypad(PAGE_STATISTICS, &widget_state);
+    CHECK(!mock_lcd_had_out_of_bounds_draw());
+    const calc_key_t *portrait_last = calculator_widget_hit_key(
+        PAGE_STATISTICS, &widget_state, 300, 133);
+    CHECK(portrait_last && portrait_last->row == 0 &&
+          portrait_last->col == 5);
+    mock_lcd_reset();
+    for (calc_page_t test_page = PAGE_BASIC;
+         test_page < PAGE_BASIC_PROGRAM; ++test_page) {
+        widget_state.page = test_page;
+        calculator_widget_render_keypad(test_page, &widget_state);
+    }
+    CHECK(!mock_lcd_had_out_of_bounds_draw());
+    widget_state.page = PAGE_STATISTICS;
+
+    calculator_widget_set_layout(CALCULATOR_LAYOUT_DATA_FOCUS);
+    CHECK(calculator_widget_display_height() == 252);
+    CHECK(calculator_widget_key_top(0) == 258);
+    CHECK(calculator_widget_key_top(4) == 426);
+    CHECK(calculator_widget_key_height() == 39);
+    mock_lcd_reset();
+    calculator_page_render_programmer(&programmer, "PORTRAIT DATA");
+    calculator_page_render_format(&programmer, 24, FORMAT_VIEW_IEEE64,
+                                  "PORTRAIT DATA");
+    calculator_page_render_symbols(&symbols, 0, "PORTRAIT DATA");
+    calculator_page_render_logic(&logic, "PORTRAIT DATA");
+    calculator_page_render_units(&units, "PORTRAIT DATA");
+    calculator_page_render_complex(&complex, true, "PORTRAIT DATA");
+    calculator_page_render_statistics(&statistics, "PORTRAIT DATA");
+    calculator_widget_render_keypad(PAGE_STATISTICS, &widget_state);
+    CHECK(!mock_lcd_had_out_of_bounds_draw());
+
+    calculator_widget_set_layout(CALCULATOR_LAYOUT_FULLSCREEN);
+    CHECK(calculator_widget_display_height() == 480);
+    CHECK(calculator_widget_key_top(0) == 480);
+    calculator_logic_activate(&logic, "TABLE", logic_message,
+                              sizeof logic_message);
+    mock_lcd_reset();
+    calculator_page_render_expression(PAGE_SCIENTIFIC, true,
+                                      "PORTRAIT FULL", &expression,
+                                      "1111111110");
+    calculator_page_render_programmer(&programmer, "PORTRAIT FULL");
+    calculator_page_render_format(&programmer, 24, FORMAT_VIEW_IEEE64,
+                                  "PORTRAIT FULL");
+    calculator_page_render_symbols(&symbols, 0, "PORTRAIT FULL");
+    calculator_page_render_logic(&logic, "PORTRAIT FULL");
+    calculator_page_render_units(&units, "PORTRAIT FULL");
+    calculator_page_render_complex(&complex, true, "PORTRAIT FULL");
+    calculator_page_render_statistics(&statistics, "PORTRAIT FULL");
+    CHECK(!mock_lcd_had_out_of_bounds_draw());
+    CHECK(mock_lcd_drew_text(" 24 "));
+
+    calculator_widget_set_layout(CALCULATOR_LAYOUT_STANDARD);
+    lcd_set_orientation(LCD_ORIENTATION_LANDSCAPE);
 
     puts("calculator page tests passed");
     return 0;

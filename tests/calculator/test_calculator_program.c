@@ -1,4 +1,5 @@
 #include "calculator_program.h"
+#include "lcd_st7796.h"
 #include "mock_lcd.h"
 
 #include <stdio.h>
@@ -85,6 +86,44 @@ int main(void) {
           CALCULATOR_PROGRAM_RENDER);
     CHECK(layout_program.editor.length == editor_length);
     CHECK(!layout_program.output_view);
+
+    lcd_set_orientation(LCD_ORIENTATION_PORTRAIT);
+    calculator_program_t portrait_program;
+    calculator_program_init(&portrait_program);
+    mock_lcd_reset();
+    calculator_program_render(&portrait_program);
+    CHECK(!mock_lcd_had_out_of_bounds_draw());
+    portrait_program.symbol_layer = true;
+    mock_lcd_reset();
+    calculator_program_render(&portrait_program);
+    CHECK(!mock_lcd_had_out_of_bounds_draw());
+    portrait_program.symbol_layer = false;
+    CHECK(calculator_program_touch(&portrait_program, 8, 210) &
+          CALCULATOR_PROGRAM_RENDER);
+    CHECK(strcmp(portrait_program.editor.text, "1") == 0);
+
+    calculator_program_set_layout(&portrait_program,
+                                  CALCULATOR_LAYOUT_DATA_FOCUS);
+    mock_lcd_reset();
+    calculator_program_render(&portrait_program);
+    CHECK(!mock_lcd_had_out_of_bounds_draw());
+    CHECK(calculator_program_touch(&portrait_program, 8, 332) &
+          CALCULATOR_PROGRAM_RENDER);
+    CHECK(strcmp(portrait_program.editor.text, "11") == 0);
+
+    calculator_program_set_layout(&portrait_program,
+                                  CALCULATOR_LAYOUT_FULLSCREEN);
+    portrait_program.output_view = true;
+    portrait_program.engine.output_count = BASIC_OUTPUT_LINES;
+    for (size_t i = 0; i < BASIC_OUTPUT_LINES; ++i) {
+        snprintf(portrait_program.engine.output[i], BASIC_OUTPUT_CAPACITY,
+                 "PORTRAIT LINE %u", (unsigned int)i);
+    }
+    mock_lcd_reset();
+    calculator_program_render(&portrait_program);
+    CHECK(!mock_lcd_had_out_of_bounds_draw());
+    CHECK(mock_lcd_drew_text("PORTRAIT LINE 15"));
+    lcd_set_orientation(LCD_ORIENTATION_LANDSCAPE);
 
     puts("calculator program tests passed");
     return 0;
