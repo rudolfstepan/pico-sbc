@@ -4,6 +4,7 @@
 #include "calculator_ui_types.h"
 #include "calculator_logic.h"
 #include "calculator_complex.h"
+#include "calculator_statistics.h"
 #include "calculator_units.h"
 #include "calculator_symbols.h"
 #include "expression_editor.h"
@@ -38,5 +39,7 @@ void calculator_page_render_units(const calculator_units_t *units,
                                   const char *message);
 void calculator_page_render_complex(const calculator_complex_t *complex,
                                     bool degrees, const char *message);
+void calculator_page_render_statistics(const calculator_statistics_t *stats,
+                                       const char *message);
 
 #endif

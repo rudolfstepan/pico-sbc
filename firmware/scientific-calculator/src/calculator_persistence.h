@@ -6,13 +6,14 @@
 #include "expression_editor.h"
 #include "graph_model.h"
 #include "programmer_engine.h"
+#include "statistics_engine.h"
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#define CALCULATOR_PERSISTENCE_VERSION 1u
-#define CALCULATOR_PERSISTENCE_RECORD_CAPACITY 2048u
+#define CALCULATOR_PERSISTENCE_VERSION 2u
+#define CALCULATOR_PERSISTENCE_RECORD_CAPACITY 4096u
 #define CALCULATOR_PERSISTENCE_HISTORY_CAPACITY 8u
 #define CALCULATOR_PERSISTENCE_RESULT_CAPACITY 32u
 
@@ -39,6 +40,7 @@ typedef struct {
     size_t history_count;
     size_t history_index;
     graph_model_t graph;
+    statistics_dataset_t statistics;
 } calculator_persisted_state_t;
 
 typedef enum {

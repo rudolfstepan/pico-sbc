@@ -33,7 +33,8 @@ typedef enum {
     ACT_GRAPH,
     ACT_LOGIC,
     ACT_UNITS,
-    ACT_COMPLEX
+    ACT_COMPLEX,
+    ACT_STATISTICS
 } calc_action_t;
 
 typedef enum {
@@ -46,7 +47,8 @@ typedef enum {
     PAGE_GRAPH,
     PAGE_LOGIC,
     PAGE_UNITS,
-    PAGE_COMPLEX
+    PAGE_COMPLEX,
+    PAGE_STATISTICS
 } calc_page_t;
 
 typedef enum {

@@ -497,3 +497,214 @@ void calculator_page_render_complex(const calculator_complex_t *complex,
                   has_result ? COL_TEXT : COL_MUTED, COL_BG, 2);
     finish_display();
 }
+
+static const char *statistics_view_name(calculator_statistics_view_t view) {
+    switch (view) {
+        case STATISTICS_VIEW_SUMMARY: return "SUMMARY";
+        case STATISTICS_VIEW_REGRESSION: return "REGRESSION";
+        case STATISTICS_VIEW_PLOT: return "PLOT";
+        case STATISTICS_VIEW_DATA:
+        default: return "DATA";
+    }
+}
+
+static void render_statistics_data(const calculator_statistics_t *stats) {
+    char x_text[EXPRESSION_EDITOR_CAPACITY + 2];
+    char y_text[EXPRESSION_EDITOR_CAPACITY + 2];
+    char x_line[42];
+    char y_line[42];
+    char selected[79];
+    snprintf(x_line, sizeof x_line, "X %s",
+             expression_editor_view(&stats->x_editor, x_text,
+                                    sizeof x_text, 35));
+    snprintf(y_line, sizeof y_line, "Y %s",
+             expression_editor_view(&stats->y_editor, y_text,
+                                    sizeof y_text, 35));
+    if (stats->dataset.count) {
+        if (stats->dataset.two_variable) {
+            snprintf(selected, sizeof selected, "ROW %u/%u  X %.9g  Y %.9g",
+                     (unsigned int)(stats->selected + 1),
+                     (unsigned int)stats->dataset.count,
+                     stats->dataset.x[stats->selected],
+                     stats->dataset.y[stats->selected]);
+        } else {
+            snprintf(selected, sizeof selected, "ROW %u/%u  X %.12g",
+                     (unsigned int)(stats->selected + 1),
+                     (unsigned int)stats->dataset.count,
+                     stats->dataset.x[stats->selected]);
+        }
+    } else {
+        snprintf(selected, sizeof selected, "NO DATA  ENTER VALUE THEN ADD");
+    }
+
+    lcd_draw_text(6, 18, x_line,
+                  stats->active_y ? COL_MUTED : COL_TEXT, COL_BG, 2);
+    if (stats->dataset.two_variable) {
+        lcd_draw_text(6, 45, y_line,
+                      stats->active_y ? COL_TEXT : COL_MUTED, COL_BG, 2);
+        lcd_draw_text(6, 70, selected, COL_MUTED, COL_BG, 1);
+    } else {
+        lcd_draw_text(6, 51, selected, COL_MUTED, COL_BG, 2);
+    }
+}
+
+static void render_statistics_summary(const calculator_statistics_t *stats) {
+    statistics_summary_t summary;
+    statistics_status_t status = statistics_engine_summary(
+        &stats->dataset, stats->active_y, &summary);
+    if (status != STATISTICS_STATUS_OK) {
+        lcd_draw_text(6, 28, statistics_engine_status_text(status),
+                      COL_TEXT, COL_BG, 2);
+        return;
+    }
+    char lines[5][79];
+    snprintf(lines[0], sizeof lines[0], "%c  N %u  MEAN %.12g",
+             stats->active_y ? 'Y' : 'X', (unsigned int)summary.count,
+             summary.mean);
+    snprintf(lines[1], sizeof lines[1], "MEDIAN %.12g", summary.median);
+    snprintf(lines[2], sizeof lines[2], "MIN %.12g  MAX %.12g",
+             summary.minimum, summary.maximum);
+    snprintf(lines[3], sizeof lines[3], "SIGMA %.12g",
+             summary.population_stddev);
+    snprintf(lines[4], sizeof lines[4], "SAMPLE S %.12g",
+             summary.sample_stddev);
+    for (size_t i = 0; i < 5; ++i) {
+        lcd_draw_text(6, 17 + (int)i * 13, lines[i],
+                      i == 0 ? COL_TEXT : COL_MUTED, COL_BG, 1);
+    }
+}
+
+static void render_statistics_regression(const calculator_statistics_t *stats) {
+    statistics_regression_t regression;
+    statistics_status_t status = statistics_engine_regression(
+        &stats->dataset, &regression);
+    if (status != STATISTICS_STATUS_OK) {
+        lcd_draw_text(6, 28, statistics_engine_status_text(status),
+                      COL_TEXT, COL_BG, 2);
+        return;
+    }
+    char equation[64];
+    char correlation[64];
+    snprintf(equation, sizeof equation, "Y = %.8g X %+.8g",
+             regression.slope, regression.intercept);
+    snprintf(correlation, sizeof correlation, "r = %.10g   r2 = %.10g",
+             regression.correlation,
+             regression.correlation * regression.correlation);
+    lcd_draw_text(6, 22, calculator_widget_tail(equation, 38),
+                  COL_TEXT, COL_BG, 2);
+    lcd_draw_text(6, 54, calculator_widget_tail(correlation, 38),
+                  COL_MUTED, COL_BG, 2);
+}
+
+static int plot_coordinate(double value, double minimum, double maximum,
+                           int low, int high) {
+    if (maximum == minimum) return (low + high) / 2;
+    double ratio = (value - minimum) / (maximum - minimum);
+    if (ratio < 0.0) ratio = 0.0;
+    if (ratio > 1.0) ratio = 1.0;
+    return low + (int)(ratio * (double)(high - low));
+}
+
+static void render_statistics_histogram(const calculator_statistics_t *stats) {
+    size_t counts[STATISTICS_HISTOGRAM_BINS];
+    double minimum;
+    double maximum;
+    if (statistics_engine_histogram(&stats->dataset, counts,
+                                    &minimum, &maximum) != STATISTICS_STATUS_OK) {
+        lcd_draw_text(6, 28, "NO DATA", COL_TEXT, COL_BG, 2);
+        return;
+    }
+    size_t largest = 1;
+    for (size_t i = 0; i < STATISTICS_HISTOGRAM_BINS; ++i) {
+        if (counts[i] > largest) largest = counts[i];
+    }
+    const int left = 30;
+    const int bottom = 79;
+    const int width = 446;
+    const int bar_width = width / (int)STATISTICS_HISTOGRAM_BINS;
+    lcd_fill_rect(left, 16, 1, bottom - 15, COL_MUTED);
+    lcd_fill_rect(left, bottom, width, 1, COL_MUTED);
+    for (size_t i = 0; i < STATISTICS_HISTOGRAM_BINS; ++i) {
+        int height = (int)(counts[i] * 56u / largest);
+        if (!height) continue;
+        int x = left + (int)i * bar_width + 3;
+        lcd_fill_rect(x, bottom - height, bar_width - 6, height, COL_TEXT);
+    }
+}
+
+static void render_statistics_scatter(const calculator_statistics_t *stats) {
+    statistics_summary_t x_summary;
+    statistics_summary_t y_summary;
+    if (statistics_engine_summary(&stats->dataset, false, &x_summary) !=
+            STATISTICS_STATUS_OK ||
+        statistics_engine_summary(&stats->dataset, true, &y_summary) !=
+            STATISTICS_STATUS_OK) {
+        lcd_draw_text(6, 28, "NO DATA", COL_TEXT, COL_BG, 2);
+        return;
+    }
+    double x_min = x_summary.minimum;
+    double x_max = x_summary.maximum;
+    double y_min = y_summary.minimum;
+    double y_max = y_summary.maximum;
+    if (x_min == x_max) { x_min -= 1.0; x_max += 1.0; }
+    if (y_min == y_max) { y_min -= 1.0; y_max += 1.0; }
+    const int left = 30;
+    const int right = 476;
+    const int top = 16;
+    const int bottom = 80;
+    lcd_fill_rect(left, top, 1, bottom - top + 1, COL_MUTED);
+    lcd_fill_rect(left, bottom, right - left, 1, COL_MUTED);
+    for (size_t i = 0; i < stats->dataset.count; ++i) {
+        int x = plot_coordinate(stats->dataset.x[i], x_min, x_max,
+                                left + 2, right - 3);
+        int y = plot_coordinate(stats->dataset.y[i], y_min, y_max,
+                                bottom - 2, top + 2);
+        lcd_fill_rect(x - 1, y - 1, 3, 3, COL_TEXT);
+    }
+    statistics_regression_t regression;
+    if (statistics_engine_regression(&stats->dataset, &regression) ==
+        STATISTICS_STATUS_OK) {
+        for (int step = 0; step <= 48; ++step) {
+            double x_value = x_min + (x_max - x_min) * step / 48.0;
+            double y_value = regression.slope * x_value +
+                             regression.intercept;
+            int x = plot_coordinate(x_value, x_min, x_max,
+                                    left + 2, right - 3);
+            int y = plot_coordinate(y_value, y_min, y_max,
+                                    bottom - 2, top + 2);
+            lcd_fill_rect(x, y, 2, 2, COL_MUTED);
+        }
+    }
+}
+
+void calculator_page_render_statistics(const calculator_statistics_t *stats,
+                                       const char *message) {
+    char status[79];
+    snprintf(status, sizeof status, "STATS %s %s N%u %c  %.45s",
+             stats->dataset.two_variable ? "2VAR" : "1VAR",
+             statistics_view_name(stats->view),
+             (unsigned int)stats->dataset.count,
+             stats->active_y ? 'Y' : 'X', message);
+    clear_display();
+    lcd_draw_text(6, 3, status, COL_MUTED, COL_BG, 1);
+    switch (stats->view) {
+        case STATISTICS_VIEW_SUMMARY:
+            render_statistics_summary(stats);
+            break;
+        case STATISTICS_VIEW_REGRESSION:
+            render_statistics_regression(stats);
+            break;
+        case STATISTICS_VIEW_PLOT:
+            if (stats->dataset.two_variable) {
+                render_statistics_scatter(stats);
+            } else {
+                render_statistics_histogram(stats);
+            }
+            break;
+        case STATISTICS_VIEW_DATA:
+        default:
+            render_statistics_data(stats);
+            break;
+    }
+    finish_display();
+}

@@ -93,6 +93,31 @@ int main(void) {
         return 1;
     }
 
+    calculator_statistics_t statistics;
+    calculator_statistics_init(&statistics);
+    for (int value = 0; value < 12; ++value) {
+        statistics_engine_add(&statistics.dataset,
+                              (double)(value * value), 0.0);
+    }
+    calculator_page_render_statistics(&statistics, "DATA READY");
+    statistics.view = STATISTICS_VIEW_SUMMARY;
+    calculator_page_render_statistics(&statistics, "SUMMARY");
+    statistics.view = STATISTICS_VIEW_PLOT;
+    calculator_page_render_statistics(&statistics, "HISTOGRAM");
+    statistics_engine_set_two_variable(&statistics.dataset, true);
+    for (int value = 0; value < 12; ++value) {
+        statistics_engine_add(&statistics.dataset, (double)value,
+                              2.0 * value + 1.0);
+    }
+    statistics.view = STATISTICS_VIEW_REGRESSION;
+    calculator_page_render_statistics(&statistics, "REGRESSION");
+    statistics.view = STATISTICS_VIEW_PLOT;
+    calculator_page_render_statistics(&statistics, "SCATTER PLOT");
+    if (mock_lcd_had_out_of_bounds_draw()) {
+        puts("FAIL: out-of-bounds drawing on statistics pages");
+        return 1;
+    }
+
     puts("calculator page tests passed");
     return 0;
 }

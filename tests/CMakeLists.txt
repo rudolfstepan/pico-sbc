@@ -154,6 +154,7 @@ add_executable(calculator_pages_tests
     ${CALCULATOR_SRC}/calculator_complex.c
     ${CALCULATOR_SRC}/calculator_keymaps.c
     ${CALCULATOR_SRC}/calculator_logic.c
+    ${CALCULATOR_SRC}/calculator_statistics.c
     ${CALCULATOR_SRC}/calculator_units.c
     ${CALCULATOR_SRC}/calculator_pages.c
     ${CALCULATOR_SRC}/calculator_symbols.c
@@ -163,6 +164,7 @@ add_executable(calculator_pages_tests
     ${CALCULATOR_SRC}/number_formats.c
     ${CALCULATOR_SRC}/logic_engine.c
     ${CALCULATOR_SRC}/programmer_engine.c
+    ${CALCULATOR_SRC}/statistics_engine.c
     ${CALCULATOR_SRC}/unit_engine.c
 )
 target_include_directories(calculator_pages_tests PRIVATE
@@ -238,3 +240,21 @@ add_executable(calculator_complex_tests
 target_include_directories(calculator_complex_tests PRIVATE ${CALCULATOR_SRC})
 enable_project_warnings(calculator_complex_tests)
 add_test(NAME calculator_complex COMMAND calculator_complex_tests)
+
+add_executable(statistics_engine_tests
+    calculator/test_statistics_engine.c
+    ${CALCULATOR_SRC}/statistics_engine.c
+)
+target_include_directories(statistics_engine_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(statistics_engine_tests)
+add_test(NAME statistics_engine COMMAND statistics_engine_tests)
+
+add_executable(calculator_statistics_tests
+    calculator/test_calculator_statistics.c
+    ${CALCULATOR_SRC}/calculator_statistics.c
+    ${CALCULATOR_SRC}/expression_editor.c
+    ${CALCULATOR_SRC}/statistics_engine.c
+)
+target_include_directories(calculator_statistics_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(calculator_statistics_tests)
+add_test(NAME calculator_statistics COMMAND calculator_statistics_tests)

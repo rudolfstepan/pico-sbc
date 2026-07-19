@@ -4,6 +4,7 @@
 #include "calculator_ui_types.h"
 #include "calculator_logic.h"
 #include "calculator_complex.h"
+#include "calculator_statistics.h"
 #include "calculator_units.h"
 #include "graph_model.h"
 
@@ -36,6 +37,9 @@ typedef struct {
     calculator_units_view_t units_view;
     bool complex_polar;
     bool complex_history;
+    bool statistics_two_variable;
+    bool statistics_active_y;
+    calculator_statistics_view_t statistics_view;
     const char *favorites[6];
 } calculator_widget_state_t;
 

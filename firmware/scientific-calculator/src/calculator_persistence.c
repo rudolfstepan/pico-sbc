@@ -5,6 +5,7 @@
 #include <string.h>
 
 #define RECORD_HEADER_SIZE 20u
+#define LEGACY_PERSISTENCE_VERSION 1u
 
 static const uint8_t record_magic[4] = {'P', 'C', 'A', 'L'};
 
@@ -148,8 +149,18 @@ static bool graph_is_valid(const graph_model_t *graph,
     return true;
 }
 
+static bool statistics_is_valid(const statistics_dataset_t *statistics) {
+    if (statistics->count > STATISTICS_CAPACITY) return false;
+    for (size_t i = 0; i < STATISTICS_CAPACITY; ++i) {
+        if (!isfinite(statistics->x[i]) || !isfinite(statistics->y[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static bool state_is_valid(const calculator_persisted_state_t *state) {
-    if (!state || state->page < PAGE_BASIC || state->page > PAGE_COMPLEX ||
+    if (!state || state->page < PAGE_BASIC || state->page > PAGE_STATISTICS ||
         !format_bits_valid(state->format_bits) ||
         state->fixed_fraction_bits >= state->format_bits ||
         !isfinite(state->ans) || !isfinite(state->memory_value) ||
@@ -184,7 +195,8 @@ static bool state_is_valid(const calculator_persisted_state_t *state) {
             return false;
         }
     }
-    return graph_is_valid(&state->graph, &state->symbols);
+    return graph_is_valid(&state->graph, &state->symbols) &&
+           statistics_is_valid(&state->statistics);
 }
 
 void calculator_persistence_defaults(calculator_persisted_state_t *state) {
@@ -258,6 +270,14 @@ static void write_payload(writer_t *writer,
     write_double(writer, state->graph.analysis_right);
     write_double(writer, state->graph.analysis_tolerance);
     write_u32(writer, state->graph.analysis_max_iterations);
+
+    write_u8(writer, (uint8_t)state->statistics.count);
+    write_u8(writer, state->statistics.two_variable ? 1u : 0u);
+    for (unsigned int i = 0; i < 6; ++i) write_u8(writer, 0);
+    for (size_t i = 0; i < STATISTICS_CAPACITY; ++i) {
+        write_double(writer, state->statistics.x[i]);
+        write_double(writer, state->statistics.y[i]);
+    }
 }
 
 static uint32_t crc32_update(uint32_t crc, const uint8_t *data, size_t size) {
@@ -318,7 +338,7 @@ bool calculator_persistence_encode(
     return true;
 }
 
-static void read_payload(reader_t *reader,
+static void read_payload(reader_t *reader, uint16_t version,
                          calculator_persisted_state_t *state) {
     calculator_persistence_defaults(state);
     state->degrees = read_u8(reader) != 0;
@@ -377,6 +397,16 @@ static void read_payload(reader_t *reader,
             state->symbols.functions[i][0] && (active_mask & (1u << i));
     }
     state->graph.analysis_text[0] = '\0';
+
+    if (version >= 2u) {
+        state->statistics.count = read_u8(reader);
+        state->statistics.two_variable = read_u8(reader) != 0;
+        for (unsigned int i = 0; i < 6; ++i) (void)read_u8(reader);
+        for (size_t i = 0; i < STATISTICS_CAPACITY; ++i) {
+            state->statistics.x[i] = read_double(reader);
+            state->statistics.y[i] = read_double(reader);
+        }
+    }
 }
 
 static bool record_is_erased(const uint8_t *record, size_t size) {
@@ -414,7 +444,8 @@ calculator_persistence_status_t calculator_persistence_decode(
         payload_size > record_size - RECORD_HEADER_SIZE) {
         return CALCULATOR_PERSISTENCE_CORRUPT;
     }
-    if (version != CALCULATOR_PERSISTENCE_VERSION) {
+    if (version != LEGACY_PERSISTENCE_VERSION &&
+        version != CALCULATOR_PERSISTENCE_VERSION) {
         return CALCULATOR_PERSISTENCE_UNSUPPORTED;
     }
     if (record_crc(record, payload_size) != expected_crc) {
@@ -427,7 +458,7 @@ calculator_persistence_status_t calculator_persistence_decode(
         .size = payload_size,
         .valid = true,
     };
-    read_payload(&payload, &decoded);
+    read_payload(&payload, version, &decoded);
     if (!payload.valid || payload.position != payload.size ||
         !state_is_valid(&decoded)) {
         return CALCULATOR_PERSISTENCE_CORRUPT;

@@ -87,6 +87,23 @@ static uint16_t key_fill(const calc_key_t *key, bool pressed,
              state->units_view == UNITS_VIEW_CONSTANTS);
         if (selected_category || selected_view) return COL_TEXT;
     }
+    if (state->page == PAGE_STATISTICS && key->action == ACT_STATISTICS) {
+        bool selected_mode =
+            (strcmp(key->token, "1VAR") == 0 &&
+             !state->statistics_two_variable) ||
+            (strcmp(key->token, "2VAR") == 0 &&
+             state->statistics_two_variable);
+        bool selected_view =
+            (strcmp(key->token, "DATA") == 0 &&
+             state->statistics_view == STATISTICS_VIEW_DATA) ||
+            (strcmp(key->token, "SUMMARY") == 0 &&
+             state->statistics_view == STATISTICS_VIEW_SUMMARY) ||
+            (strcmp(key->token, "REGRESSION") == 0 &&
+             state->statistics_view == STATISTICS_VIEW_REGRESSION) ||
+            (strcmp(key->token, "PLOT") == 0 &&
+             state->statistics_view == STATISTICS_VIEW_PLOT);
+        if (selected_mode || selected_view) return COL_TEXT;
+    }
     switch (key->style) {
         case STYLE_NUMBER: return COL_KEY;
         case STYLE_FUNCTION: return COL_FUNCTION;
@@ -119,6 +136,10 @@ void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
     if (state->page == PAGE_COMPLEX && key->action == ACT_COMPLEX &&
         strcmp(key->token, "VIEW") == 0) {
         label = state->complex_polar ? "POLAR" : "CART";
+    }
+    if (state->page == PAGE_STATISTICS && key->action == ACT_STATISTICS &&
+        strcmp(key->token, "XY") == 0) {
+        label = state->statistics_active_y ? "Y" : "X";
     }
     uint16_t fill = key_fill(key, pressed, state);
     bool disabled = false;

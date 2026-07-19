@@ -12,10 +12,38 @@
     } \
 } while (0)
 
+#define STATISTICS_PAYLOAD_SIZE \
+    (8u + STATISTICS_CAPACITY * 2u * sizeof(double))
+
+static void put_u32(uint8_t *destination, uint32_t value) {
+    destination[0] = (uint8_t)value;
+    destination[1] = (uint8_t)(value >> 8);
+    destination[2] = (uint8_t)(value >> 16);
+    destination[3] = (uint8_t)(value >> 24);
+}
+
+static uint32_t test_crc32_update(uint32_t crc, const uint8_t *data,
+                                  size_t size) {
+    for (size_t i = 0; i < size; ++i) {
+        crc ^= data[i];
+        for (unsigned int bit = 0; bit < 8; ++bit) {
+            uint32_t mask = 0u - (crc & 1u);
+            crc = (crc >> 1) ^ (UINT32_C(0xedb88320) & mask);
+        }
+    }
+    return crc;
+}
+
+static uint32_t test_record_crc(const uint8_t *record, size_t payload_size) {
+    uint32_t crc = test_crc32_update(UINT32_MAX, record, 16);
+    crc = test_crc32_update(crc, record + 20, payload_size);
+    return ~crc;
+}
+
 static void fill_state(calculator_persisted_state_t *state) {
     calculator_persistence_defaults(state);
     state->degrees = false;
-    state->page = PAGE_COMPLEX;
+    state->page = PAGE_STATISTICS;
     state->format_bits = 64;
     state->fixed_fraction_bits = 24;
     state->ans = 12.5;
@@ -48,6 +76,14 @@ static void fill_state(calculator_persisted_state_t *state) {
     snprintf(state->history[1].result, sizeof state->history[1].result,
              "42.5");
     state->history[1].value = 42.5;
+    state->statistics.two_variable = true;
+    state->statistics.count = 3;
+    state->statistics.x[0] = 1.0;
+    state->statistics.y[0] = 3.0;
+    state->statistics.x[1] = 2.0;
+    state->statistics.y[1] = 5.0;
+    state->statistics.x[2] = 3.0;
+    state->statistics.y[2] = 7.0;
 }
 
 int main(void) {
@@ -69,7 +105,7 @@ int main(void) {
                                         &sequence) ==
           CALCULATOR_PERSISTENCE_VALID);
     CHECK(sequence == 41);
-    CHECK(!decoded.degrees && decoded.page == PAGE_COMPLEX);
+    CHECK(!decoded.degrees && decoded.page == PAGE_STATISTICS);
     CHECK(decoded.format_bits == 64 && decoded.fixed_fraction_bits == 24);
     CHECK(fabs(decoded.memory_value + 7.25) < 1e-12);
     CHECK(decoded.programmer_value == UINT64_C(0x123456789abcdef0));
@@ -79,6 +115,9 @@ int main(void) {
     CHECK(strcmp(decoded.history[1].formula, "f1(30)") == 0);
     CHECK(fabs(decoded.graph.x_center - 3.0) < 1e-12);
     CHECK(decoded.graph.trace_enabled);
+    CHECK(decoded.statistics.two_variable && decoded.statistics.count == 3);
+    CHECK(decoded.statistics.x[1] == 2.0 &&
+          decoded.statistics.y[2] == 7.0);
 
     uint8_t canonical[CALCULATOR_PERSISTENCE_RECORD_CAPACITY];
     size_t canonical_size = 0;
@@ -86,6 +125,20 @@ int main(void) {
                                         sizeof canonical, &canonical_size));
     CHECK(canonical_size == first_size &&
           memcmp(canonical, first, first_size) == 0);
+
+    uint8_t legacy[CALCULATOR_PERSISTENCE_RECORD_CAPACITY];
+    memcpy(legacy, first, first_size);
+    size_t legacy_payload_size = first_size - 20u - STATISTICS_PAYLOAD_SIZE;
+    legacy[4] = 1u;
+    legacy[5] = 0u;
+    legacy[21] = (uint8_t)PAGE_COMPLEX;
+    put_u32(legacy + 8, (uint32_t)legacy_payload_size);
+    put_u32(legacy + 16, test_record_crc(legacy, legacy_payload_size));
+    CHECK(calculator_persistence_decode(
+              legacy, 20u + legacy_payload_size, &decoded, &sequence) ==
+          CALCULATOR_PERSISTENCE_VALID);
+    CHECK(decoded.page == PAGE_COMPLEX && decoded.statistics.count == 0 &&
+          !decoded.statistics.two_variable);
 
     size_t second_size = 0;
     original.memory_value = 99.0;

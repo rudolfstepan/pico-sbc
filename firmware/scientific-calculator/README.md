@@ -11,8 +11,8 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 - `sinh`, `cosh`, `tanh`, `ln`, `log`, `exp`, `sqrt`
 - Betrag, Abrunden, Fakultaet, Kombinationen und Permutationen
 - Konstanten Pi und e
-- Neun Touch-Ebenen: `BASIC`, `SCIENTIFIC`, `PROGRAMMER`, `FORMAT`, `TOOLS`,
-  `SYMBOLS`, `LOGIC`, `UNITS` und `COMPLEX`
+- Zehn Touch-Ebenen: `BASIC`, `SCIENTIFIC`, `PROGRAMMER`, `FORMAT`, `TOOLS`,
+  `SYMBOLS`, `LOGIC`, `UNITS`, `COMPLEX` und `STATS`
 - `PROGRAMMER`-Ebene fuer exakte 64-Bit-Werte
 - Direkte Umwandlung zwischen Dezimal, Hexadezimal und Binaer
 - Bitoperationen `AND`, `OR`, `XOR`, `NOT`, Schieben und Zweierkomplement
@@ -29,6 +29,8 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
   Einheit und Quellenangabe
 - Komplexer Rechner mit kartesischer und polarer Anzeige, Betrag, Phase,
   Konjugation und eigenem verlustfreien Verlauf
+- Ein- und Zwei-Variablen-Statistik mit editierbarer Zahlenliste,
+  Standardabweichung, linearer Regression, Histogramm und Streudiagramm
 - Automatisch maximal skalierte Tastenbeschriftungen
 - Ausdruckseditor mit sichtbarem Cursor und Joystick-Navigation
 - Acht Eintraege Rechenverlauf mit erneutem Laden
@@ -46,7 +48,7 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 - K1 berechnet, K2 loescht das letzte Zeichen
 
 Die Seitentaste wechselt
-`BASIC -> SCIENTIFIC -> PROGRAMMER -> FORMAT -> TOOLS -> SYMBOLS -> LOGIC -> UNITS -> COMPLEX -> BASIC`.
+`BASIC -> SCIENTIFIC -> PROGRAMMER -> FORMAT -> TOOLS -> SYMBOLS -> LOGIC -> UNITS -> COMPLEX -> STATS -> BASIC`.
 Der Graphenmodus wird von `TOOLS` aus geoeffnet. Der Joystick bewegt im
 Editor den Cursor und im Graphenmodus den sichtbaren Ausschnitt.
 Funktionen setzen automatisch eine oeffnende Klammer. Die schliessende Klammer
@@ -170,6 +172,27 @@ Nach `=` kann mit `+`, `-`, `*` oder `/` direkt am gesamten komplexen Ergebnis
 weitergerechnet werden. Parserfehler, Division durch null, ungueltige
 Polarwerte und Zahlenbereichsfehler erscheinen als getrennte Statusmeldungen.
 
+## Statistik
+
+`STATS` verwaltet bis zu 32 Zahlen oder Zahlenpaare. Im Modus `1VAR` wird der
+X-Wert eingegeben und mit `ADD` angehaengt. Fuer `2VAR` zuerst X eingeben, mit
+`X/Y` zum Y-Feld wechseln, Y eingeben und danach `ADD` druecken. `ANS` laedt
+das letzte normale Rechenergebnis in das aktive Feld.
+
+- `PREV` und `NEXT` waehlen eine Zeile aus.
+- `EDIT` laedt die ausgewaehlte Zeile; `ADD` speichert die Aenderung.
+- `DROP` entfernt die ausgewaehlte Zeile, `CLEAR` leert die Liste.
+- `SUM` zeigt Anzahl, Mittelwert, Median, Minimum, Maximum sowie Populations-
+  und Stichproben-Standardabweichung. In `2VAR` waehlt `X/Y` die Spalte.
+- `REG` zeigt die lineare Funktion, den Korrelationskoeffizienten und dessen
+  Quadrat. Dafuer werden mindestens zwei Zahlenpaare benoetigt.
+- `PLOT` zeichnet in `1VAR` ein Histogramm und in `2VAR` ein Streudiagramm
+  mit gestrichelter Regressionsgerade.
+
+K1 entspricht `ADD`, K2 loescht das letzte Zeichen. Der Joystick waehlt mit
+links/rechts eine Zeile und mit oben/unten das X- oder Y-Feld. Modus und
+Zahlenliste werden automatisch im Flash gespeichert.
+
 ## Erweiterte Programmer-Werkzeuge
 
 Auf `FORMAT` oeffnet `BITS` die wortbreitenabhaengigen Programmer-Werkzeuge.
@@ -211,8 +234,9 @@ aufgerufen oder in weiteren Graphfunktionen verwendet werden.
 ## Permanente Speicherung
 
 Der Rechner speichert Winkelmodus, `ANS`, Speicherregister, letzte Seite,
-Programmer-Zustand, Verlauf, Variablen, Benutzerfunktionen, Favoriten und
-Graphbereiche automatisch. Aenderungen werden drei Sekunden gesammelt; ein
+Programmer-Zustand, Verlauf, Variablen, Benutzerfunktionen, Favoriten,
+Graphbereiche und Statistiklisten automatisch. Aenderungen werden drei
+Sekunden gesammelt; ein
 unveraenderter Zustand wird nicht erneut in den Flash geschrieben.
 
 Zwei wechselnde, jeweils mit CRC32 geschuetzte Flashkopien verhindern, dass

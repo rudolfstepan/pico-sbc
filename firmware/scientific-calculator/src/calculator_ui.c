@@ -11,6 +11,7 @@
 #include "calculator_persistence.h"
 #include "calculator_storage.h"
 #include "calculator_symbols.h"
+#include "calculator_statistics.h"
 #include "calculator_ui_types.h"
 #include "calculator_widgets.h"
 #include "expression_editor.h"
@@ -52,6 +53,7 @@ static calculator_symbols_t symbols;
 static calculator_logic_t logic;
 static calculator_units_t units;
 static calculator_complex_t complex;
+static calculator_statistics_t statistics;
 static bool persistence_dirty;
 static absolute_time_t persistence_deadline;
 
@@ -75,6 +77,7 @@ static void capture_persisted_state(calculator_persisted_state_t *state) {
     state->history_count = history_list.count;
     state->history_index = history_list.index;
     state->graph = graph;
+    state->statistics = statistics.dataset;
 }
 
 static void apply_persisted_state(
@@ -97,6 +100,8 @@ static void apply_persisted_state(
     programmer.selected_bit = state->programmer_selected_bit;
     programmer_engine_set_base(&programmer, state->programmer_base);
     graph = state->graph;
+    statistics.dataset = state->statistics;
+    statistics.selected = 0;
     snprintf(result_text, sizeof result_text, "%.12g", ans);
 }
 
@@ -148,6 +153,9 @@ static calculator_widget_state_t current_widget_state(void) {
         .units_view = units.view,
         .complex_polar = complex.polar_view,
         .complex_history = complex.history_view,
+        .statistics_two_variable = statistics.dataset.two_variable,
+        .statistics_active_y = statistics.active_y,
+        .statistics_view = statistics.view,
     };
     for (size_t i = 0; i < CALCULATOR_FAVORITE_COUNT; ++i) {
         state.favorites[i] = symbols.favorites[i];
@@ -196,6 +204,10 @@ static void render_display(void) {
     if (page == PAGE_COMPLEX) {
         calculator_page_render_complex(&complex, calc_engine_uses_degrees(),
                                        message);
+        return;
+    }
+    if (page == PAGE_STATISTICS) {
+        calculator_page_render_statistics(&statistics, message);
         return;
     }
     if (page == PAGE_GRAPH) return;
@@ -814,6 +826,12 @@ static void activate_complex_key(const calc_key_t *key) {
     render_keypad();
 }
 
+static void activate_statistics_key(const calc_key_t *key) {
+    calculator_statistics_activate(&statistics, key->token, ans,
+                                    message, sizeof message);
+    render_keypad();
+}
+
 static void activate_key(const calc_key_t *key) {
     switch (key->action) {
         case ACT_INSERT:
@@ -929,6 +947,9 @@ static void activate_key(const calc_key_t *key) {
         case ACT_COMPLEX:
             activate_complex_key(key);
             break;
+        case ACT_STATISTICS:
+            activate_statistics_key(key);
+            break;
     }
     render_display();
     mark_persistence_dirty();
@@ -947,6 +968,7 @@ void calculator_ui_init(void) {
     calculator_logic_init(&logic);
     calculator_units_init(&units);
     calculator_complex_init(&complex);
+    calculator_statistics_init(&statistics);
 
     calculator_persisted_state_t persisted;
     calculator_storage_load_status_t load_status =
@@ -1013,6 +1035,10 @@ void calculator_ui_task(void) {
                                         calc_engine_uses_degrees(),
                                         message, sizeof message);
             render_keypad();
+        } else if (page == PAGE_STATISTICS) {
+            calculator_statistics_activate(&statistics, "ADD", ans,
+                                            message, sizeof message);
+            render_keypad();
         } else if (calculator_page_accepts_evaluate(page)) {
             evaluate_expression();
         }
@@ -1026,6 +1052,10 @@ void calculator_ui_task(void) {
             calculator_complex_activate(&complex, "DEL",
                                         calc_engine_uses_degrees(),
                                         message, sizeof message);
+            render_keypad();
+        } else if (page == PAGE_STATISTICS) {
+            calculator_statistics_activate(&statistics, "DEL", ans,
+                                            message, sizeof message);
             render_keypad();
         } else if (page == PAGE_LOGIC) {
             calculator_logic_activate(&logic, "DEL",
@@ -1063,6 +1093,17 @@ void calculator_ui_task(void) {
             }
             render_graph();
             mark_persistence_dirty();
+        } else if (page == PAGE_STATISTICS) {
+            if (joystick.left || joystick.right) {
+                calculator_statistics_activate(
+                    &statistics, joystick.left ? "PREV" : "NEXT", ans,
+                    message, sizeof message);
+            } else if (joystick.up || joystick.down) {
+                calculator_statistics_activate(&statistics, "XY", ans,
+                                                message, sizeof message);
+            }
+            render_display();
+            render_keypad();
         } else if (page == PAGE_COMPLEX) {
             if (complex.history_view &&
                 (joystick.left || joystick.right)) {

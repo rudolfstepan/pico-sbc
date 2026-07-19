@@ -39,6 +39,7 @@ int main(void) {
     CHECK(check_page(PAGE_LOGIC, 30) == 0);
     CHECK(check_page(PAGE_UNITS, 30) == 0);
     CHECK(check_page(PAGE_COMPLEX, 30) == 0);
+    CHECK(check_page(PAGE_STATISTICS, 30) == 0);
     size_t complex_history_count = 0;
     const calc_key_t *complex_history =
         calculator_complex_keymap(true, &complex_history_count);

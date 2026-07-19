@@ -17,8 +17,8 @@ ein Test auf dem echten LCD erfolgreich sind.
 | 5 | Programmer-Erweiterungen | Phase 0 | Hardwaretest offen |
 | 6 | Schaltalgebra und Gatter | Phase 5 | abgeschlossen |
 | 7 | Einheiten und Konstanten | Phase 3 | abgeschlossen |
-| 8 | Komplexe Zahlen | Phase 3 | Hardwaretest offen |
-| 9 | Statistikmodus | Phasen 2 und 3 | geplant |
+| 8 | Komplexe Zahlen | Phase 3 | abgeschlossen |
+| 9 | Statistikmodus | Phasen 2 und 3 | Hardwaretest offen |
 | 10 | USB-Datenaustausch | Phasen 4 und 9 | geplant |
 
 ## Phase 0: Technische Grundlage
@@ -169,24 +169,33 @@ anschliessend auf dem Pico erfolgreich geprueft.
 **Fertig, wenn:** Parser, Anzeige und Verlauf komplexe Zahlen verlustfrei
 verarbeiten und die wichtigsten Operationen durch Host-Tests abgesichert sind.
 
-Softwarestand: Ein eigener Parser unterstuetzt kartesische Zahlen, implizite
+Abschlussstand: Ein eigener Parser unterstuetzt kartesische Zahlen, implizite
 Multiplikation, Polarkonstruktion, Grundrechenarten, Potenzen, Betrag, Phase,
 Konjugation, Real-/Imaginaerteil, Wurzel, Exponentialfunktion und Logarithmus.
 Ein acht Eintraege grosser Verlauf speichert Ausdruck und beide
 Double-Komponenten verlustfrei. Alle 21 Host-Tests und der Pico-Firmware-Build
-laufen erfolgreich; Touchbedienung und Lesbarkeit auf dem Pico stehen noch aus.
+laufen erfolgreich. Parser, Berechnungen, Verlauf, Touchbedienung und
+Lesbarkeit wurden anschliessend auf dem Pico erfolgreich geprueft.
 
 ## Phase 9: Statistikmodus
 
-- [ ] Einen touchfreundlichen Editor fuer Zahlenlisten erstellen.
-- [ ] Mittelwert, Median, Minimum, Maximum und Standardabweichung berechnen.
-- [ ] Ein- und Zwei-Variablen-Statistik unterstuetzen.
-- [ ] Lineare Regression mit Korrelationskoeffizient implementieren.
-- [ ] Histogramm und Streudiagramm im Graphbereich darstellen.
-- [ ] Listen in Verlauf und persistente Speicherung integrieren.
+- [x] Einen touchfreundlichen Editor fuer Zahlenlisten erstellen.
+- [x] Mittelwert, Median, Minimum, Maximum und Standardabweichung berechnen.
+- [x] Ein- und Zwei-Variablen-Statistik unterstuetzen.
+- [x] Lineare Regression mit Korrelationskoeffizient implementieren.
+- [x] Histogramm und Streudiagramm im Graphbereich darstellen.
+- [x] Zahlenlisten persistent speichern und beim Start wiederherstellen.
 
 **Fertig, wenn:** Listen bearbeitet, ausgewertet und grafisch dargestellt
 werden koennen und Ergebnisse gegen bekannte Datensaetze getestet sind.
+
+Softwarestand: Ein Editor fuer bis zu 32 Werte oder Wertepaare, Kennwerte fuer
+X und Y, lineare Regression mit `r` und `r^2`, Histogramm und Streudiagramm
+sind implementiert. Datensaetze werden im CRC-gesicherten Flashformat
+gespeichert; Version 2 liest bestehende Version-1-Daten weiterhin. Alle 23
+Host-Tests und der RP2040-Release-Build laufen erfolgreich. Touchbedienung,
+Lesbarkeit der Diagramme und Wiederherstellung nach einem Neustart stehen noch
+als Hardwaretest aus.
 
 ## Phase 10: USB-Datenaustausch
 

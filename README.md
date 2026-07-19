@@ -9,7 +9,7 @@ flashbare Anwendungen und eine gemeinsame Hardwarebibliothek.
 | Anwendung | Beschreibung | Ziel |
 |---|---|---|
 | [Mini Computer](firmware/mini-computer/README.md) | Touch-Tastatur und kleine Kommandozeile | `lafvin_minicomputer` |
-| [Scientific Calculator](firmware/scientific-calculator/README.md) | Wissenschaftlicher Rechner, Programmer-, Format- und Graphmodus | `lafvin_scientific_calculator` |
+| [Scientific Calculator](firmware/scientific-calculator/README.md) | Wissenschaftlicher Rechner mit Programmer-, Graph-, Logik- und Statistikmodus | `lafvin_scientific_calculator` |
 
 ## Projektstruktur
 

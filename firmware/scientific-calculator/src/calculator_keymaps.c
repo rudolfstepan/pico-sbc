@@ -371,7 +371,7 @@ static const calc_key_t unit_keys[] = {
 };
 
 static const calc_key_t complex_keys[] = {
-    {"BASIC", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"STATS", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
     {"CART", "VIEW", 1, 0, ACT_COMPLEX, STYLE_COMMAND},
     {"DEG", "", 2, 0, ACT_ANGLE, STYLE_COMMAND},
     {"DEL", "DEL", 3, 0, ACT_COMPLEX, STYLE_COMMAND},
@@ -408,7 +408,7 @@ static const calc_key_t complex_keys[] = {
 };
 
 static const calc_key_t complex_history_keys[] = {
-    {"BASIC", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"STATS", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
     {"CART", "VIEW", 1, 0, ACT_COMPLEX, STYLE_COMMAND},
     {"DEG", "", 2, 0, ACT_ANGLE, STYLE_COMMAND},
     {"DEL", "DEL", 3, 0, ACT_COMPLEX, STYLE_COMMAND},
@@ -442,6 +442,43 @@ static const calc_key_t complex_history_keys[] = {
     {"USE", "USE", 3, 4, ACT_COMPLEX, STYLE_EQUALS},
     {"HCLR", "HCLR", 4, 4, ACT_COMPLEX, STYLE_COMMAND},
     {"VIEW", "VIEW", 5, 4, ACT_COMPLEX, STYLE_COMMAND},
+};
+
+static const calc_key_t statistics_keys[] = {
+    {"BASIC", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"1VAR", "1VAR", 1, 0, ACT_STATISTICS, STYLE_COMMAND},
+    {"2VAR", "2VAR", 2, 0, ACT_STATISTICS, STYLE_COMMAND},
+    {"DATA", "DATA", 3, 0, ACT_STATISTICS, STYLE_COMMAND},
+    {"SUM", "SUMMARY", 4, 0, ACT_STATISTICS, STYLE_COMMAND},
+    {"PLOT", "PLOT", 5, 0, ACT_STATISTICS, STYLE_EQUALS},
+
+    {"7", "7", 0, 1, ACT_STATISTICS, STYLE_NUMBER},
+    {"8", "8", 1, 1, ACT_STATISTICS, STYLE_NUMBER},
+    {"9", "9", 2, 1, ACT_STATISTICS, STYLE_NUMBER},
+    {"DEL", "DEL", 3, 1, ACT_STATISTICS, STYLE_COMMAND},
+    {"X", "XY", 4, 1, ACT_STATISTICS, STYLE_FUNCTION},
+    {"ADD", "ADD", 5, 1, ACT_STATISTICS, STYLE_EQUALS},
+
+    {"4", "4", 0, 2, ACT_STATISTICS, STYLE_NUMBER},
+    {"5", "5", 1, 2, ACT_STATISTICS, STYLE_NUMBER},
+    {"6", "6", 2, 2, ACT_STATISTICS, STYLE_NUMBER},
+    {"-", "-", 3, 2, ACT_STATISTICS, STYLE_FUNCTION},
+    {"EXP", "e", 4, 2, ACT_STATISTICS, STYLE_FUNCTION},
+    {"ANS", "ANS", 5, 2, ACT_STATISTICS, STYLE_FUNCTION},
+
+    {"1", "1", 0, 3, ACT_STATISTICS, STYLE_NUMBER},
+    {"2", "2", 1, 3, ACT_STATISTICS, STYLE_NUMBER},
+    {"3", "3", 2, 3, ACT_STATISTICS, STYLE_NUMBER},
+    {".", ".", 3, 3, ACT_STATISTICS, STYLE_NUMBER},
+    {"PREV", "PREV", 4, 3, ACT_STATISTICS, STYLE_FUNCTION},
+    {"NEXT", "NEXT", 5, 3, ACT_STATISTICS, STYLE_FUNCTION},
+
+    {"0", "0", 0, 4, ACT_STATISTICS, STYLE_NUMBER},
+    {"+/-", "SIGN", 1, 4, ACT_STATISTICS, STYLE_FUNCTION},
+    {"EDIT", "EDIT", 2, 4, ACT_STATISTICS, STYLE_FUNCTION},
+    {"DROP", "DROP", 3, 4, ACT_STATISTICS, STYLE_FUNCTION},
+    {"CLEAR", "CLEAR", 4, 4, ACT_STATISTICS, STYLE_COMMAND},
+    {"REG", "REGRESSION", 5, 4, ACT_STATISTICS, STYLE_EQUALS},
 };
 
 const calc_key_t *calculator_complex_keymap(bool history, size_t *count) {
@@ -572,6 +609,9 @@ const calc_key_t *calculator_keymap(calc_page_t page, size_t *count) {
             return unit_keys;
         case PAGE_COMPLEX:
             return calculator_complex_keymap(false, count);
+        case PAGE_STATISTICS:
+            *count = sizeof statistics_keys / sizeof statistics_keys[0];
+            return statistics_keys;
         case PAGE_BASIC:
         default:
             *count = sizeof basic_keys / sizeof basic_keys[0];
