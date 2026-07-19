@@ -115,6 +115,7 @@ add_executable(graph_renderer_tests
     ${CALCULATOR_SRC}/calculator_keymaps.c
     ${CALCULATOR_SRC}/calculator_widgets.c
     ${CALCULATOR_SRC}/graph_model.c
+    ${CALCULATOR_SRC}/numerical_analysis.c
     ${TINYEXPR_SRC}/tinyexpr.c
 )
 target_include_directories(graph_renderer_tests PRIVATE
@@ -126,3 +127,12 @@ target_include_directories(graph_renderer_tests PRIVATE
 target_compile_definitions(graph_renderer_tests PRIVATE TE_POW_FROM_RIGHT)
 enable_project_warnings(graph_renderer_tests)
 add_test(NAME graph_renderer COMMAND graph_renderer_tests)
+
+add_executable(numerical_analysis_tests
+    calculator/test_numerical_analysis.c
+    ${CALCULATOR_SRC}/calculation_status.c
+    ${CALCULATOR_SRC}/numerical_analysis.c
+)
+target_include_directories(numerical_analysis_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(numerical_analysis_tests)
+add_test(NAME numerical_analysis COMMAND numerical_analysis_tests)

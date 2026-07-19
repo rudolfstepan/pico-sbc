@@ -199,8 +199,26 @@ static const calc_key_t graph_menu_keys[] = {
     {"TABLE", "TABLE", 1, 4, ACT_GRAPH, STYLE_FUNCTION},
     {"TRACE", "TRACE", 2, 4, ACT_GRAPH, STYLE_FUNCTION},
     {"AUTO", "AUTO", 3, 4, ACT_GRAPH, STYLE_FUNCTION},
-    {"ZOOM+", "IN", 4, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"ANALYZE", "ANALYZE", 4, 4, ACT_GRAPH, STYLE_FUNCTION},
     {"RANGE", "RANGE", 5, 4, ACT_GRAPH, STYLE_EQUALS},
+};
+
+static const calc_key_t graph_analysis_keys[] = {
+    {"PLOT", "PLOT", 0, 4, ACT_GRAPH, STYLE_COMMAND},
+    {"ROOT", "ROOT", 1, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"XING", "XING", 2, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"DERIV", "DERIV", 3, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"INTEGR", "INTEGR", 4, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"MORE", "ANMORE", 5, 4, ACT_GRAPH, STYLE_EQUALS},
+};
+
+static const calc_key_t graph_analysis_more_keys[] = {
+    {"BACK", "ANBACK", 0, 4, ACT_GRAPH, STYLE_COMMAND},
+    {"EXTREM", "EXTREM", 1, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"A=ANS", "A=ANS", 2, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"B=ANS", "B=ANS", 3, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"VIEW", "VIEWINT", 4, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"TOL", "TOL", 5, 4, ACT_GRAPH, STYLE_EQUALS},
 };
 
 static const calc_key_t graph_table_keys[] = {
@@ -229,6 +247,13 @@ const calc_key_t *calculator_graph_keymap(graph_view_t view, size_t *count) {
         case GRAPH_VIEW_TABLE:
             *count = sizeof graph_table_keys / sizeof graph_table_keys[0];
             return graph_table_keys;
+        case GRAPH_VIEW_ANALYSIS:
+            *count = sizeof graph_analysis_keys / sizeof graph_analysis_keys[0];
+            return graph_analysis_keys;
+        case GRAPH_VIEW_ANALYSIS_MORE:
+            *count = sizeof graph_analysis_more_keys /
+                     sizeof graph_analysis_more_keys[0];
+            return graph_analysis_more_keys;
         case GRAPH_VIEW_RANGE:
             *count = sizeof graph_range_keys / sizeof graph_range_keys[0];
             return graph_range_keys;

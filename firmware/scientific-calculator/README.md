@@ -61,6 +61,38 @@ des normalen Rechners.
 Farbige Kreuze markieren Nullstellen. Weisse Kreuze markieren Schnittpunkte
 aktiver Funktionen.
 
+## Numerische Analyse
+
+`MORE -> ANALYZE` oeffnet die numerischen Werkzeuge. Im Kopf des Graphen
+stehen die verwendete Toleranz `1e-9`, die Grenze von `64` Iterationen und das
+aktuelle Intervall.
+
+- `ROOT`: Nullstelle der ausgewaehlten Funktion. Der Trace-x-Wert ist der
+  Startwert; falls Newton dort nicht konvergiert, wird der sichtbare Bereich
+  nach einem Intervall mit Vorzeichenwechsel durchsucht.
+- `XING`: Schnittpunkt der ausgewaehlten mit der naechsten aktiven Funktion.
+- `DERIV`: numerische Ableitung der ausgewaehlten Funktion am Trace-x-Wert.
+- `INTEGR`: bestimmtes Integral ueber den sichtbaren x-Bereich.
+- `EXTREM`: lokale Minima und Maxima im sichtbaren x-Bereich.
+
+`ANALYZE -> MORE` verwaltet die Rechenparameter:
+
+- `A=ANS` und `B=ANS` uebernehmen den aktuellen Rechnerwert als exakte
+  Intervallgrenze. Die Reihenfolge ist beliebig; intern wird die kleinere
+  Grenze zuerst verwendet.
+- `VIEW` verwendet wieder den aktuell sichtbaren x-Bereich als Intervall.
+- `TOL` schaltet zyklisch zwischen `1e-6`, `1e-9` und `1e-12` um.
+
+Zum Setzen einer exakten Grenze wird der gewuenschte Wert zuerst im normalen
+Rechner berechnet. Danach wird im Graph unter `ANALYZE -> MORE` die passende
+`A=ANS`- oder `B=ANS`-Taste gedrueckt. Der Graphkopf kennzeichnet ein solches
+Intervall mit `A/B`, andernfalls mit `VIEW`.
+
+Ergebnisse enthalten die benoetigte Iterationszahl. Fehler wie ungueltige
+Wertebereiche oder fehlende Konvergenz werden direkt im Graphkopf angezeigt.
+Mit `RANGE` und dem Joystick lassen sich Intervall und Startwert vor der
+Berechnung anpassen.
+
 ## Build
 
 Vom Workspace-Stammverzeichnis:

@@ -8,10 +8,13 @@
 
 #define GRAPH_FUNCTION_COUNT 3
 #define GRAPH_EXPRESSION_CAPACITY 96
+#define GRAPH_ANALYSIS_TEXT_CAPACITY 80
 
 typedef enum {
     GRAPH_VIEW_PLOT,
     GRAPH_VIEW_MENU,
+    GRAPH_VIEW_ANALYSIS,
+    GRAPH_VIEW_ANALYSIS_MORE,
     GRAPH_VIEW_TABLE,
     GRAPH_VIEW_RANGE
 } graph_view_t;
@@ -40,6 +43,12 @@ typedef struct {
     double trace_x;
     double table_x;
     double table_step;
+    char analysis_text[GRAPH_ANALYSIS_TEXT_CAPACITY];
+    bool custom_analysis_interval;
+    double analysis_left;
+    double analysis_right;
+    double analysis_tolerance;
+    unsigned int analysis_max_iterations;
 } graph_model_t;
 
 typedef bool (*graph_evaluate_fn)(void *context, size_t function_index,
@@ -61,6 +70,13 @@ void graph_model_reset_range(graph_model_t *model);
 void graph_model_move_trace(graph_model_t *model, double steps);
 void graph_model_scroll_table(graph_model_t *model, double rows);
 void graph_model_scale_table_step(graph_model_t *model, double factor);
+void graph_model_clear_analysis(graph_model_t *model);
+void graph_model_set_analysis_bound(graph_model_t *model, bool left,
+                                    double value);
+void graph_model_use_view_interval(graph_model_t *model);
+void graph_model_analysis_interval(const graph_model_t *model,
+                                   double *left, double *right);
+void graph_model_cycle_analysis_tolerance(graph_model_t *model);
 calc_status_t graph_model_auto_scale(graph_model_t *model,
                                      graph_evaluate_fn evaluate,
                                      void *context);

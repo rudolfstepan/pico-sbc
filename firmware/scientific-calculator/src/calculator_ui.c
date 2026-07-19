@@ -414,6 +414,12 @@ static void activate_graph_key(const calc_key_t *key) {
         }
     } else if (strcmp(key->token, "MENU") == 0) {
         graph_model_set_view(&graph, GRAPH_VIEW_MENU);
+    } else if (strcmp(key->token, "ANALYZE") == 0) {
+        graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS);
+    } else if (strcmp(key->token, "ANMORE") == 0) {
+        graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS_MORE);
+    } else if (strcmp(key->token, "ANBACK") == 0) {
+        graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS);
     } else if (strcmp(key->token, "PLOT") == 0) {
         graph_model_set_view(&graph, GRAPH_VIEW_PLOT);
     } else if (strcmp(key->token, "TABLE") == 0) {
@@ -421,6 +427,7 @@ static void activate_graph_key(const calc_key_t *key) {
     } else if (strcmp(key->token, "RANGE") == 0) {
         graph_model_set_view(&graph, GRAPH_VIEW_RANGE);
     } else if (strcmp(key->token, "TRACE") == 0) {
+        graph_model_clear_analysis(&graph);
         graph.trace_enabled = !graph.trace_enabled;
         if (graph.trace_enabled) graph.trace_x = graph.x_center;
         graph_model_set_view(&graph, GRAPH_VIEW_PLOT);
@@ -432,6 +439,37 @@ static void activate_graph_key(const calc_key_t *key) {
                  status == CALC_OK ? "AUTO SCALE" :
                  calc_engine_status_text(status));
         graph_model_set_view(&graph, GRAPH_VIEW_PLOT);
+    } else if (strcmp(key->token, "ROOT") == 0) {
+        calculator_graph_analyze(&graph, ans, CALCULATOR_GRAPH_ROOT);
+        graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS);
+    } else if (strcmp(key->token, "XING") == 0) {
+        calculator_graph_analyze(&graph, ans,
+                                 CALCULATOR_GRAPH_INTERSECTION);
+        graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS);
+    } else if (strcmp(key->token, "DERIV") == 0) {
+        calculator_graph_analyze(&graph, ans,
+                                 CALCULATOR_GRAPH_DERIVATIVE);
+        graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS);
+    } else if (strcmp(key->token, "INTEGR") == 0) {
+        calculator_graph_analyze(&graph, ans,
+                                 CALCULATOR_GRAPH_INTEGRAL);
+        graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS);
+    } else if (strcmp(key->token, "EXTREM") == 0) {
+        calculator_graph_analyze(&graph, ans,
+                                 CALCULATOR_GRAPH_EXTREMA);
+        graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS);
+    } else if (strcmp(key->token, "A=ANS") == 0) {
+        graph_model_set_analysis_bound(&graph, true, ans);
+        graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS_MORE);
+    } else if (strcmp(key->token, "B=ANS") == 0) {
+        graph_model_set_analysis_bound(&graph, false, ans);
+        graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS_MORE);
+    } else if (strcmp(key->token, "VIEWINT") == 0) {
+        graph_model_use_view_interval(&graph);
+        graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS_MORE);
+    } else if (strcmp(key->token, "TOL") == 0) {
+        graph_model_cycle_analysis_tolerance(&graph);
+        graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS_MORE);
     } else if (strcmp(key->token, "IN") == 0) {
         calculator_graph_zoom(&graph, 0.5);
     } else if (strcmp(key->token, "TABLE-") == 0) {

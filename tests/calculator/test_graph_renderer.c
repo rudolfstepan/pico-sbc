@@ -4,6 +4,7 @@
 #include "lcd_st7796.h"
 #include "mock_lcd.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -92,7 +93,65 @@ int main(void) {
         failures++;
     }
 
+    if (calculator_graph_analyze(&graph, 0.0, CALCULATOR_GRAPH_ROOT) !=
+            CALC_OK ||
+        strstr(graph.analysis_text, "ROOT F1") == NULL ||
+        fabs(graph.trace_x) > 1e-8) {
+        printf("FAIL: graph root analysis: %s\n", graph.analysis_text);
+        failures++;
+    }
+    graph.trace_x = 0.0;
+    if (calculator_graph_analyze(&graph, 0.0,
+                                 CALCULATOR_GRAPH_DERIVATIVE) != CALC_OK ||
+        strstr(graph.analysis_text, "DERIV F1") == NULL) {
+        printf("FAIL: graph derivative analysis: %s\n", graph.analysis_text);
+        failures++;
+    }
+    if (calculator_graph_analyze(&graph, 0.0,
+                                 CALCULATOR_GRAPH_INTEGRAL) != CALC_OK ||
+        strstr(graph.analysis_text, "INTEGR F1") == NULL) {
+        printf("FAIL: graph integral analysis: %s\n", graph.analysis_text);
+        failures++;
+    }
+    graph_model_set_analysis_bound(&graph, true, 0.0);
+    graph_model_set_analysis_bound(&graph, false, 3.14159265358979323846);
+    if (calculator_graph_analyze(&graph, 0.0,
+                                 CALCULATOR_GRAPH_INTEGRAL) != CALC_OK ||
+        strstr(graph.analysis_text, "= 2") == NULL) {
+        printf("FAIL: custom interval integral: %s\n", graph.analysis_text);
+        failures++;
+    }
+    graph_model_use_view_interval(&graph);
+    if (calculator_graph_analyze(&graph, 0.0,
+                                 CALCULATOR_GRAPH_EXTREMA) != CALC_OK ||
+        strstr(graph.analysis_text, "EXT F1") == NULL) {
+        printf("FAIL: graph extrema analysis: %s\n", graph.analysis_text);
+        failures++;
+    }
+    graph_model_set_function(&graph, 1, "0");
+    graph_model_select_function(&graph, 0);
+    graph.trace_x = 0.0;
+    if (calculator_graph_analyze(&graph, 0.0,
+                                 CALCULATOR_GRAPH_INTERSECTION) != CALC_OK ||
+        strstr(graph.analysis_text, "XING F1/F2") == NULL) {
+        printf("FAIL: graph intersection analysis: %s\n", graph.analysis_text);
+        failures++;
+    }
+    if (!calc_engine_uses_degrees()) {
+        printf("FAIL: analysis did not restore DEG mode\n");
+        failures++;
+    }
+
+    graph_model_set_function(&graph, 1, "");
+    graph_model_set_range(&graph, 0.0, 3.14159265358979323846, -1.5, 1.5);
+    graph.trace_x = 0.0;
+    calculator_graph_analyze(&graph, 0.0, CALCULATOR_GRAPH_ROOT);
+    graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS);
+    expect_render_in_bounds(&graph, GRAPH_VIEW_ANALYSIS);
+    expect_render_in_bounds(&graph, GRAPH_VIEW_ANALYSIS_MORE);
+
     expect_render_in_bounds(&graph, GRAPH_VIEW_MENU);
+    expect_render_in_bounds(&graph, GRAPH_VIEW_ANALYSIS);
     expect_render_in_bounds(&graph, GRAPH_VIEW_TABLE);
     expect_render_in_bounds(&graph, GRAPH_VIEW_RANGE);
 

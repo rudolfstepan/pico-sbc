@@ -11,7 +11,7 @@ ein Test auf dem echten LCD erfolgreich sind.
 |---:|---|---|---|
 | 0 | Technische Grundlage | keine | abgeschlossen |
 | 1 | Graph 2.0 | Phase 0 | abgeschlossen |
-| 2 | Numerische Analyse | Phase 1 | geplant |
+| 2 | Numerische Analyse | Phase 1 | abgeschlossen |
 | 3 | Variablen und Benutzerfunktionen | Phase 2 | geplant |
 | 4 | Permanente Speicherung | Phase 3 | geplant |
 | 5 | Programmer-Erweiterungen | Phase 0 | geplant |
@@ -54,15 +54,20 @@ Touchbedienung wurden auf dem 480-x-320-LCD erfolgreich geprueft.
 
 ## Phase 2: Numerische Analyse
 
-- [ ] Nullstellensuche mit Startwert oder Intervall implementieren.
-- [ ] Schnittpunkte zweier gespeicherter Funktionen berechnen.
-- [ ] Numerische Ableitung an einer frei waehlbaren Stelle anbieten.
-- [ ] Bestimmte Integrale ueber ein eingegebenes Intervall berechnen.
-- [ ] Lokale Minima und Maxima im sichtbaren Bereich suchen.
-- [ ] Iterationsgrenzen, Toleranzen und Konvergenzfehler sichtbar behandeln.
+- [x] Nullstellensuche mit Startwert oder Intervall implementieren.
+- [x] Schnittpunkte zweier gespeicherter Funktionen berechnen.
+- [x] Numerische Ableitung an einer frei waehlbaren Stelle anbieten.
+- [x] Bestimmte Integrale ueber ein eingegebenes Intervall berechnen.
+- [x] Lokale Minima und Maxima im sichtbaren Bereich suchen.
+- [x] Iterationsgrenzen, Toleranzen und Konvergenzfehler sichtbar behandeln.
 
 **Fertig, wenn:** Solver, Ableitung und Integral reproduzierbare Ergebnisse
 liefern und Grenzfaelle durch automatisierte Tests abgedeckt sind.
+
+Abschlussstand: Referenzwerte, exakte A/B-Intervalle, fehlende
+Nullstellenintervalle, Iterationsabbrueche, TinyExpr-Anbindung und
+LCD-Zeichenbereich werden durch Host-Tests abgedeckt. Ergebnisse, Touchwege,
+Lesbarkeit und Laufzeit wurden anschliessend erfolgreich auf dem Pico geprueft.
 
 ## Phase 3: Variablen und Benutzerfunktionen
 

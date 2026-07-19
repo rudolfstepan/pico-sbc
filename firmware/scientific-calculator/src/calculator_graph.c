@@ -3,6 +3,7 @@
 #include "calculator_engine.h"
 #include "calculator_keymaps.h"
 #include "lcd_st7796.h"
+#include "numerical_analysis.h"
 
 #include <math.h>
 #include <stdbool.h>
@@ -97,6 +98,269 @@ calc_status_t calculator_graph_auto_scale(calculator_graph_t *graph,
     calc_status_t status = count
         ? graph_model_auto_scale(graph, graph_evaluate, &evaluation)
         : CALC_EMPTY;
+    free_functions(&evaluation);
+    calc_engine_set_degrees(previous_degrees);
+    return status;
+}
+
+typedef struct {
+    graph_evaluation_t *evaluation;
+    size_t function;
+} graph_slot_evaluation_t;
+
+static bool evaluate_slot(void *context, double x, double *y) {
+    graph_slot_evaluation_t *slot = context;
+    return graph_evaluate(slot->evaluation, slot->function, x, y);
+}
+
+typedef struct {
+    graph_slot_evaluation_t first;
+    graph_slot_evaluation_t second;
+} graph_difference_evaluation_t;
+
+static bool evaluate_slot_difference(void *context, double x, double *y) {
+    graph_difference_evaluation_t *difference = context;
+    double first = 0.0;
+    double second = 0.0;
+    if (!evaluate_slot(&difference->first, x, &first) ||
+        !evaluate_slot(&difference->second, x, &second)) {
+        return false;
+    }
+    *y = first - second;
+    return isfinite(*y);
+}
+
+static numerical_result_t root_near_guess(numerical_function_t function,
+                                           void *context,
+                                           double left, double right,
+                                           double guess,
+                                           numerical_options_t options) {
+    numerical_result_t result = numerical_root_guess(
+        function, context, guess, options);
+    if (result.status == CALC_OK && result.x >= left && result.x <= right) {
+        return result;
+    }
+
+    numerical_result_t best = result;
+    best.status = CALC_CONVERGENCE_ERROR;
+    double best_distance = INFINITY;
+    double previous_x = left;
+    double previous_value = 0.0;
+    bool previous_valid = function(context, previous_x, &previous_value) &&
+                          isfinite(previous_value);
+    for (unsigned int sample = 1; sample <= options.sample_count; ++sample) {
+        double x = left + (right - left) * sample / options.sample_count;
+        double value = 0.0;
+        bool valid = function(context, x, &value) && isfinite(value);
+        if (valid && previous_valid &&
+            (fabs(value) <= options.tolerance ||
+             fabs(previous_value) <= options.tolerance ||
+             (value < 0.0) != (previous_value < 0.0))) {
+            numerical_result_t candidate = numerical_root_interval(
+                function, context, previous_x, x, options);
+            if (candidate.status == CALC_OK) {
+                double distance = fabs(candidate.x - guess);
+                if (distance < best_distance) {
+                    best = candidate;
+                    best_distance = distance;
+                }
+            }
+        }
+        previous_x = x;
+        previous_value = value;
+        previous_valid = valid;
+    }
+    return best;
+}
+
+static size_t next_active_function(const calculator_graph_t *graph,
+                                   const graph_evaluation_t *evaluation) {
+    for (size_t offset = 1; offset < GRAPH_FUNCTION_COUNT; ++offset) {
+        size_t function = (graph->selected_function + offset) %
+                          GRAPH_FUNCTION_COUNT;
+        if (evaluation->compiled[function]) return function;
+    }
+    return GRAPH_FUNCTION_COUNT;
+}
+
+static const char *analysis_name(calculator_graph_analysis_t analysis) {
+    switch (analysis) {
+        case CALCULATOR_GRAPH_ROOT: return "ROOT";
+        case CALCULATOR_GRAPH_INTERSECTION: return "XING";
+        case CALCULATOR_GRAPH_DERIVATIVE: return "DERIV";
+        case CALCULATOR_GRAPH_INTEGRAL: return "INTEGR";
+        case CALCULATOR_GRAPH_EXTREMA: return "EXTREM";
+        default: return "ANALYSIS";
+    }
+}
+
+static void set_analysis_error(calculator_graph_t *graph,
+                               calculator_graph_analysis_t analysis,
+                               calc_status_t status,
+                               numerical_options_t options) {
+    snprintf(graph->analysis_text, sizeof graph->analysis_text,
+             "%s %s  TOL %.0e  MAX %u",
+             analysis_name(analysis), calculation_status_text(status),
+             options.tolerance, options.max_iterations);
+}
+
+calc_status_t calculator_graph_analyze(calculator_graph_t *graph, double ans,
+                                       calculator_graph_analysis_t analysis) {
+    numerical_options_t options = numerical_default_options();
+    options.tolerance = graph->analysis_tolerance;
+    options.max_iterations = graph->analysis_max_iterations;
+    bool previous_degrees = calc_engine_uses_degrees();
+    calc_engine_set_degrees(false);
+    graph_evaluation_t evaluation;
+    char compile_message[24] = "";
+    compile_functions(graph, ans, &evaluation,
+                      compile_message, sizeof compile_message);
+
+    size_t selected = graph->selected_function;
+    calc_status_t status = CALC_EMPTY;
+    if (!evaluation.compiled[selected]) {
+        snprintf(graph->analysis_text, sizeof graph->analysis_text,
+                 "F%u %s", (unsigned int)(selected + 1),
+                 compile_message[0] ? compile_message : "IS EMPTY OR OFF");
+        free_functions(&evaluation);
+        calc_engine_set_degrees(previous_degrees);
+        return status;
+    }
+
+    double left = 0.0;
+    double right = 0.0;
+    graph_model_analysis_interval(graph, &left, &right);
+    graph_slot_evaluation_t slot = {
+        .evaluation = &evaluation,
+        .function = selected,
+    };
+    numerical_result_t result;
+
+    switch (analysis) {
+        case CALCULATOR_GRAPH_ROOT:
+            result = root_near_guess(evaluate_slot, &slot, left, right,
+                                     graph->trace_x, options);
+            status = result.status;
+            if (status == CALC_OK) {
+                graph->trace_enabled = true;
+                graph->trace_x = result.x;
+                snprintf(graph->analysis_text, sizeof graph->analysis_text,
+                         "ROOT F%u  X %.9g  I %u",
+                         (unsigned int)(selected + 1), result.x,
+                         result.iterations);
+            }
+            break;
+
+        case CALCULATOR_GRAPH_INTERSECTION: {
+            size_t second = next_active_function(graph, &evaluation);
+            if (second >= GRAPH_FUNCTION_COUNT) {
+                status = CALC_EMPTY;
+                snprintf(graph->analysis_text, sizeof graph->analysis_text,
+                         "XING NEED SECOND ACTIVE FUNCTION");
+                break;
+            }
+            graph_difference_evaluation_t difference = {
+                .first = slot,
+                .second = {
+                    .evaluation = &evaluation,
+                    .function = second,
+                },
+            };
+            result = root_near_guess(evaluate_slot_difference, &difference,
+                                     left, right, graph->trace_x, options);
+            status = result.status;
+            if (status == CALC_OK &&
+                evaluate_slot(&slot, result.x, &result.value)) {
+                graph->trace_enabled = true;
+                graph->trace_x = result.x;
+                snprintf(graph->analysis_text, sizeof graph->analysis_text,
+                         "XING F%u/F%u  X %.8g  Y %.8g  I %u",
+                         (unsigned int)(selected + 1),
+                         (unsigned int)(second + 1), result.x, result.value,
+                         result.iterations);
+            } else if (status == CALC_OK) {
+                status = CALC_DOMAIN_ERROR;
+            }
+            break;
+        }
+
+        case CALCULATOR_GRAPH_DERIVATIVE:
+            result = numerical_derivative(evaluate_slot, &slot,
+                                          graph->trace_x, options);
+            status = result.status;
+            if (status == CALC_OK) {
+                graph->trace_enabled = true;
+                snprintf(graph->analysis_text, sizeof graph->analysis_text,
+                         "DERIV F%u  X %.8g  D %.9g  I %u",
+                         (unsigned int)(selected + 1), result.x, result.value,
+                         result.iterations);
+            }
+            break;
+
+        case CALCULATOR_GRAPH_INTEGRAL:
+            result = numerical_integral(evaluate_slot, &slot,
+                                        left, right, options);
+            status = result.status;
+            if (status == CALC_OK) {
+                snprintf(graph->analysis_text, sizeof graph->analysis_text,
+                         "INTEGR F%u  [%.5g,%.5g] = %.9g  I %u",
+                         (unsigned int)(selected + 1), left, right,
+                         result.value, result.iterations);
+            }
+            break;
+
+        case CALCULATOR_GRAPH_EXTREMA: {
+            numerical_extremum_t extrema[12];
+            calc_status_t extrema_status = CALC_EMPTY;
+            size_t count = numerical_find_extrema(
+                evaluate_slot, &slot, left, right, options,
+                extrema, sizeof extrema / sizeof extrema[0], &extrema_status);
+            status = extrema_status;
+            if (status == CALC_OK) {
+                const numerical_extremum_t *minimum = NULL;
+                const numerical_extremum_t *maximum = NULL;
+                for (size_t i = 0; i < count; ++i) {
+                    if (extrema[i].kind == NUMERICAL_MINIMUM && !minimum) {
+                        minimum = &extrema[i];
+                    }
+                    if (extrema[i].kind == NUMERICAL_MAXIMUM && !maximum) {
+                        maximum = &extrema[i];
+                    }
+                }
+                if (minimum && maximum) {
+                    graph->trace_enabled = true;
+                    graph->trace_x = minimum->x;
+                    snprintf(graph->analysis_text,
+                             sizeof graph->analysis_text,
+                             "EXT F%u N%u  MIN %.6g@%.6g  MAX %.6g@%.6g",
+                             (unsigned int)(selected + 1),
+                             (unsigned int)count,
+                             minimum->value, minimum->x,
+                             maximum->value, maximum->x);
+                } else {
+                    const numerical_extremum_t *extremum = minimum
+                        ? minimum : maximum;
+                    graph->trace_enabled = true;
+                    graph->trace_x = extremum->x;
+                    snprintf(graph->analysis_text,
+                             sizeof graph->analysis_text,
+                             "EXT F%u N%u  %s %.8g @ %.8g",
+                             (unsigned int)(selected + 1),
+                             (unsigned int)count,
+                             minimum ? "MIN" : "MAX",
+                             extremum->value, extremum->x);
+                }
+            }
+            break;
+        }
+    }
+
+    if (status != CALC_OK && !graph->analysis_text[0]) {
+        set_analysis_error(graph, analysis, status, options);
+    } else if (status != CALC_OK &&
+               strncmp(graph->analysis_text, "XING NEED", 9) != 0) {
+        set_analysis_error(graph, analysis, status, options);
+    }
     free_functions(&evaluation);
     calc_engine_set_degrees(previous_degrees);
     return status;
@@ -276,8 +540,15 @@ static void draw_marker(const calculator_graph_t *graph,
                           GRAPH_PLOT_TOP, plot_height);
     uint16_t color = marker->second_function < GRAPH_FUNCTION_COUNT
         ? COL_TEXT : function_colors[marker->first_function];
-    lcd_fill_rect(x - 3, y, 7, 1, color);
-    lcd_fill_rect(x, y - 3, 1, 7, color);
+    int horizontal_left = x > 3 ? x - 3 : 0;
+    int horizontal_right = x + 3 < LCD_WIDTH ? x + 3 : LCD_WIDTH - 1;
+    int vertical_top = y > GRAPH_PLOT_TOP + 3 ? y - 3 : GRAPH_PLOT_TOP;
+    int vertical_bottom = y + 3 < GRAPH_PLOT_BOTTOM
+        ? y + 3 : GRAPH_PLOT_BOTTOM - 1;
+    lcd_fill_rect(horizontal_left, y,
+                  horizontal_right - horizontal_left + 1, 1, color);
+    lcd_fill_rect(x, vertical_top, 1,
+                  vertical_bottom - vertical_top + 1, color);
 }
 
 static void draw_trace(const calculator_graph_t *graph,
@@ -297,9 +568,23 @@ static void draw_trace(const calculator_graph_t *graph,
     int pixel_y = graph_y_pixel(y, y_max, graph->y_span,
                                 GRAPH_PLOT_TOP, plot_height);
     lcd_fill_rect(x, GRAPH_PLOT_TOP, 1, plot_height, COL_MUTED);
-    lcd_fill_rect(x - 3, pixel_y - 3, 7, 7,
+    int left = x > 3 ? x - 3 : 0;
+    int right = x + 3 < LCD_WIDTH ? x + 3 : LCD_WIDTH - 1;
+    int top = pixel_y > GRAPH_PLOT_TOP + 3
+        ? pixel_y - 3 : GRAPH_PLOT_TOP;
+    int bottom = pixel_y + 3 < GRAPH_PLOT_BOTTOM
+        ? pixel_y + 3 : GRAPH_PLOT_BOTTOM - 1;
+    lcd_fill_rect(left, top, right - left + 1, bottom - top + 1,
                   function_colors[graph->selected_function]);
-    lcd_fill_rect(x - 1, pixel_y - 1, 3, 3, COL_BG);
+    int inner_left = x > 1 ? x - 1 : 0;
+    int inner_right = x + 1 < LCD_WIDTH ? x + 1 : LCD_WIDTH - 1;
+    int inner_top = pixel_y > GRAPH_PLOT_TOP + 1
+        ? pixel_y - 1 : GRAPH_PLOT_TOP;
+    int inner_bottom = pixel_y + 1 < GRAPH_PLOT_BOTTOM
+        ? pixel_y + 1 : GRAPH_PLOT_BOTTOM - 1;
+    lcd_fill_rect(inner_left, inner_top,
+                  inner_right - inner_left + 1,
+                  inner_bottom - inner_top + 1, COL_BG);
 }
 
 static void render_plot(const calculator_graph_t *graph,
@@ -336,7 +621,9 @@ static void render_plot(const calculator_graph_t *graph,
     bool trace_valid = graph->trace_enabled &&
         graph_evaluate(evaluation, graph->selected_function,
                        graph->trace_x, &trace_y);
-    if (trace_valid) {
+    if (graph->analysis_text[0]) {
+        snprintf(status, sizeof status, "%.79s", graph->analysis_text);
+    } else if (trace_valid) {
         snprintf(status, sizeof status, "TRACE F%u  X %.6g  Y %.6g  RAD",
                  (unsigned int)(graph->selected_function + 1),
                  graph->trace_x, trace_y);
@@ -348,12 +635,27 @@ static void render_plot(const calculator_graph_t *graph,
     lcd_draw_text(4, 2, status, COL_TEXT, COL_BG, 1);
 
     char selected[84];
-    snprintf(selected, sizeof selected, "F%u %s%.75s",
-             (unsigned int)(graph->selected_function + 1),
-             graph->functions[graph->selected_function].active ? "" : "OFF ",
-             graph->functions[graph->selected_function].expression[0]
-                ? graph->functions[graph->selected_function].expression
-                : "EMPTY - EDIT IN TOOLS");
+    if (graph->view == GRAPH_VIEW_ANALYSIS ||
+        graph->view == GRAPH_VIEW_ANALYSIS_MORE) {
+        double analysis_left = 0.0;
+        double analysis_right = 0.0;
+        graph_model_analysis_interval(graph, &analysis_left, &analysis_right);
+        snprintf(selected, sizeof selected,
+                 "F%u  TOL %.0e  MAX %u  %s %.5g..%.5g",
+                 (unsigned int)(graph->selected_function + 1),
+                 graph->analysis_tolerance,
+                 graph->analysis_max_iterations,
+                 graph->custom_analysis_interval ? "A/B" : "VIEW",
+                 analysis_left, analysis_right);
+    } else {
+        snprintf(selected, sizeof selected, "F%u %s%.75s",
+                 (unsigned int)(graph->selected_function + 1),
+                 graph->functions[graph->selected_function].active
+                    ? "" : "OFF ",
+                 graph->functions[graph->selected_function].expression[0]
+                    ? graph->functions[graph->selected_function].expression
+                    : "EMPTY - EDIT IN TOOLS");
+    }
     lcd_draw_text(4, 15, calculator_widget_tail(selected, 76),
                   function_colors[graph->selected_function], COL_BG, 1);
 }

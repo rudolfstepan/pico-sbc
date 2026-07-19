@@ -58,6 +58,22 @@ int main(void) {
     graph_model_scale_table_step(&model, 0.5);
     expect_close(model.table_step, 0.5, 1e-12, "table step");
 
+    double interval_left = 0.0;
+    double interval_right = 0.0;
+    graph_model_analysis_interval(&model, &interval_left, &interval_right);
+    expect_close(interval_left, -5.0, 1e-12, "view interval left");
+    expect_close(interval_right, 5.0, 1e-12, "view interval right");
+    graph_model_set_analysis_bound(&model, true, 3.0);
+    graph_model_set_analysis_bound(&model, false, -2.0);
+    graph_model_analysis_interval(&model, &interval_left, &interval_right);
+    expect_close(interval_left, -2.0, 1e-12, "custom interval left");
+    expect_close(interval_right, 3.0, 1e-12, "custom interval right");
+    graph_model_cycle_analysis_tolerance(&model);
+    expect_close(model.analysis_tolerance, 1e-12, 1e-18,
+                 "analysis tolerance");
+    graph_model_use_view_interval(&model);
+    if (model.custom_analysis_interval) failures++;
+
     if (graph_model_auto_scale(&model, evaluate_polynomial, NULL) != CALC_OK) {
         printf("FAIL: auto scale status\n");
         failures++;

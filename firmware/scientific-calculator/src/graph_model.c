@@ -16,6 +16,8 @@ void graph_model_init(graph_model_t *model) {
     model->x_span = GRAPH_DEFAULT_X_SPAN;
     model->y_span = GRAPH_DEFAULT_Y_SPAN;
     model->table_step = 1.0;
+    model->analysis_tolerance = 1e-9;
+    model->analysis_max_iterations = 64;
 }
 
 bool graph_model_set_function(graph_model_t *model, size_t index,
@@ -27,12 +29,14 @@ bool graph_model_set_function(graph_model_t *model, size_t index,
     snprintf(model->functions[index].expression,
              sizeof model->functions[index].expression, "%s", expression);
     model->functions[index].active = expression[0] != '\0';
+    graph_model_clear_analysis(model);
     return true;
 }
 
 bool graph_model_select_function(graph_model_t *model, size_t index) {
     if (index >= GRAPH_FUNCTION_COUNT) return false;
     model->selected_function = index;
+    graph_model_clear_analysis(model);
     return true;
 }
 
@@ -42,6 +46,7 @@ bool graph_model_toggle_function(graph_model_t *model, size_t index) {
         return false;
     }
     model->functions[index].active = !model->functions[index].active;
+    graph_model_clear_analysis(model);
     return true;
 }
 
@@ -55,6 +60,7 @@ void graph_model_pan(graph_model_t *model, double horizontal_fraction,
     model->y_center += model->y_span * vertical_fraction;
     model->trace_x += model->x_span * horizontal_fraction;
     model->table_x += model->x_span * horizontal_fraction;
+    graph_model_clear_analysis(model);
 }
 
 void graph_model_zoom(graph_model_t *model, double factor) {
@@ -67,6 +73,7 @@ void graph_model_zoom(graph_model_t *model, double factor) {
     }
     model->x_span = x_span;
     model->y_span = y_span;
+    graph_model_clear_analysis(model);
 }
 
 bool graph_model_set_range(graph_model_t *model,
@@ -83,6 +90,7 @@ bool graph_model_set_range(graph_model_t *model,
     model->y_span = y_max - y_min;
     model->trace_x = model->x_center;
     model->table_x = x_min;
+    graph_model_clear_analysis(model);
     return true;
 }
 
@@ -94,6 +102,8 @@ void graph_model_reset_range(graph_model_t *model) {
     model->trace_x = 0.0;
     model->table_x = -10.0;
     model->table_step = 1.0;
+    model->custom_analysis_interval = false;
+    graph_model_clear_analysis(model);
 }
 
 void graph_model_move_trace(graph_model_t *model, double steps) {
@@ -103,6 +113,7 @@ void graph_model_move_trace(graph_model_t *model, double steps) {
     double x_max = model->x_center + model->x_span * 0.5;
     if (model->trace_x < x_min) model->trace_x = x_min;
     if (model->trace_x > x_max) model->trace_x = x_max;
+    graph_model_clear_analysis(model);
 }
 
 void graph_model_scroll_table(graph_model_t *model, double rows) {
@@ -115,6 +126,57 @@ void graph_model_scale_table_step(graph_model_t *model, double factor) {
     if (isfinite(step) && step >= 1e-9 && step <= 1e9) {
         model->table_step = step;
     }
+}
+
+void graph_model_clear_analysis(graph_model_t *model) {
+    model->analysis_text[0] = '\0';
+}
+
+void graph_model_set_analysis_bound(graph_model_t *model, bool left,
+                                    double value) {
+    if (!isfinite(value)) return;
+    if (!model->custom_analysis_interval) {
+        model->analysis_left = model->x_center - model->x_span * 0.5;
+        model->analysis_right = model->x_center + model->x_span * 0.5;
+        model->custom_analysis_interval = true;
+    }
+    if (left) {
+        model->analysis_left = value;
+    } else {
+        model->analysis_right = value;
+    }
+    graph_model_clear_analysis(model);
+}
+
+void graph_model_use_view_interval(graph_model_t *model) {
+    model->custom_analysis_interval = false;
+    graph_model_clear_analysis(model);
+}
+
+void graph_model_analysis_interval(const graph_model_t *model,
+                                   double *left, double *right) {
+    double first = model->custom_analysis_interval
+        ? model->analysis_left : model->x_center - model->x_span * 0.5;
+    double second = model->custom_analysis_interval
+        ? model->analysis_right : model->x_center + model->x_span * 0.5;
+    if (first <= second) {
+        *left = first;
+        *right = second;
+    } else {
+        *left = second;
+        *right = first;
+    }
+}
+
+void graph_model_cycle_analysis_tolerance(graph_model_t *model) {
+    if (model->analysis_tolerance > 5e-8) {
+        model->analysis_tolerance = 1e-9;
+    } else if (model->analysis_tolerance > 5e-11) {
+        model->analysis_tolerance = 1e-12;
+    } else {
+        model->analysis_tolerance = 1e-6;
+    }
+    graph_model_clear_analysis(model);
 }
 
 calc_status_t graph_model_auto_scale(graph_model_t *model,
@@ -153,6 +215,7 @@ calc_status_t graph_model_auto_scale(graph_model_t *model,
     if (!isfinite(span) || span <= 0.0) return CALC_RANGE_ERROR;
     model->y_center = (y_min + y_max) * 0.5;
     model->y_span = span;
+    graph_model_clear_analysis(model);
     return CALC_OK;
 }
 
@@ -248,11 +311,15 @@ static size_t find_crossings(const graph_model_t *model,
                 .second_function = second_function,
             };
             bool found = false;
-            if (fabs(previous_value) < 1e-12) {
+            bool previous_zero = fabs(previous_value) < 1e-12;
+            bool current_zero = fabs(value) < 1e-12;
+            if (previous_zero && current_zero) {
+                found = false;
+            } else if (previous_zero) {
                 marker.x = previous_x;
                 found = evaluate(context, first_function,
                                  marker.x, &marker.y);
-            } else if (fabs(value) < 1e-12) {
+            } else if (current_zero) {
                 marker.x = x;
                 marker.y = first;
                 found = true;
