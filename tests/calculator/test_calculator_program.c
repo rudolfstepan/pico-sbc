@@ -31,11 +31,14 @@ int main(void) {
     CHECK(program.symbol_layer);
     calculator_program_touch(&program, 60, 180);
     CHECK(strcmp(program.editor.text, "10 PRINT ") == 0);
+    calculator_program_touch(&program, 170, 245);
+    calculator_program_touch(&program, 170, 245);
+    CHECK(strcmp(program.editor.text, "10 PRINT \"\"") == 0);
 
     unsigned int effects = calculator_program_touch(&program, 410, 220);
     CHECK(effects & CALCULATOR_PROGRAM_DIRTY);
     CHECK(program.engine.program.count == 1);
-    CHECK(strcmp(program.engine.program.lines[0].text, "PRINT") == 0);
+    CHECK(strcmp(program.engine.program.lines[0].text, "PRINT \"\"") == 0);
 
     calculator_program_touch(&program, 320, 280);
     CHECK(program.engine.state == BASIC_RUN_RUNNING);

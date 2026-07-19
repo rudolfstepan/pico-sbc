@@ -119,7 +119,7 @@ static const program_key_t symbol_keys[] = {
     {8, 236, 48, 30, "DEL", "", PROGRAM_KEY_DELETE},
     INSERT_KEY(60, 236, 44, 30, ".", "."),
     INSERT_KEY(108, 236, 44, 30, ",", ","),
-    INSERT_KEY(156, 236, 44, 30, "\"", "\""),
+    INSERT_KEY(156, 236, 44, 30, "QUOTE", "\""),
     INSERT_KEY(204, 236, 44, 30, "<=", "<="),
     INSERT_KEY(252, 236, 44, 30, ">=", ">="),
     INSERT_KEY(300, 236, 44, 30, "<>", "<>"),
