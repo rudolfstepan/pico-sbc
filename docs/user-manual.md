@@ -205,6 +205,12 @@ Beispiele:
 Nach einer Auswertung kann ein Operator direkt an das Ergebnis angehaengt
 werden. Der Rechner setzt dabei intern `ANS` als linken Operanden ein.
 
+Lange Ausdruecke und Ergebnisse werden automatisch auf mehrere Displayzeilen
+verteilt. Die Zeilenbreite richtet sich nach Landscape oder Portrait und nach
+der aktuell verfuegbaren Anzeigeflaeche. Passt der vollstaendige Text mit der
+normalen Schriftgroesse nicht in den Datenbereich, verkleinert der Rechner die
+Schrift stufenweise, statt Stellen am Anfang oder Ende abzuschneiden.
+
 ### Exakte und angenaeherte Ergebnisse
 
 Der Rechner arbeitet hybrid:

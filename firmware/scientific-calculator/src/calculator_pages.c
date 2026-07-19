@@ -68,36 +68,98 @@ static void finish_display(void) {
                   lcd_width(), 2, COL_MUTED);
 }
 
+static size_t wrapped_text_rows(const char *text, size_t chars_per_row) {
+    size_t length = strlen(text);
+    if (length == 0u) return 1u;
+    return (length + chars_per_row - 1u) / chars_per_row;
+}
+
+static int wrapped_text_height(size_t rows, int line_height, int line_gap) {
+    return (int)rows * line_height + (int)(rows - 1u) * line_gap;
+}
+
+static void draw_wrapped_text(const char *text, size_t chars_per_row,
+                              int y, int line_step, uint8_t scale,
+                              bool right_aligned, uint16_t color) {
+    char line[CALCULATOR_RESULT_TEXT_CAPACITY + 2u];
+    size_t length = strlen(text);
+
+    for (size_t offset = 0u; offset < length; offset += chars_per_row) {
+        size_t count = length - offset;
+        if (count > chars_per_row) count = chars_per_row;
+        if (count >= sizeof line) count = sizeof line - 1u;
+        memcpy(line, text + offset, count);
+        line[count] = '\0';
+
+        int x = 6;
+        if (right_aligned) {
+            x = lcd_width() - 6 - (int)(count * 6u * scale);
+            if (x < 6) x = 6;
+        }
+        page_draw_text_absolute(x, y, line, color, COL_BG, scale);
+        y += line_step;
+    }
+}
+
 void calculator_page_render_expression(calc_page_t page, bool degrees,
                                        const char *message,
                                        const expression_editor_t *editor,
                                        const char *result_text) {
     char status[48];
-    char editor_text[EXPRESSION_EDITOR_CAPACITY + 2];
     char shown_result[CALCULATOR_RESULT_TEXT_CAPACITY + 2u];
 
     snprintf(status, sizeof status, "%s  %s  %s",
              degrees ? "DEG" : "RAD",
              page == PAGE_SCIENTIFIC ? "SCIENTIFIC" : "BASIC", message);
     snprintf(shown_result, sizeof shown_result, "=%s", result_text);
-    bool enlarged = calculator_widget_layout() != CALCULATOR_LAYOUT_STANDARD;
-    int result_scale = enlarged ? 3 : 2;
-    size_t visible_chars = (size_t)(lcd_width() - 12) /
-                           ((size_t)result_scale * 6u);
-    size_t maximum_chars = enlarged ? 26u : 38u;
-    if (visible_chars > maximum_chars) visible_chars = maximum_chars;
-    const char *visible = calculator_widget_tail(shown_result, visible_chars);
-    int width = (int)strlen(visible) * 6 * result_scale;
-    int x = lcd_width() - width - 6;
-    if (x < 6) x = 6;
+
+    const int content_top = 18;
+    const int content_bottom = calculator_widget_display_height() - 4;
+    const int available_height = content_bottom - content_top;
+    uint8_t scale = calculator_widget_layout() == CALCULATOR_LAYOUT_STANDARD
+        ? 2u : 3u;
+    size_t chars_per_row;
+    size_t expression_rows;
+    size_t result_rows;
+    int line_height;
+    int line_gap;
+    int expression_height;
+    int result_height;
+    int section_gap;
+
+    /* Keep the preferred font until all wrapped rows fit the data area. */
+    for (;;) {
+        chars_per_row = (size_t)(lcd_width() - 12) /
+                        ((size_t)scale * 6u);
+        if (chars_per_row == 0u) chars_per_row = 1u;
+        expression_rows = wrapped_text_rows(editor->text, chars_per_row);
+        result_rows = wrapped_text_rows(shown_result, chars_per_row);
+        line_height = 8 * scale;
+        line_gap = scale == 1u ? 2 : scale;
+        expression_height = wrapped_text_height(expression_rows, line_height,
+                                                line_gap);
+        result_height = wrapped_text_height(result_rows, line_height,
+                                            line_gap);
+        section_gap = 2 * scale;
+        if (expression_height + section_gap + result_height <=
+                available_height || scale == 1u) {
+            break;
+        }
+        --scale;
+    }
+
+    /* Short results stay bottom-aligned; wrapped expressions keep priority. */
+    int result_y = content_bottom - result_height;
+    int minimum_result_y = content_top + expression_height + section_gap;
+    if (result_y < minimum_result_y) result_y = minimum_result_y;
+    int line_step = line_height + line_gap;
 
     clear_display();
     lcd_draw_text(6, 4, status, COL_MUTED, COL_BG, 1);
-    lcd_draw_text(6, 20,
-                  expression_editor_view(editor, editor_text,
-                                         sizeof editor_text, visible_chars),
-                  COL_TEXT, COL_BG, 2);
-    lcd_draw_text(x, 52, visible, COL_TEXT, COL_BG, 2);
+    draw_wrapped_text(editor->text, chars_per_row, content_top, line_step,
+                      scale, false, COL_TEXT);
+    draw_wrapped_text(shown_result, chars_per_row, result_y, line_step,
+                      scale, true, COL_TEXT);
     finish_display();
 }
 

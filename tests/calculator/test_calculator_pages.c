@@ -1,3 +1,4 @@
+#include "calculator_engine.h"
 #include "calculator_pages.h"
 #include "calculator_symbols.h"
 #include "calculator_widgets.h"
@@ -6,6 +7,7 @@
 #include "touch_gt911.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #define CHECK(condition) do { \
     if (!(condition)) { \
@@ -231,6 +233,42 @@ int main(void) {
     CHECK(calculator_widget_cycle_layout() ==
           CALCULATOR_LAYOUT_STANDARD);
 
+    expression_editor_t expression;
+    expression_editor_init(&expression);
+    expression_editor_set(
+        &expression,
+        "12345678901234567890123456789012345678901234567890");
+    mock_lcd_reset();
+    calculator_page_render_expression(
+        PAGE_SCIENTIFIC, true, "LANDSCAPE", &expression,
+        "98765432109876543210987654321098765432");
+    CHECK(!mock_lcd_had_out_of_bounds_draw());
+    CHECK(mock_lcd_max_text_scale() == 2);
+    CHECK(mock_lcd_drew_text(
+        "123456789012345678901234567890123456789"));
+    CHECK(mock_lcd_drew_text("01234567890"));
+    CHECK(mock_lcd_drew_text(
+        "=98765432109876543210987654321098765432"));
+
+    char maximum_expression[EXPRESSION_EDITOR_CAPACITY];
+    char maximum_result[CALCULATOR_RESULT_TEXT_CAPACITY];
+    memset(maximum_expression, '1', sizeof maximum_expression - 1u);
+    maximum_expression[sizeof maximum_expression - 1u] = '\0';
+    memcpy(maximum_expression + 78, "WRAPPED-TAIL-1234", 17u);
+    memset(maximum_result, '9', sizeof maximum_result - 1u);
+    maximum_result[sizeof maximum_result - 1u] = '\0';
+    expression_editor_set(&expression, maximum_expression);
+    mock_lcd_reset();
+    calculator_page_render_expression(PAGE_BASIC, true, "LONG",
+                                      &expression, maximum_result);
+    CHECK(!mock_lcd_had_out_of_bounds_draw());
+    CHECK(mock_lcd_max_text_scale() == 1);
+    CHECK(mock_lcd_drew_text("WRAPPED-TAIL-1234"));
+
+    expression_editor_set(
+        &expression,
+        "12345678901234567890123456789012345678901234567890");
+
     lcd_set_orientation(LCD_ORIENTATION_PORTRAIT);
     CHECK(lcd_width() == 320);
     CHECK(lcd_height() == 480);
@@ -240,12 +278,21 @@ int main(void) {
     CHECK(calculator_widget_key_top(4) == 404);
     CHECK(calculator_widget_key_height() == 64);
 
-    expression_editor_t expression;
-    expression_editor_init(&expression);
-    expression_editor_set(&expression, "123456789+987654321");
     mock_lcd_reset();
-    calculator_page_render_expression(PAGE_SCIENTIFIC, true, "PORTRAIT",
-                                      &expression, "1111111110");
+    calculator_page_render_expression(
+        PAGE_SCIENTIFIC, true, "PORTRAIT", &expression,
+        "98765432109876543210987654321098765432");
+    CHECK(!mock_lcd_had_out_of_bounds_draw());
+    CHECK(mock_lcd_max_text_scale() == 2);
+    CHECK(mock_lcd_drew_text("1234567890123456789012345"));
+    CHECK(mock_lcd_drew_text("6789012345678901234567890"));
+    CHECK(mock_lcd_drew_text("=987654321098765432109876"));
+    CHECK(mock_lcd_drew_text("54321098765432"));
+
+    mock_lcd_reset();
+    calculator_page_render_expression(
+        PAGE_SCIENTIFIC, true, "PORTRAIT", &expression,
+        "98765432109876543210987654321098765432");
     calculator_page_render_programmer(&programmer, "PORTRAIT");
     calculator_page_render_format(&programmer, 24, FORMAT_VIEW_IEEE64,
                                   "PORTRAIT");
