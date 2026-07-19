@@ -149,7 +149,21 @@ Anzeige wechselt dann zwischen:
 Renderer, Tasten und Touchkoordinaten drehen gemeinsam. Im schmaleren
 Portraitmodus werden lange Tastenbezeichnungen gekuerzt; ihre Funktion bleibt
 unveraendert. Ein kurzer K2-Druck schaltet weiterhin nur das Tastaturlayout.
-Nach einem Neustart beginnt die Firmware in Landscape.
+Die Umschaltung und die Touchzuordnung wurden auf dem LAFVIN-Board in beiden
+Orientierungen geprueft. Nach einem Neustart beginnt die Firmware in
+Landscape.
+
+Empfohlener Ablauf:
+
+1. K2 gedrueckt halten und erst nach dem Signalton loslassen.
+2. Das Board entsprechend der neuen Anzeigeorientierung drehen.
+3. Eine sichtbare Taste kurz antippen. Ihre Touchflaeche liegt in beiden
+   Orientierungen direkt auf der gezeichneten Taste.
+4. Fuer die Rueckkehr K2 erneut mindestens 0,8 Sekunden halten.
+
+Der aktuelle Tastaturzustand bleibt beim Drehen erhalten. Standard,
+Datenfokus und Vollbild koennen daher in Landscape und Portrait unabhaengig
+verwendet werden.
 
 ### Seitenfolge
 
@@ -815,7 +829,9 @@ normalen Verlauf, Statistikdaten und BASIC-Programme.
 2. Pico neu starten, damit der GT911 neu initialisiert wird.
 3. Pruefen, ob sichtbares und beruehrbares Layout mit `K2` gemeinsam wechseln.
    Im dritten Zustand ist die Tastatur absichtlich vollstaendig ausgeblendet.
-4. Bei dauerhaft falschen Koordinaten Boardrevision und Touchverkabelung
+4. Im Portraitmodus links oben und rechts unten testen. Die Beruehrung muss
+   ohne Spiegelung an derselben Position erkannt werden.
+5. Bei dauerhaft falschen Koordinaten Boardrevision und Touchverkabelung
    anhand von `docs/hardware.md` pruefen.
 
 ### Letzte Tastenzeile fehlt
