@@ -1,6 +1,6 @@
 # Benutzerhandbuch: Pico Scientific Calculator
 
-Gueltig fuer Firmware `1.5.0`, USB-Protokoll `3` und das LAFVIN Pico
+Gueltig fuer Firmware `1.6.0`, USB-Protokoll `4` und das LAFVIN Pico
 Development Kit mit RP2040, ST7796U-LCD und GT911-Touchscreen.
 
 ## Inhalt
@@ -714,8 +714,9 @@ python -m pip install -r tools/requirements.txt
 python tools/pico_calc_gui.py
 ```
 
-Unter Linux kann zusaetzlich `python3-tk` notwendig sein. Die Firmware muss
-mindestens Version `1.4.0` mit USB-Protokoll `3` besitzen.
+Unter Linux kann zusaetzlich `python3-tk` notwendig sein. Unter Windows und
+macOS muss Python mit Tk/Tcl installiert sein. Die Firmware muss mindestens
+Version `1.6.0` mit USB-Protokoll `4` besitzen.
 
 ### Verbindung
 
@@ -731,15 +732,26 @@ Datenzaehler.
 
 | Bereich | Verwendung |
 |---|---|
-| `Rechner` | Ausdruck senden und Ergebnis anzeigen |
-| `Speicher` | A-F und F1-F3 bearbeiten und synchronisieren |
-| `Statistik` | Werte oder Wertepaare verwalten und uebertragen |
+| `Rechner` | Wissenschaftlichen Ausdruck senden, Ergebnis anzeigen und DEG/RAD schalten |
+| `Code` | BIN/DEC/HEX, Bitoperationen, 2er-Komplement, Q-Fixpunkt und IEEE-754 untersuchen |
+| `Graph` | F1-F3 plotten sowie Nullstelle, Schnittpunkt, Ableitung, Integral und Extrema berechnen |
+| `Logik` | Gatterbelegung auswerten, Wahrheitstabelle sowie vereinfachte oder kanonische DNF/KNF erzeugen |
+| `Einheiten` | Alle Einheitenkategorien umrechnen und physikalische Konstanten lesen |
+| `Komplex` | Komplexe Ausdruecke in kartesischer und polarer Form berechnen |
+| `Statistik` | Werte oder Wertepaare verwalten, Summary, Regression und Histogramm berechnen |
+| `Speicher` | A-F, F1-F3, M und FAV1-FAV6 bearbeiten und synchronisieren |
 | `BASIC` | `.bas` laden, speichern, uebertragen und ausfuehren |
 | `Verlauf` | Acht Recheneintraege lesen und wiederverwenden |
 | `Protokoll` | Einzelne USB-Befehle senden und Antworten ansehen |
 
 Lange exakte Dezimalergebnisse bleiben Text und werden von der Anwendung nicht
 in Python-Gleitkomma umgewandelt.
+
+Alle Modulberechnungen laufen auf dem Pico. Die PC-App zeichnet Ergebnisse wie
+Graphen und Tabellen nur auf; Rechenkern, Winkelmodus, Bereichspruefung und
+Fehlermeldungen stammen aus derselben Firmware wie die LCD-Bedienung. Bei
+Graphen werden F1-F3 und der sichtbare Bereich vor dem Plotten synchronisiert.
+Eine Wahrheitstabelle kann je nach Ausdruck bis zu 64 Zeilen besitzen.
 
 ### BASIC ueber den PC
 
@@ -749,11 +761,12 @@ Eingabefeld. Die Programmausgabe wird fortlaufend vom Rechner gelesen.
 
 ### JSON-Sicherung
 
-Der Export erfasst Ausdruck, exaktes Ergebnis, A-F, F1-F3, Verlauf, Statistik
-und BASIC-Programm. Beim Import werden Ausdruck, Variablen, Funktionen,
-Statistik und BASIC-Programm zurueckgeschrieben; `ANS` und Verlauf dienen im
-JSON als Sicherungs- und Protokolldaten. Abhaengige Benutzerfunktionen werden
-in einer gueltigen Reihenfolge uebertragen.
+Der Export erfasst Ausdruck, exaktes Ergebnis, Winkelmodus, A-F, F1-F3,
+Speicher M, Favoriten, Programmer- und Zahlenformatzustand, Graphbereich,
+Verlauf, Statistik und BASIC-Programm. Beim Import werden alle persistenten
+Einstellungen ausser `ANS` und Verlauf zurueckgeschrieben; diese beiden dienen
+im JSON als Sicherungs- und Protokolldaten. Abhaengige Benutzerfunktionen
+werden in einer gueltigen Reihenfolge uebertragen.
 
 ### Kommandozeile
 
@@ -858,8 +871,9 @@ enthaelt. Diese verwenden `double`. Fuer exakte Dezimalrechnung nur Literale,
 
 ### PC meldet inkompatibles Protokoll
 
-Firmware `1.4.0` oder neuer flashen. Die aktuelle Desktop-Anwendung erwartet
-USB-Protokoll `3`, damit exakte Ergebnisstrings nicht verloren gehen.
+Firmware `1.6.0` oder neuer flashen. Die aktuelle Desktop-Anwendung erwartet
+USB-Protokoll `4`, damit alle Rechner-Module und persistenten Einstellungen
+verfuegbar sind.
 
 ## 17. Grenzen und technische Hinweise
 

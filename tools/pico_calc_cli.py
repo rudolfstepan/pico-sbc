@@ -89,6 +89,18 @@ def fields(response: str, expected: str) -> list[str]:
     return parts[1:]
 
 
+def property_fields(response: str, expected: str) -> dict[str, str]:
+    properties: dict[str, str] = {}
+    for field in fields(response, expected):
+        if "=" not in field:
+            raise ProtocolError(f"Ungueltiges {expected}-Feld: {field}")
+        name, value = field.split("=", 1)
+        if not name or name in properties:
+            raise ProtocolError(f"Ungueltiges {expected}-Feld: {field}")
+        properties[name] = value
+    return properties
+
+
 def normalize_basic_program(source: str | list[Any]) -> list[str]:
     if isinstance(source, list):
         raw_lines = [str(line) for line in source]
@@ -202,9 +214,23 @@ def export_state(client: Any) -> dict[str, Any]:
 
     program = read_basic_program(client)
 
+    angle_fields = fields(client.command("GET ANGLE"), "ANGLE")
+    memory_fields = fields(client.command("GET MEMORY"), "MEMORY")
+    programmer = property_fields(
+        client.command("GET PROGRAMMER"), "PROGRAMMER_STATE")
+    number_format = property_fields(
+        client.command("GET FORMAT"), "FORMAT_STATE")
+    graph = property_fields(client.command("GET GRAPH"), "GRAPH")
+    favorites: dict[str, str] = {}
+    for index in range(1, 7):
+        item = fields(client.command(f"GET FAVORITE {index}"), "FAVORITE")
+        if len(item) != 2 or int(item[0]) != index:
+            raise ProtocolError("Ungueltige FAVORITE-Antwort")
+        favorites[f"FAV{index}"] = item[1]
+
     return {
         "format": "pico-sbc-calculator-state",
-        "version": 3,
+        "version": 4,
         "result": float(result_fields[0]),
         "result_text": result_fields[0],
         "expression": expression_fields[0] if expression_fields else "",
@@ -213,6 +239,20 @@ def export_state(client: Any) -> dict[str, Any]:
         "history": history,
         "statistics": {"mode": mode, "values": values},
         "program": program,
+        "angle": angle_fields[0],
+        "memory": float(memory_fields[0]),
+        "favorites": favorites,
+        "programmer": {
+            "value": int(programmer["value"]),
+            "base": programmer["base"],
+            "signed": programmer["signed"] == "1",
+            "selected_bit": int(programmer["bit"]),
+        },
+        "number_format": {
+            "bits": int(number_format["bits"]),
+            "fraction": int(number_format["fraction"]),
+        },
+        "graph": {name: float(value) for name, value in graph.items()},
     }
 
 
@@ -222,6 +262,65 @@ def import_state(client: Any, data: dict[str, Any]) -> None:
     if "expression" in data:
         expression = str(data["expression"])
         client.command(f"SET EXPR {expression}")
+
+    if "angle" in data:
+        angle = str(data["angle"]).upper()
+        if angle not in ("DEG", "RAD"):
+            raise ProtocolError("Winkelmodus muss DEG oder RAD sein")
+        client.command(f"SET ANGLE {angle}")
+
+    if "memory" in data:
+        memory = float(data["memory"])
+        if not math.isfinite(memory):
+            raise ProtocolError("Speicherwert muss endlich sein")
+        client.command(f"SET MEMORY {memory:.17g}")
+
+    favorites = data.get("favorites", {})
+    if not isinstance(favorites, dict):
+        raise ProtocolError("favorites muss ein Objekt sein")
+    for name, token_value in favorites.items():
+        normalized = str(name).upper()
+        if not re.fullmatch(r"FAV[1-6]", normalized):
+            raise ProtocolError(f"Ungueltiger Favorit: {name}")
+        token = str(token_value)
+        if not token or len(token.encode("ascii")) >= 24:
+            raise ProtocolError(f"Ungueltiger Favorit: {name}")
+        client.command(f"SET FAVORITE {normalized[3:]} {token}")
+
+    number_format = data.get("number_format")
+    if number_format is not None:
+        if not isinstance(number_format, dict):
+            raise ProtocolError("number_format muss ein Objekt sein")
+        bits = int(number_format.get("bits", 64))
+        fraction = int(number_format.get("fraction", 16))
+        if bits not in (8, 16, 32, 64) or not 0 <= fraction < bits:
+            raise ProtocolError("Ungueltiges Zahlenformat")
+        client.command(f"SET FORMAT {bits} {fraction}")
+
+    programmer = data.get("programmer")
+    if programmer is not None:
+        if not isinstance(programmer, dict):
+            raise ProtocolError("programmer muss ein Objekt sein")
+        value = int(programmer.get("value", 0))
+        base = str(programmer.get("base", "DEC")).upper()
+        signed = 1 if bool(programmer.get("signed", False)) else 0
+        selected = int(programmer.get("selected_bit", 0))
+        if value < 0 or value > (1 << 64) - 1 or base not in (
+                "BIN", "DEC", "HEX") or selected < 0:
+            raise ProtocolError("Ungueltiger Programmer-Zustand")
+        client.command(
+            f"SET PROGRAMMER {value} {base} {signed} {selected}")
+
+    graph = data.get("graph")
+    if graph is not None:
+        if not isinstance(graph, dict):
+            raise ProtocolError("graph muss ein Objekt sein")
+        values = [float(graph[name]) for name in
+                  ("xmin", "xmax", "ymin", "ymax")]
+        if not all(math.isfinite(value) for value in values):
+            raise ProtocolError("Graphbereich muss endlich sein")
+        client.command("SET GRAPH " + " ".join(
+            f"{value:.17g}" for value in values))
 
     variables = data.get("variables", {})
     if not isinstance(variables, dict):

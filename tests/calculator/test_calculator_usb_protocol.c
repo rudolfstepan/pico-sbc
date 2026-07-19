@@ -32,6 +32,9 @@ int main(void) {
     snprintf(state.ans_text, sizeof state.ans_text, "0");
     state.degrees = true;
     state.page = PAGE_BASIC;
+    state.format_bits = 64;
+    state.fixed_fraction_bits = 16;
+    state.programmer_base = PROGRAMMER_DEC;
     calculator_symbols_init(&state.symbols);
     graph_model_init(&state.graph);
     statistics_engine_init(&state.statistics);
@@ -46,7 +49,7 @@ int main(void) {
 
     CHECK(strcmp(run(&context, "PING", &effect), "OK PONG") == 0);
     CHECK(!effect.changed);
-    CHECK(strstr(run(&context, "INFO", &effect), "protocol=3") != NULL);
+    CHECK(strstr(run(&context, "INFO", &effect), "protocol=4") != NULL);
     CHECK(strstr(run(&context, "DIAG", &effect), "mode=1") != NULL);
 
     CHECK(strcmp(run(&context, "SET EXPR 6*7", &effect),
@@ -91,12 +94,76 @@ int main(void) {
                   "ERR INVALID_FUNC", 16) == 0);
     CHECK(strcmp(state.symbols.functions[0], "x+A") == 0);
 
+    CHECK(strcmp(run(&context, "GET ANGLE", &effect),
+                 "OK ANGLE\tDEG") == 0);
+    CHECK(strcmp(run(&context, "SET ANGLE RAD", &effect),
+                 "OK ANGLE\tRAD") == 0);
+    CHECK(!state.degrees && effect.persistent_changed);
+    CHECK(strcmp(run(&context, "SET MEMORY 12.5", &effect),
+                 "OK MEMORY\t12.5") == 0);
+    CHECK(strcmp(run(&context, "GET MEMORY", &effect),
+                 "OK MEMORY\t12.5") == 0);
+    CHECK(strcmp(run(&context, "SET FAVORITE 1 atan2(", &effect),
+                 "OK FAVORITE\t1\tatan2(") == 0);
+    CHECK(strcmp(run(&context, "GET FAVORITE 1", &effect),
+                 "OK FAVORITE\t1\tatan2(") == 0);
+    CHECK(strcmp(run(&context, "SET FORMAT 8 4", &effect),
+                 "OK FORMAT_STATE\tbits=8\tfraction=4") == 0);
+    CHECK(strstr(run(&context, "GET FORMAT", &effect), "bits=8") != NULL);
+    CHECK(strstr(run(&context, "SET PROGRAMMER 255 HEX 1 7", &effect),
+                 "value=255") != NULL);
+    CHECK(strstr(run(&context, "GET PROGRAMMER", &effect), "base=HEX") != NULL);
+    CHECK(strcmp(run(&context, "SET GRAPH -4 4 -3 3", &effect),
+                 "OK GRAPH\t-4\t4\t-3\t3") == 0);
+    CHECK(strstr(run(&context, "GET GRAPH", &effect), "xmin=-4") != NULL);
+
+    const char *programmer = run(
+        &context, "MODULE PROGRAMMER NOT 0 8", &effect);
+    CHECK(strstr(programmer, "value=255") != NULL);
+    CHECK(strstr(programmer, "signed=-1") != NULL);
+    CHECK(strstr(programmer, "hex=FF") != NULL);
+    CHECK(strstr(run(&context, "MODULE FORMAT 255 8 4", &effect),
+                 "fixed=-0.0625") != NULL);
+    CHECK(strstr(run(&context, "MODULE IEEE 32 1065353216", &effect),
+                 "value=1") != NULL);
+
+    CHECK(strcmp(run(&context, "SET FUNC F2 x^2-4", &effect),
+                 "OK FUNC\tF2\tx^2-4") == 0);
+    CHECK(strstr(run(&context, "MODULE GRAPH EVAL F1 2", &effect),
+                 "y=7") != NULL);
+    CHECK(strstr(run(&context, "MODULE GRAPH ROOT F2 0 3", &effect),
+                 "OK GRAPH_ANALYSIS") != NULL);
+    CHECK(strcmp(run(&context, "MODULE GRAPH XING F1 F2 bad 3", &effect),
+                 "ERR ARGUMENT GRAPH XING F1 F2 left right") == 0);
+
+    CHECK(strstr(run(&context, "MODULE LOGIC INFO A&B", &effect),
+                 "rows=4") != NULL);
+    CHECK(strstr(run(&context, "MODULE LOGIC ROW 3 A&B", &effect),
+                 "value=1") != NULL);
+    CHECK(strstr(run(&context,
+                     "MODULE LOGIC FORM DNF SIMPLE 0 A&B", &effect),
+                 "data=(A&B)") != NULL);
+    CHECK(strstr(run(&context, "MODULE UNIT CATEGORY 0", &effect),
+                 "name=LENGTH") != NULL);
+    CHECK(strstr(run(&context, "MODULE UNIT CONVERT 0 0 2 1000", &effect),
+                 "value=1") != NULL);
+    CHECK(strcmp(run(&context, "MODULE CONSTANT COUNT", &effect),
+                 "OK CONSTANTS\t12") == 0);
+    CHECK(strstr(run(&context, "MODULE COMPLEX DEG (1+2i)*(3-i)", &effect),
+                 "real=5") != NULL);
+
     CHECK(strcmp(run(&context, "STAT MODE 2", &effect),
                  "OK STATS\t2\t0") == 0);
     CHECK(strcmp(run(&context, "STAT ADD 1 3", &effect),
                  "OK STATS\t2\t1") == 0);
     CHECK(strcmp(run(&context, "STAT ADD 2 5", &effect),
                  "OK STATS\t2\t2") == 0);
+    CHECK(strstr(run(&context, "STAT SUMMARY X", &effect),
+                 "mean=1.5") != NULL);
+    CHECK(strstr(run(&context, "STAT REGRESSION", &effect),
+                 "slope=2") != NULL);
+    CHECK(strstr(run(&context, "STAT HISTOGRAM", &effect),
+                 "bins=") != NULL);
     CHECK(strcmp(run(&context, "GET STATS", &effect),
                  "OK STATS\t2\t2") == 0);
     CHECK(strcmp(run(&context, "GET STATS 1", &effect),

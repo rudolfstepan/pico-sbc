@@ -26,11 +26,25 @@ from pico_calc_cli import (
 from pico_calc_gui_model import (
     BasicRunResult,
     DeviceSnapshot,
+    analyze_graph,
+    analyze_statistics,
     continue_basic_program,
+    convert_unit,
+    evaluate_complex,
     evaluate_expression,
+    evaluate_logic,
     format_number,
+    inspect_ieee,
+    inspect_number_format,
+    parse_integer,
+    programmer_operation,
+    read_constants,
     read_device_snapshot,
+    read_logic_form,
+    read_truth_table,
+    read_unit_category,
     run_basic_program,
+    sample_graph,
     stop_basic_program,
     synchronize_statistics,
     synchronize_symbols,
@@ -38,7 +52,7 @@ from pico_calc_gui_model import (
 
 
 APP_NAME = "Pico Calculator Link"
-APP_VERSION = "1.2"
+APP_VERSION = "2.0"
 BG = "#eef1f4"
 PANEL = "#ffffff"
 INK = "#202428"
@@ -114,6 +128,44 @@ class CalculatorLinkApp:
         self.function_vars = {
             name: tk.StringVar() for name in ("F1", "F2", "F3")
         }
+        self.angle_var = tk.StringVar(value="DEG")
+        self.memory_var = tk.StringVar(value="0")
+        self.favorite_vars = {
+            f"FAV{index}": tk.StringVar() for index in range(1, 7)
+        }
+        self.programmer_value_var = tk.StringVar(value="0")
+        self.programmer_operand_var = tk.StringVar(value="0")
+        self.programmer_base_var = tk.StringVar(value="DEC")
+        self.programmer_bits_var = tk.IntVar(value=64)
+        self.programmer_bit_var = tk.IntVar(value=0)
+        self.programmer_signed_var = tk.BooleanVar(value=False)
+        self.programmer_result_var = tk.StringVar(value="")
+        self.format_fraction_var = tk.IntVar(value=16)
+        self.ieee_width_var = tk.IntVar(value=32)
+        self.ieee_raw_var = tk.StringVar(value="00000000")
+        self.format_result_var = tk.StringVar(value="")
+        self.graph_range_vars = {
+            "xmin": tk.StringVar(value="-10"),
+            "xmax": tk.StringVar(value="10"),
+            "ymin": tk.StringVar(value="-10"),
+            "ymax": tk.StringVar(value="10"),
+        }
+        self.graph_function_var = tk.StringVar(value="F1")
+        self.graph_second_var = tk.StringVar(value="F2")
+        self.graph_analysis_var = tk.StringVar(value="ROOT")
+        self.graph_left_var = tk.StringVar(value="-10")
+        self.graph_right_var = tk.StringVar(value="10")
+        self.graph_analysis_result_var = tk.StringVar(value="")
+        self.logic_expression_var = tk.StringVar(value="(A&B)|!C")
+        self.logic_assignment_var = tk.IntVar(value=0)
+        self.logic_simplified_var = tk.BooleanVar(value=True)
+        self.unit_category_var = tk.StringVar(value="LENGTH")
+        self.unit_input_var = tk.StringVar(value="1")
+        self.unit_result_var = tk.StringVar(value="")
+        self.unit_cache: dict[int, dict[str, Any]] = {}
+        self.complex_expression_var = tk.StringVar(value="(1+2i)*(3-i)")
+        self.complex_angle_var = tk.StringVar(value="DEG")
+        self.complex_result_var = tk.StringVar(value="")
 
         self._configure_styles()
         self._build_ui()
@@ -150,8 +202,8 @@ class CalculatorLinkApp:
                         font=("Segoe UI Semibold", 11), padding=7)
         style.map("Equals.TButton", background=[("active", ACCENT_ACTIVE)])
         style.configure("TNotebook", background=BG, borderwidth=0)
-        style.configure("TNotebook.Tab", font=("Segoe UI Semibold", 10),
-                        padding=(16, 9), background="#dfe3e8")
+        style.configure("TNotebook.Tab", font=("Segoe UI Semibold", 9),
+                        padding=(11, 9), background="#dfe3e8")
         style.map("TNotebook.Tab",
                   background=[("selected", PANEL)],
                   foreground=[("selected", ACCENT)])
@@ -192,8 +244,13 @@ class CalculatorLinkApp:
         self.notebook.grid(row=0, column=1, sticky="nsew", padx=(0, 12), pady=12)
 
         self._build_calculator_tab()
-        self._build_symbols_tab()
+        self._build_programmer_tab()
+        self._build_graph_tab()
+        self._build_logic_tab()
+        self._build_units_tab()
+        self._build_complex_tab()
         self._build_statistics_tab()
+        self._build_symbols_tab()
         self._build_basic_tab()
         self._build_history_tab()
         self._build_console_tab()
@@ -303,6 +360,12 @@ class CalculatorLinkApp:
         actions.grid(row=1, column=0, sticky="ew", padx=18, pady=(0, 10))
         ttk.Button(actions, text="Editor zum Rechner",
                    command=self._send_expression).pack(side=tk.LEFT)
+        ttk.Label(actions, text="Winkel", style="Panel.TLabel").pack(
+            side=tk.LEFT, padx=(14, 5))
+        angle = ttk.Combobox(actions, textvariable=self.angle_var,
+                             values=("DEG", "RAD"), state="readonly", width=5)
+        angle.pack(side=tk.LEFT)
+        angle.bind("<<ComboboxSelected>>", lambda _event: self._set_angle())
         ttk.Button(actions, text="Ausführen", style="Accent.TButton",
                    command=self._evaluate).pack(side=tk.RIGHT)
 
@@ -348,11 +411,262 @@ class CalculatorLinkApp:
         self.session_tree.grid(row=0, column=0, sticky="nsew", padx=8, pady=8)
         self.session_tree.bind("<Double-1>", self._use_session_expression)
 
+    def _build_programmer_tab(self) -> None:
+        self.programmer_tab = self._new_tab("Code")
+        tab = self.programmer_tab
+        tab.columnconfigure(0, weight=1)
+        tab.rowconfigure(0, weight=1)
+        pages = ttk.Notebook(tab)
+        pages.grid(row=0, column=0, sticky="nsew", padx=18, pady=18)
+
+        programmer = ttk.Frame(pages, style="Panel.TFrame")
+        pages.add(programmer, text="Programmer")
+        programmer.columnconfigure(0, weight=1)
+        programmer.rowconfigure(4, weight=1)
+        value_row = ttk.Frame(programmer, style="Panel.TFrame")
+        value_row.grid(row=0, column=0, sticky="ew", padx=14, pady=(14, 8))
+        ttk.Label(value_row, text="Wert", style="Panel.TLabel").pack(side=tk.LEFT)
+        ttk.Entry(value_row, textvariable=self.programmer_value_var,
+                  font=("Consolas", 12), width=30).pack(
+                      side=tk.LEFT, padx=(6, 12), fill=tk.X, expand=True)
+        ttk.Combobox(value_row, textvariable=self.programmer_base_var,
+                     values=("BIN", "DEC", "HEX"), state="readonly",
+                     width=5).pack(side=tk.LEFT)
+        ttk.Combobox(value_row, textvariable=self.programmer_bits_var,
+                     values=(8, 16, 32, 64), state="readonly",
+                     width=4).pack(side=tk.LEFT, padx=6)
+        ttk.Checkbutton(value_row, text="signed",
+                        variable=self.programmer_signed_var).pack(side=tk.LEFT)
+        ttk.Button(value_row, text="Anzeigen", style="Teal.TButton",
+                   command=lambda: self._programmer_action("VIEW")).pack(
+                       side=tk.LEFT, padx=(8, 0))
+
+        operand_row = ttk.Frame(programmer, style="Panel.TFrame")
+        operand_row.grid(row=1, column=0, sticky="ew", padx=14, pady=4)
+        ttk.Label(operand_row, text="Operand", style="Panel.TLabel").pack(
+            side=tk.LEFT)
+        ttk.Entry(operand_row, textvariable=self.programmer_operand_var,
+                  font=("Consolas", 10), width=20).pack(side=tk.LEFT, padx=6)
+        ttk.Label(operand_row, text="Bitoperationen verwenden die gewählte Wortbreite.",
+                  style="Muted.Panel.TLabel").pack(side=tk.LEFT, padx=8)
+        operation_pad = ttk.Frame(programmer, style="Panel.TFrame")
+        operation_pad.grid(row=2, column=0, sticky="ew", padx=14, pady=4)
+        for action in ("AND", "OR", "XOR", "NOT", "NEG", "SHL", "SHR",
+                       "ROL", "ROR", "SWAP", "INC", "DEC"):
+            index = ("AND", "OR", "XOR", "NOT", "NEG", "SHL", "SHR",
+                     "ROL", "ROR", "SWAP", "INC", "DEC").index(action)
+            operation_pad.columnconfigure(index % 6, weight=1, uniform="op")
+            ttk.Button(operation_pad, text=action, width=5,
+                       command=lambda value=action:
+                           self._programmer_action(value)).grid(
+                               row=index // 6, column=index % 6,
+                               sticky="ew", padx=2, pady=2)
+
+        bit_row = ttk.Frame(programmer, style="Panel.TFrame")
+        bit_row.grid(row=3, column=0, sticky="ew", padx=14, pady=4)
+        ttk.Label(bit_row, text="Bit", style="Panel.TLabel").pack(side=tk.LEFT)
+        ttk.Spinbox(bit_row, from_=0, to=63, width=5,
+                    textvariable=self.programmer_bit_var).pack(
+                        side=tk.LEFT, padx=6)
+        for action, label in (("BSET", "Setzen"), ("BCLEAR", "Löschen"),
+                              ("BTOGGLE", "Toggle")):
+            ttk.Button(bit_row, text=label,
+                       command=lambda value=action:
+                           self._programmer_action(value)).pack(
+                               side=tk.LEFT, padx=3)
+        self.programmer_output = tk.Text(
+            programmer, height=8, wrap=tk.WORD, bg=DISPLAY, fg="#f5f7fa",
+            font=("Consolas", 12), relief=tk.FLAT, padx=12, pady=10)
+        self.programmer_output.grid(row=4, column=0, sticky="nsew",
+                                    padx=14, pady=(8, 14))
+        self.programmer_output.configure(state=tk.DISABLED)
+
+        formats = ttk.Frame(pages, style="Panel.TFrame")
+        pages.add(formats, text="Fix / Gleitkomma")
+        formats.columnconfigure(0, weight=1)
+        controls = ttk.Frame(formats, style="Panel.TFrame")
+        controls.grid(row=0, column=0, sticky="ew", padx=14, pady=14)
+        ttk.Label(controls, text="Q-Nachkommabits",
+                  style="Panel.TLabel").pack(side=tk.LEFT)
+        ttk.Spinbox(controls, from_=0, to=63, width=5,
+                    textvariable=self.format_fraction_var).pack(
+                        side=tk.LEFT, padx=6)
+        ttk.Button(controls, text="2er-Komplement / Fix / Float",
+                   style="Teal.TButton", command=self._inspect_format).pack(
+                       side=tk.LEFT, padx=(6, 18))
+        ttk.Label(controls, text="IEEE", style="Panel.TLabel").pack(side=tk.LEFT)
+        ttk.Combobox(controls, textvariable=self.ieee_width_var,
+                     values=(32, 64), state="readonly", width=4).pack(
+                         side=tk.LEFT, padx=5)
+        ttk.Entry(controls, textvariable=self.ieee_raw_var,
+                  font=("Consolas", 10), width=20).pack(side=tk.LEFT)
+        ttk.Button(controls, text="Bitmuster prüfen",
+                   command=self._inspect_ieee).pack(side=tk.LEFT, padx=6)
+        self.format_output = tk.Text(
+            formats, height=12, wrap=tk.WORD, bg=DISPLAY, fg="#f5f7fa",
+            font=("Consolas", 12), relief=tk.FLAT, padx=12, pady=10)
+        self.format_output.grid(row=1, column=0, sticky="nsew",
+                                padx=14, pady=(0, 14))
+        formats.rowconfigure(1, weight=1)
+        self.format_output.configure(state=tk.DISABLED)
+
+    def _build_graph_tab(self) -> None:
+        self.graph_tab = self._new_tab("Graph")
+        tab = self.graph_tab
+        tab.columnconfigure(0, weight=1)
+        tab.rowconfigure(3, weight=1)
+        functions = ttk.Frame(tab, style="Panel.TFrame")
+        functions.grid(row=0, column=0, sticky="ew", padx=18, pady=(18, 6))
+        for name in ("F1", "F2", "F3"):
+            ttk.Label(functions, text=f"{name}(x)", style="Panel.TLabel").pack(
+                side=tk.LEFT, padx=(0, 4))
+            ttk.Entry(functions, textvariable=self.function_vars[name],
+                      width=18, font=("Consolas", 10)).pack(
+                          side=tk.LEFT, padx=(0, 10), fill=tk.X, expand=True)
+
+        ranges = ttk.Frame(tab, style="Panel.TFrame")
+        ranges.grid(row=1, column=0, sticky="ew", padx=18, pady=6)
+        for name in ("xmin", "xmax", "ymin", "ymax"):
+            ttk.Label(ranges, text=name, style="Panel.TLabel").pack(side=tk.LEFT)
+            ttk.Entry(ranges, textvariable=self.graph_range_vars[name],
+                      width=8, font=("Consolas", 9)).pack(
+                          side=tk.LEFT, padx=(3, 7))
+        ttk.Button(ranges, text="Plotten", style="Accent.TButton",
+                   command=self._plot_graph).pack(side=tk.LEFT, padx=(8, 14))
+        analysis = ttk.Frame(tab, style="Panel.TFrame")
+        analysis.grid(row=2, column=0, sticky="ew", padx=18, pady=4)
+        ttk.Label(analysis, text="Analyse", style="Panel.TLabel").pack(side=tk.LEFT)
+        ttk.Combobox(analysis, textvariable=self.graph_analysis_var,
+                     values=("ROOT", "DERIV", "INTEGR", "XING", "EXTREMA"),
+                     state="readonly", width=9).pack(side=tk.LEFT)
+        ttk.Combobox(analysis, textvariable=self.graph_function_var,
+                     values=("F1", "F2", "F3"), state="readonly",
+                     width=4).pack(side=tk.LEFT, padx=3)
+        ttk.Combobox(analysis, textvariable=self.graph_second_var,
+                     values=("F1", "F2", "F3"), state="readonly",
+                     width=4).pack(side=tk.LEFT)
+        ttk.Label(analysis, text="x / links", style="Panel.TLabel").pack(
+            side=tk.LEFT, padx=(12, 3))
+        ttk.Entry(analysis, textvariable=self.graph_left_var, width=9).pack(
+            side=tk.LEFT, padx=(5, 2))
+        ttk.Label(analysis, text="rechts", style="Panel.TLabel").pack(
+            side=tk.LEFT, padx=(8, 3))
+        ttk.Entry(analysis, textvariable=self.graph_right_var, width=9).pack(
+            side=tk.LEFT, padx=2)
+        ttk.Button(analysis, text="Analysieren",
+                   command=self._analyze_graph).pack(side=tk.LEFT, padx=4)
+
+        self.graph_canvas = tk.Canvas(tab, bg="#ffffff", highlightthickness=1,
+                                      highlightbackground=LINE)
+        self.graph_canvas.grid(row=3, column=0, sticky="nsew", padx=18, pady=8)
+        ttk.Label(tab, textvariable=self.graph_analysis_result_var,
+                  style="Muted.Panel.TLabel").grid(
+                      row=4, column=0, sticky="w", padx=18, pady=(0, 14))
+
+    def _build_logic_tab(self) -> None:
+        self.logic_tab = self._new_tab("Logik")
+        tab = self.logic_tab
+        tab.columnconfigure(0, weight=1)
+        tab.rowconfigure(2, weight=1)
+        controls = ttk.Frame(tab, style="Panel.TFrame")
+        controls.grid(row=0, column=0, sticky="ew", padx=18, pady=(18, 8))
+        ttk.Entry(controls, textvariable=self.logic_expression_var,
+                  font=("Consolas", 12)).pack(side=tk.LEFT, fill=tk.X, expand=True)
+        actions = ttk.Frame(tab, style="Panel.TFrame")
+        actions.grid(row=1, column=0, sticky="ew", padx=18, pady=(0, 8))
+        ttk.Label(actions, text="Belegung", style="Panel.TLabel").pack(
+            side=tk.LEFT, padx=(12, 4))
+        ttk.Spinbox(actions, from_=0, to=63, width=5,
+                    textvariable=self.logic_assignment_var).pack(side=tk.LEFT)
+        ttk.Button(actions, text="Gatter auswerten",
+                   command=self._evaluate_logic).pack(side=tk.LEFT, padx=4)
+        ttk.Button(actions, text="Wahrheitstabelle", style="Teal.TButton",
+                   command=self._truth_table).pack(side=tk.LEFT, padx=4)
+        ttk.Checkbutton(actions, text="vereinfacht",
+                        variable=self.logic_simplified_var).pack(side=tk.LEFT)
+        ttk.Button(actions, text="DNF",
+                   command=lambda: self._logic_form("DNF")).pack(side=tk.LEFT)
+        ttk.Button(actions, text="KNF",
+                   command=lambda: self._logic_form("KNF")).pack(side=tk.LEFT, padx=4)
+        self.logic_output = tk.Text(
+            tab, wrap=tk.NONE, bg=DISPLAY, fg="#f5f7fa",
+            font=("Consolas", 11), relief=tk.FLAT, padx=12, pady=10)
+        self.logic_output.grid(row=2, column=0, sticky="nsew", padx=18, pady=(0, 18))
+        self.logic_output.configure(state=tk.DISABLED)
+
+    def _build_units_tab(self) -> None:
+        self.units_tab = self._new_tab("Einheiten")
+        tab = self.units_tab
+        tab.columnconfigure(0, weight=1)
+        tab.rowconfigure(2, weight=1)
+        controls = ttk.Frame(tab, style="Panel.TFrame")
+        controls.grid(row=0, column=0, sticky="ew", padx=18, pady=(18, 8))
+        categories = ("LENGTH", "AREA", "VOLUME", "MASS", "TIME",
+                      "TEMPERATURE", "ANGLE", "PRESSURE", "ENERGY", "POWER")
+        self.unit_category_combo = ttk.Combobox(
+            controls, textvariable=self.unit_category_var, values=categories,
+            state="readonly", width=15)
+        self.unit_category_combo.pack(side=tk.LEFT)
+        self.unit_category_combo.bind(
+            "<<ComboboxSelected>>", lambda _event: self._load_units())
+        ttk.Entry(controls, textvariable=self.unit_input_var,
+                  font=("Consolas", 11), width=16).pack(side=tk.LEFT, padx=8)
+        self.unit_from_combo = ttk.Combobox(controls, state="readonly", width=24)
+        self.unit_from_combo.pack(side=tk.LEFT)
+        ttk.Label(controls, text="nach", style="Panel.TLabel").pack(
+            side=tk.LEFT, padx=6)
+        self.unit_to_combo = ttk.Combobox(controls, state="readonly", width=24)
+        self.unit_to_combo.pack(side=tk.LEFT)
+        ttk.Button(controls, text="Umrechnen", style="Accent.TButton",
+                   command=self._convert_unit).pack(side=tk.LEFT, padx=8)
+        ttk.Label(tab, textvariable=self.unit_result_var,
+                  style="Title.Panel.TLabel").grid(
+                      row=1, column=0, sticky="w", padx=18, pady=6)
+        constants = ttk.LabelFrame(tab, text="Physikalische Konstanten")
+        constants.grid(row=2, column=0, sticky="nsew", padx=18, pady=(6, 18))
+        constants.columnconfigure(0, weight=1)
+        constants.rowconfigure(0, weight=1)
+        self.constants_tree = ttk.Treeview(
+            constants, columns=("symbol", "name", "value", "unit", "source"),
+            show="headings")
+        for name, label, width in (("symbol", "Symbol", 70),
+                                   ("name", "Konstante", 190),
+                                   ("value", "Wert", 150),
+                                   ("unit", "Einheit", 120),
+                                   ("source", "Quelle", 130)):
+            self.constants_tree.heading(name, text=label)
+            self.constants_tree.column(name, width=width,
+                                       anchor=tk.E if name == "value" else tk.W)
+        self.constants_tree.grid(row=0, column=0, sticky="nsew", padx=8, pady=8)
+        ttk.Button(constants, text="Konstanten vom Rechner laden",
+                   command=self._load_constants).grid(
+                       row=1, column=0, sticky="e", padx=8, pady=(0, 8))
+
+    def _build_complex_tab(self) -> None:
+        self.complex_tab = self._new_tab("Komplex")
+        tab = self.complex_tab
+        tab.columnconfigure(0, weight=1)
+        controls = ttk.Frame(tab, style="Panel.TFrame")
+        controls.grid(row=0, column=0, sticky="ew", padx=18, pady=(18, 8))
+        ttk.Entry(controls, textvariable=self.complex_expression_var,
+                  font=("Consolas", 14)).pack(side=tk.LEFT, fill=tk.X, expand=True)
+        ttk.Combobox(controls, textvariable=self.complex_angle_var,
+                     values=("DEG", "RAD"), state="readonly", width=5).pack(
+                         side=tk.LEFT, padx=8)
+        ttk.Button(controls, text="Auswerten", style="Accent.TButton",
+                   command=self._evaluate_complex).pack(side=tk.LEFT)
+        display = tk.Label(tab, textvariable=self.complex_result_var,
+                           bg=DISPLAY, fg=AMBER, anchor="nw", justify=tk.LEFT,
+                           font=("Consolas", 20, "bold"), padx=18, pady=18)
+        display.grid(row=1, column=0, sticky="nsew", padx=18, pady=(8, 18))
+        tab.rowconfigure(1, weight=1)
+
     def _build_symbols_tab(self) -> None:
         self.symbols_tab = self._new_tab("Speicher")
         tab = self.symbols_tab
         tab.columnconfigure(0, weight=1)
         tab.columnconfigure(1, weight=2)
+        tab.columnconfigure(2, weight=1)
         tab.rowconfigure(0, weight=1)
 
         variables = ttk.LabelFrame(tab, text="Variablen A-F")
@@ -375,8 +689,23 @@ class CalculatorLinkApp:
                       font=("Consolas", 11)).grid(
                 row=row, column=1, sticky="ew", padx=(0, 14), pady=12)
 
+        tools = ttk.LabelFrame(tab, text="M und Favoriten")
+        tools.grid(row=0, column=2, sticky="nsew", padx=(8, 18), pady=18)
+        tools.columnconfigure(1, weight=1)
+        ttk.Label(tools, text="M", style="Panel.TLabel").grid(
+            row=0, column=0, padx=(12, 6), pady=7, sticky="w")
+        ttk.Entry(tools, textvariable=self.memory_var, width=14,
+                  font=("Consolas", 10)).grid(
+            row=0, column=1, sticky="ew", padx=(0, 12), pady=7)
+        for row, name in enumerate(self.favorite_vars, start=1):
+            ttk.Label(tools, text=name, style="Panel.TLabel").grid(
+                row=row, column=0, padx=(12, 6), pady=7, sticky="w")
+            ttk.Entry(tools, textvariable=self.favorite_vars[name], width=14,
+                      font=("Consolas", 10)).grid(
+                row=row, column=1, sticky="ew", padx=(0, 12), pady=7)
+
         actions = ttk.Frame(tab, style="Panel.TFrame")
-        actions.grid(row=1, column=0, columnspan=2, sticky="ew",
+        actions.grid(row=1, column=0, columnspan=3, sticky="ew",
                      padx=18, pady=(0, 18))
         ttk.Button(actions, text="Neu laden",
                    command=self._refresh_snapshot).pack(side=tk.LEFT)
@@ -410,7 +739,8 @@ class CalculatorLinkApp:
 
         table_frame = ttk.Frame(tab, style="Panel.TFrame")
         table_frame.grid(row=1, column=0, sticky="nsew", padx=18)
-        table_frame.columnconfigure(0, weight=1)
+        table_frame.columnconfigure(0, weight=3)
+        table_frame.columnconfigure(2, weight=2)
         table_frame.rowconfigure(0, weight=1)
         self.stats_tree = ttk.Treeview(
             table_frame, columns=("index", "x", "y"), show="headings",
@@ -427,9 +757,15 @@ class CalculatorLinkApp:
         self.stats_tree.configure(yscrollcommand=scrollbar.set)
         self.stats_tree.grid(row=0, column=0, sticky="nsew")
         scrollbar.grid(row=0, column=1, sticky="ns")
+        self.stats_analysis_output = tk.Text(
+            table_frame, width=34, wrap=tk.WORD, bg=DISPLAY, fg="#f5f7fa",
+            font=("Consolas", 10), relief=tk.FLAT, padx=10, pady=8)
+        self.stats_analysis_output.grid(row=0, column=2, sticky="nsew",
+                                        padx=(10, 0))
+        self.stats_analysis_output.configure(state=tk.DISABLED)
 
         actions = ttk.Frame(tab, style="Panel.TFrame")
-        actions.grid(row=2, column=0, sticky="ew", padx=18, pady=18)
+        actions.grid(row=2, column=0, sticky="ew", padx=18, pady=(10, 4))
         ttk.Button(actions, text="Auswahl entfernen",
                    command=self._remove_stat_rows).pack(side=tk.LEFT)
         ttk.Button(actions, text="Liste leeren",
@@ -442,6 +778,24 @@ class CalculatorLinkApp:
         ttk.Button(actions, text="Zum Rechner synchronisieren",
                    style="Accent.TButton", command=self._sync_statistics).pack(
                        side=tk.RIGHT)
+
+        analysis_actions = ttk.Frame(tab, style="Panel.TFrame")
+        analysis_actions.grid(row=3, column=0, sticky="ew", padx=18,
+                              pady=(4, 14))
+        ttk.Label(analysis_actions, text="Auswertung",
+                  style="Panel.TLabel").pack(side=tk.LEFT, padx=(0, 8))
+        ttk.Button(analysis_actions, text="Summary X",
+                   command=lambda: self._statistics_analysis(
+                       "SUMMARY", "X")).pack(side=tk.LEFT, padx=2)
+        ttk.Button(analysis_actions, text="Summary Y",
+                   command=lambda: self._statistics_analysis(
+                       "SUMMARY", "Y")).pack(side=tk.LEFT, padx=2)
+        ttk.Button(analysis_actions, text="Regression",
+                   command=lambda: self._statistics_analysis(
+                       "REGRESSION")).pack(side=tk.LEFT, padx=2)
+        ttk.Button(analysis_actions, text="Histogramm",
+                   command=lambda: self._statistics_analysis(
+                       "HISTOGRAM")).pack(side=tk.LEFT, padx=2)
         self._stats_mode_changed()
 
     def _build_basic_tab(self) -> None:
@@ -484,7 +838,8 @@ class CalculatorLinkApp:
         editor_frame.columnconfigure(0, weight=1)
         editor_frame.rowconfigure(0, weight=1)
         self.basic_editor = tk.Text(
-            editor_frame, wrap=tk.NONE, undo=True, bg="#ffffff", fg=INK,
+            editor_frame, width=48, wrap=tk.NONE, undo=True,
+            bg="#ffffff", fg=INK,
             insertbackground=INK, selectbackground="#d9ece9",
             font=("Consolas", 11), relief=tk.FLAT, padx=10, pady=10,
         )
@@ -499,7 +854,7 @@ class CalculatorLinkApp:
         output_frame.columnconfigure(0, weight=1)
         output_frame.rowconfigure(0, weight=1)
         self.basic_output = tk.Text(
-            output_frame, wrap=tk.WORD, bg=DISPLAY, fg="#f5f7fa",
+            output_frame, width=28, wrap=tk.WORD, bg=DISPLAY, fg="#f5f7fa",
             insertbackground="#ffffff", selectbackground=TEAL,
             font=("Consolas", 11), relief=tk.FLAT, padx=10, pady=10,
         )
@@ -612,6 +967,7 @@ class CalculatorLinkApp:
         def success(snapshot: DeviceSnapshot) -> None:
             self._set_connected(True, port)
             self._apply_snapshot(snapshot)
+            self.root.after(0, self._load_units)
 
         self._submit(f"Verbinde mit {port}", operation, success)
 
@@ -669,14 +1025,377 @@ class CalculatorLinkApp:
         self._submit("Sende Ausdruckseditor", operation,
                      lambda response: self._append_console(f"< {response}"))
 
+    @staticmethod
+    def _replace_text(widget: tk.Text, text: str) -> None:
+        widget.configure(state=tk.NORMAL)
+        widget.delete("1.0", tk.END)
+        widget.insert("1.0", text)
+        widget.configure(state=tk.DISABLED)
+
+    def _set_angle(self) -> None:
+        if not self._require_connection():
+            return
+        mode = self.angle_var.get()
+
+        def operation() -> DeviceSnapshot:
+            self.client.command(f"SET ANGLE {mode}")
+            return read_device_snapshot(self.client)
+
+        self._submit("Setze Winkelmodus", operation, self._apply_snapshot)
+
+    def _programmer_action(self, action: str) -> None:
+        if not self._require_connection():
+            return
+        try:
+            base = self.programmer_base_var.get()
+            bits = int(self.programmer_bits_var.get())
+            value = parse_integer(self.programmer_value_var.get(), base)
+            operand = None
+            if action in ("AND", "OR", "XOR"):
+                operand = parse_integer(self.programmer_operand_var.get(), base)
+            elif action in ("BSET", "BCLEAR", "BTOGGLE"):
+                operand = int(self.programmer_bit_var.get())
+            selected_bit = min(int(self.programmer_bit_var.get()), bits - 1)
+            fraction = min(int(self.format_fraction_var.get()), bits - 1)
+            signed = self.programmer_signed_var.get()
+            if action in ("BSET", "BCLEAR", "BTOGGLE"):
+                operand = selected_bit
+        except (ValueError, ProtocolError) as error:
+            messagebox.showerror(APP_NAME, str(error))
+            return
+
+        def operation() -> dict[str, str]:
+            result = programmer_operation(
+                self.client, action, value, bits, operand)
+            self.client.command(f"SET FORMAT {bits} {fraction}")
+            self.client.command(
+                f"SET PROGRAMMER {result['value']} {base} "
+                f"{1 if signed else 0} {selected_bit}")
+            return result
+
+        def success(result: dict[str, str]) -> None:
+            displayed = result[base.lower()] if base in ("BIN", "HEX") \
+                else result["value"]
+            self.programmer_value_var.set(displayed)
+            self.programmer_bit_var.set(selected_bit)
+            self.format_fraction_var.set(fraction)
+            lines = [
+                f"DEC unsigned  {result['value']}",
+                f"DEC signed    {result['signed']}",
+                f"HEX           {result['hex']}",
+                f"BIN           {result['bin']}",
+                f"Carry {result['carry']}    Overflow {result['overflow']}",
+            ]
+            self._replace_text(self.programmer_output, "\n".join(lines))
+
+        self._submit(f"Programmer {action}", operation, success)
+
+    def _inspect_format(self) -> None:
+        if not self._require_connection():
+            return
+        try:
+            base = self.programmer_base_var.get()
+            value = parse_integer(self.programmer_value_var.get(), base)
+            bits = int(self.programmer_bits_var.get())
+            fraction = int(self.format_fraction_var.get())
+        except (ValueError, ProtocolError) as error:
+            messagebox.showerror(APP_NAME, str(error))
+            return
+
+        def operation() -> dict[str, str]:
+            result = inspect_number_format(self.client, value, bits, fraction)
+            self.client.command(f"SET FORMAT {bits} {fraction}")
+            return result
+
+        def success(result: dict[str, str]) -> None:
+            self._replace_text(self.format_output, "\n".join((
+                f"Unsigned       {result['unsigned']}",
+                f"2er-Komplement {result['signed']}",
+                f"Q{bits - fraction - 1}.{fraction}          {result['fixed']}",
+                f"Float32 bits   0x{result['float32']}",
+                f"Float64 bits   0x{result['float64']}",
+            )))
+
+        self._submit("Analysiere Zahlenformat", operation, success)
+
+    def _inspect_ieee(self) -> None:
+        if not self._require_connection():
+            return
+        try:
+            width = int(self.ieee_width_var.get())
+            raw_text = self.ieee_raw_var.get().strip().lower()
+            raw = int(raw_text[2:] if raw_text.startswith("0x") else raw_text, 16)
+        except ValueError:
+            messagebox.showerror(APP_NAME, "IEEE-Bitmuster muss hexadezimal sein.")
+            return
+
+        def success(result: dict[str, str]) -> None:
+            self._replace_text(self.format_output, "\n".join((
+                f"IEEE {result.get('width', width)}  {result['class']}",
+                f"Wert          {result['value']}",
+                f"Vorzeichen    {result['sign']}",
+                f"Exponent raw  {result['rawexp']}",
+                f"Exponent      {result['exponent']}",
+                f"Mantisse      {result['mantissa']}",
+            )))
+
+        self._submit("Prüfe IEEE-Bitmuster",
+                     lambda: inspect_ieee(self.client, width, raw), success)
+
+    def _plot_graph(self) -> None:
+        if not self._require_connection():
+            return
+        try:
+            ranges = {name: float(variable.get())
+                      for name, variable in self.graph_range_vars.items()}
+            if (not all(math.isfinite(value) for value in ranges.values()) or
+                    ranges["xmin"] >= ranges["xmax"] or
+                    ranges["ymin"] >= ranges["ymax"]):
+                raise ValueError
+        except ValueError:
+            messagebox.showerror(APP_NAME, "Ungültiger Graphbereich.")
+            return
+        functions = {name: value.get().strip()
+                     for name, value in self.function_vars.items()}
+        variables = {name: value.get() for name, value in self.variable_vars.items()}
+
+        def operation() -> dict[str, list[tuple[float, float]]]:
+            synchronize_symbols(self.client, variables, functions)
+            self.client.command(
+                "SET GRAPH " + " ".join(
+                    f"{ranges[name]:.17g}"
+                    for name in ("xmin", "xmax", "ymin", "ymax")))
+            return {
+                name: sample_graph(self.client, name, ranges["xmin"],
+                                   ranges["xmax"], 81)
+                for name, expression in functions.items() if expression
+            }
+
+        self._submit("Plotte Funktionen", operation,
+                     lambda points: self._draw_graph(points, ranges))
+
+    def _draw_graph(self, series: dict[str, list[tuple[float, float]]],
+                    ranges: dict[str, float]) -> None:
+        canvas = self.graph_canvas
+        canvas.delete("all")
+        width = max(canvas.winfo_width(), 200)
+        height = max(canvas.winfo_height(), 160)
+        x_min, x_max = ranges["xmin"], ranges["xmax"]
+        y_min, y_max = ranges["ymin"], ranges["ymax"]
+
+        def screen(x: float, y: float) -> tuple[float, float]:
+            return ((x - x_min) / (x_max - x_min) * width,
+                    height - (y - y_min) / (y_max - y_min) * height)
+
+        for index in range(11):
+            x = index * width / 10
+            y = index * height / 10
+            canvas.create_line(x, 0, x, height, fill="#e2e6ea")
+            canvas.create_line(0, y, width, y, fill="#e2e6ea")
+        if x_min <= 0 <= x_max:
+            axis_x, _ = screen(0, 0)
+            canvas.create_line(axis_x, 0, axis_x, height, fill="#5f6871", width=2)
+        if y_min <= 0 <= y_max:
+            _, axis_y = screen(0, 0)
+            canvas.create_line(0, axis_y, width, axis_y, fill="#5f6871", width=2)
+        colors = {"F1": ACCENT, "F2": TEAL, "F3": "#2867b2"}
+        for name, points in series.items():
+            segment: list[float] = []
+            for x, y in points:
+                if not math.isfinite(y) or y < y_min or y > y_max:
+                    if len(segment) >= 4:
+                        canvas.create_line(*segment, fill=colors[name], width=2)
+                    segment = []
+                    continue
+                sx, sy = screen(x, y)
+                segment.extend((sx, sy))
+            if len(segment) >= 4:
+                canvas.create_line(*segment, fill=colors[name], width=2)
+        self.graph_analysis_result_var.set(
+            "  ".join(f"{name}: {self.function_vars[name].get()}"
+                      for name in series))
+
+    def _analyze_graph(self) -> None:
+        if not self._require_connection():
+            return
+        try:
+            left = float(self.graph_left_var.get())
+            right = float(self.graph_right_var.get())
+        except ValueError:
+            messagebox.showerror(APP_NAME, "Analysewerte müssen Zahlen sein.")
+            return
+        action = self.graph_analysis_var.get()
+        first = self.graph_function_var.get()
+        second = self.graph_second_var.get()
+        values = [left] if action == "DERIV" else [left, right]
+        functions = {name: value.get().strip()
+                     for name, value in self.function_vars.items()}
+        variables = {name: value.get() for name, value in self.variable_vars.items()}
+
+        def operation() -> dict[str, str]:
+            synchronize_symbols(self.client, variables, functions)
+            return analyze_graph(self.client, action, first, values, second)
+
+        def success(result: dict[str, str]) -> None:
+            self.graph_analysis_result_var.set(
+                "  ".join(f"{name}={value}" for name, value in result.items()))
+
+        self._submit("Analysiere Graph", operation, success)
+
+    def _evaluate_logic(self) -> None:
+        if not self._require_connection():
+            return
+        expression = self.logic_expression_var.get()
+        assignment = int(self.logic_assignment_var.get())
+
+        def success(result: dict[str, str]) -> None:
+            self._replace_text(
+                self.logic_output,
+                f"Ausdruck: {expression}\nBelegung: {result['assignment']:>2}\n"
+                f"Ausgang:  {result['value']}")
+
+        self._submit("Simuliere Logikgatter",
+                     lambda: evaluate_logic(self.client, expression, assignment),
+                     success)
+
+    def _truth_table(self) -> None:
+        if not self._require_connection():
+            return
+        expression = self.logic_expression_var.get()
+
+        def success(table: dict[str, Any]) -> None:
+            variables = table["variables"]
+            lines = ["  ".join(variables + ["OUT"]),
+                     "--" * (len(variables) + 1)]
+            for row in table["rows"]:
+                lines.append("  ".join(
+                    [str(value) for value in row["inputs"] + [row["value"]]]))
+            self._replace_text(self.logic_output, "\n".join(lines))
+
+        self._submit("Lese Wahrheitstabelle",
+                     lambda: read_truth_table(self.client, expression), success)
+
+    def _logic_form(self, kind: str) -> None:
+        if not self._require_connection():
+            return
+        expression = self.logic_expression_var.get()
+        simplified = self.logic_simplified_var.get()
+        self._submit(
+            f"Berechne {kind}",
+            lambda: read_logic_form(self.client, expression, kind, simplified),
+            lambda result: self._replace_text(
+                self.logic_output,
+                f"{kind} ({'vereinfacht' if simplified else 'kanonisch'})\n\n"
+                f"{result}"))
+
+    def _load_units(self) -> None:
+        if not self._require_connection():
+            return
+        categories = tuple(self.unit_category_combo["values"])
+        category = categories.index(self.unit_category_var.get())
+
+        def success(data: dict[str, Any]) -> None:
+            self.unit_cache[category] = data
+            labels = [f"{unit['name']} ({unit['symbol']})"
+                      for unit in data["units"]]
+            self.unit_from_combo["values"] = labels
+            self.unit_to_combo["values"] = labels
+            if labels:
+                self.unit_from_combo.current(0)
+                self.unit_to_combo.current(1 if len(labels) > 1 else 0)
+
+        self._submit("Lade Einheiten",
+                     lambda: read_unit_category(self.client, category), success)
+
+    def _convert_unit(self) -> None:
+        if not self._require_connection():
+            return
+        categories = tuple(self.unit_category_combo["values"])
+        category = categories.index(self.unit_category_var.get())
+        try:
+            value = float(self.unit_input_var.get())
+            from_index = self.unit_from_combo.current()
+            to_index = self.unit_to_combo.current()
+            if from_index < 0 or to_index < 0:
+                raise ValueError
+        except ValueError:
+            messagebox.showerror(APP_NAME, "Wert und Einheiten auswählen.")
+            return
+
+        def success(result: dict[str, str]) -> None:
+            self.unit_result_var.set(
+                f"{self.unit_input_var.get()} {result['from']} = "
+                f"{result['value']} {result['to']}")
+
+        self._submit("Rechne Einheit um",
+                     lambda: convert_unit(self.client, category, from_index,
+                                          to_index, value), success)
+
+    def _load_constants(self) -> None:
+        if not self._require_connection():
+            return
+
+        def success(constants: list[dict[str, str]]) -> None:
+            self.constants_tree.delete(*self.constants_tree.get_children())
+            for item in constants:
+                self.constants_tree.insert("", tk.END, values=(
+                    item["symbol"], item["name"], item["value"],
+                    item["unit"], item["source"],
+                ))
+
+        self._submit("Lade Konstanten", lambda: read_constants(self.client), success)
+
+    def _evaluate_complex(self) -> None:
+        if not self._require_connection():
+            return
+        expression = self.complex_expression_var.get()
+        angle = self.complex_angle_var.get()
+
+        def success(result: dict[str, str]) -> None:
+            self.complex_result_var.set(
+                f"Kartesisch\n{result['cart']}\n\nPolar\n{result['polar']}\n\n"
+                f"Real = {result['real']}\nImag = {result['imag']}")
+
+        self._submit("Berechne komplexen Ausdruck",
+                     lambda: evaluate_complex(self.client, expression, angle),
+                     success)
+
+    def _statistics_analysis(self, action: str, axis: str = "X") -> None:
+        if not self._require_connection():
+            return
+        mode = self.stats_mode_var.get()
+        values = []
+        for item in self.stats_tree.get_children():
+            row = self.stats_tree.item(item, "values")
+            values.append([row[1]] if mode == 1 else [row[1], row[2]])
+
+        def operation() -> dict[str, str]:
+            synchronize_statistics(self.client, mode, values)
+            return analyze_statistics(self.client, action, axis)
+
+        def success(result: dict[str, str]) -> None:
+            self._replace_text(self.stats_analysis_output, "\n".join(
+                f"{name:<12} {value}" for name, value in result.items()))
+
+        self._submit(f"Statistik {action}", operation, success)
+
     def _sync_symbols(self) -> None:
         if not self._require_connection():
             return
         variables = {name: value.get() for name, value in self.variable_vars.items()}
         functions = {name: value.get() for name, value in self.function_vars.items()}
 
+        memory = self.memory_var.get()
+        favorites = {name: value.get()
+                     for name, value in self.favorite_vars.items()}
+
         def operation() -> DeviceSnapshot:
-            synchronize_symbols(self.client, variables, functions)
+            import_state(self.client, {
+                "variables": variables,
+                "functions": functions,
+                "memory": memory,
+                "favorites": favorites,
+            })
             return read_device_snapshot(self.client)
 
         self._submit("Synchronisiere Speicher", operation, self._apply_snapshot)
@@ -989,6 +1708,8 @@ class CalculatorLinkApp:
             f"{diag.get('mode', '-')}VAR / {diag.get('stats', '0')}")
         self.device_vars["BASIC"].set(
             f"{diag.get('basic', '0')} / {diag.get('basic_state', '-')}")
+        self.angle_var.set(str(state.get("angle", diag.get("angle", "DEG"))))
+        self.complex_angle_var.set(self.angle_var.get())
         self.expression_var.set(str(state.get("expression", "")))
         self._set_result(format_number(
             state.get("result_text", state.get("result", 0))))
@@ -998,6 +1719,22 @@ class CalculatorLinkApp:
         for name, value in state.get("functions", {}).items():
             if name in self.function_vars:
                 self.function_vars[name].set(str(value))
+        self.memory_var.set(format_number(state.get("memory", 0)))
+        for name, value in state.get("favorites", {}).items():
+            if name in self.favorite_vars:
+                self.favorite_vars[name].set(str(value))
+        programmer = state.get("programmer", {})
+        self.programmer_value_var.set(str(programmer.get("value", 0)))
+        self.programmer_base_var.set(str(programmer.get("base", "DEC")))
+        self.programmer_signed_var.set(bool(programmer.get("signed", False)))
+        self.programmer_bit_var.set(int(programmer.get("selected_bit", 0)))
+        number_format = state.get("number_format", {})
+        self.programmer_bits_var.set(int(number_format.get("bits", 64)))
+        self.format_fraction_var.set(int(number_format.get("fraction", 16)))
+        graph = state.get("graph", {})
+        for name, variable in self.graph_range_vars.items():
+            if name in graph:
+                variable.set(format_number(graph[name]))
         self._load_history(state.get("history", []))
         self._load_statistics(state.get("statistics", {}))
         self._set_basic_source(state.get("program", []))

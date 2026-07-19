@@ -317,10 +317,16 @@ add_executable(calculator_usb_protocol_tests
     ${CALCULATOR_SRC}/calculator_engine.c
     ${CALCULATOR_SRC}/calculator_symbols.c
     ${CALCULATOR_SRC}/calculator_usb_protocol.c
+    ${CALCULATOR_SRC}/complex_engine.c
     ${CALCULATOR_SRC}/decimal_engine.c
     ${CALCULATOR_SRC}/expression_editor.c
     ${CALCULATOR_SRC}/graph_model.c
+    ${CALCULATOR_SRC}/logic_engine.c
+    ${CALCULATOR_SRC}/number_formats.c
+    ${CALCULATOR_SRC}/numerical_analysis.c
+    ${CALCULATOR_SRC}/programmer_engine.c
     ${CALCULATOR_SRC}/statistics_engine.c
+    ${CALCULATOR_SRC}/unit_engine.c
     ${TINYEXPR_SRC}/tinyexpr.c
 )
 target_include_directories(calculator_usb_protocol_tests PRIVATE

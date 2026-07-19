@@ -6,11 +6,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 
 from pico_calc_cli import ProtocolError
 from pico_calc_gui_model import (
+    analyze_graph,
+    analyze_statistics,
     continue_basic_program,
+    convert_unit,
+    evaluate_complex,
     evaluate_expression,
+    evaluate_logic,
     format_number,
+    inspect_ieee,
+    inspect_number_format,
     parse_properties,
+    parse_integer,
+    programmer_operation,
+    read_constants,
     read_device_snapshot,
+    read_logic_form,
+    read_truth_table,
+    read_unit_category,
     run_basic_program,
     stop_basic_program,
     synchronize_statistics,
@@ -25,7 +38,7 @@ class FakeClient:
     def command(self, command):
         self.commands.append(command)
         responses = {
-            "INFO": "OK INFO\tprotocol=3\tfirmware=1.4.0\tmodel=scientific-calculator",
+            "INFO": "OK INFO\tprotocol=4\tfirmware=1.6.0\tmodel=scientific-calculator",
             "DIAG": (
                 "OK DIAG\tpage=0\tangle=DEG\thistory=1\tstats=1\tmode=1"
                 "\tbasic=1\tbasic_state=STOPPED"
@@ -48,36 +61,112 @@ class FakeClient:
             ),
             "GET BASIC OUTPUT": "OK BASIC_OUTPUT\t1",
             "GET BASIC OUTPUT 0": "OK BASIC_OUTPUT\t0\tDONE",
+            "GET ANGLE": "OK ANGLE\tDEG",
+            "GET MEMORY": "OK MEMORY\t0",
+            "GET PROGRAMMER": (
+                "OK PROGRAMMER_STATE\tvalue=0\tbase=DEC\tsigned=0\tbit=0"
+            ),
+            "GET FORMAT": "OK FORMAT_STATE\tbits=64\tfraction=16",
+            "GET GRAPH": (
+                "OK GRAPH\txmin=-10\txmax=10\tymin=-10\tymax=10"
+                "\ttable=0\tstep=1"
+            ),
+            "MODULE PROGRAMMER NOT 0 8": (
+                "OK PROGRAMMER\tvalue=255\tsigned=-1\thex=FF\tbin=11111111"
+                "\tcarry=0\toverflow=0"
+            ),
+            "MODULE FORMAT 255 8 4": (
+                "OK FORMAT\tunsigned=255\tsigned=-1\tfixed=-0.0625"
+                "\tfloat32=BD800000\tfloat64=BFB0000000000000"
+            ),
+            "MODULE IEEE 32 1065353216": (
+                "OK IEEE\twidth=32\tsign=0\trawexp=127\texponent=0"
+                "\tmantissa=0\tclass=NORMAL\tvalue=1"
+            ),
+            "MODULE GRAPH ROOT F1 -2 2": (
+                "OK GRAPH_ANALYSIS\taction=ROOT\tx=0\tvalue=0\titerations=1"
+            ),
+            "MODULE LOGIC EVAL 3 A&B": (
+                "OK LOGIC_VALUE\tassignment=3\tvalue=1\tmask=3"
+            ),
+            "MODULE LOGIC INFO A&B": "OK LOGIC_INFO\tmask=3\tvars=2\trows=4",
+            "MODULE LOGIC ROW 0 A&B": (
+                "OK LOGIC_VALUE\tassignment=0\tvalue=0\tmask=3"
+            ),
+            "MODULE LOGIC ROW 1 A&B": (
+                "OK LOGIC_VALUE\tassignment=1\tvalue=0\tmask=3"
+            ),
+            "MODULE LOGIC ROW 2 A&B": (
+                "OK LOGIC_VALUE\tassignment=2\tvalue=0\tmask=3"
+            ),
+            "MODULE LOGIC ROW 3 A&B": (
+                "OK LOGIC_VALUE\tassignment=3\tvalue=1\tmask=3"
+            ),
+            "MODULE LOGIC FORM DNF SIMPLE 0 A&B": (
+                "OK LOGIC_FORM\ttotal=5\toffset=0\tdata=(A&B)"
+            ),
+            "MODULE UNIT CATEGORY 0": (
+                "OK UNIT_CATEGORY\tindex=0\tname=LENGTH\tcount=2"
+            ),
+            "MODULE UNIT ITEM 0 0": (
+                "OK UNIT\tindex=0\tname=millimetre\tsymbol=mm"
+            ),
+            "MODULE UNIT ITEM 0 1": (
+                "OK UNIT\tindex=1\tname=metre\tsymbol=m"
+            ),
+            "MODULE UNIT CONVERT 0 0 1 1000": (
+                "OK UNIT_RESULT\tvalue=1\tfrom=mm\tto=m"
+            ),
+            "MODULE CONSTANT COUNT": "OK CONSTANTS\t1",
+            "MODULE CONSTANT 0": (
+                "OK CONSTANT\tindex=0\tname=speed of light\tsymbol=c"
+                "\tvalue=299792458\tunit=m/s\tsource=SI"
+            ),
+            "MODULE COMPLEX DEG 1+2i": (
+                "OK COMPLEX\treal=1\timag=2\tcart=1+2i\tpolar=2.236 < 63 deg"
+            ),
+            "STAT SUMMARY X": (
+                "OK STATS_SUMMARY\taxis=X\tcount=2\tmean=1.5\tmedian=1.5"
+                "\tmin=1\tmax=2\tpopstd=0.5\tsamplestd=0.707"
+            ),
+            "STAT REGRESSION": (
+                "OK STATS_REGRESSION\tslope=2\tintercept=1\tcorrelation=1"
+            ),
+            "STAT HISTOGRAM": (
+                "OK STATS_HISTOGRAM\tmin=1\tmax=2\tbins=1,0,0,0,0,0,0,1"
+            ),
         }
         if command.startswith("GET VAR "):
             return f"OK VAR\t{command[-1]}\t0"
         if command.startswith("GET FUNC "):
             return f"OK FUNC\t{command[-2:]}\tx+1"
+        if command.startswith("GET FAVORITE "):
+            return f"OK FAVORITE\t{command[-1]}\tsin("
         return responses.get(command, "OK")
 
 
 class GuiModelTests(unittest.TestCase):
     def test_parse_properties(self):
         parsed = parse_properties(
-            "OK INFO\tprotocol=3\tfirmware=1.4.0", "INFO"
+            "OK INFO\tprotocol=4\tfirmware=1.6.0", "INFO"
         )
-        self.assertEqual(parsed, {"protocol": "3", "firmware": "1.4.0"})
+        self.assertEqual(parsed, {"protocol": "4", "firmware": "1.6.0"})
         with self.assertRaises(ProtocolError):
             parse_properties("OK INFO\tbroken", "INFO")
 
     def test_read_device_snapshot(self):
         snapshot = read_device_snapshot(FakeClient())
-        self.assertEqual(snapshot.info["firmware"], "1.4.0")
+        self.assertEqual(snapshot.info["firmware"], "1.6.0")
         self.assertEqual(snapshot.diagnostics["angle"], "DEG")
         self.assertEqual(snapshot.state["history"][0]["expression"], "6*7")
         self.assertEqual(snapshot.state["program"], ["10 END"])
 
         old_client = FakeClient()
         old_client.command = lambda command: (
-            "OK INFO\tprotocol=2\tfirmware=1.3.0"
+            "OK INFO\tprotocol=3\tfirmware=1.5.0"
             if command == "INFO" else "OK"
         )
-        with self.assertRaisesRegex(ProtocolError, "Protokoll 3"):
+        with self.assertRaisesRegex(ProtocolError, "Protokoll 4"):
             read_device_snapshot(old_client)
 
     def test_evaluate_expression(self):
@@ -120,6 +209,34 @@ class GuiModelTests(unittest.TestCase):
         with self.assertRaisesRegex(ProtocolError, "nicht leer"):
             run_basic_program(empty, "")
         self.assertNotIn("BASIC CLEAR", empty.commands)
+
+    def test_programmer_and_number_formats(self):
+        client = FakeClient()
+        self.assertEqual(parse_integer("FF", "HEX"), 255)
+        result = programmer_operation(client, "NOT", 0, 8)
+        self.assertEqual(result["signed"], "-1")
+        formatted = inspect_number_format(client, 255, 8, 4)
+        self.assertEqual(formatted["fixed"], "-0.0625")
+        ieee = inspect_ieee(client, 32, 0x3F800000)
+        self.assertEqual(ieee["value"], "1")
+
+    def test_graph_logic_units_complex_and_statistics(self):
+        client = FakeClient()
+        graph = analyze_graph(client, "ROOT", "F1", [-2, 2])
+        self.assertEqual(graph["x"], "0")
+        self.assertEqual(evaluate_logic(client, "A&B", 3)["value"], "1")
+        table = read_truth_table(client, "A&B")
+        self.assertEqual(table["variables"], ["A", "B"])
+        self.assertEqual(table["rows"][-1]["value"], 1)
+        self.assertEqual(read_logic_form(client, "A&B", "DNF"), "(A&B)")
+        units = read_unit_category(client, 0)
+        self.assertEqual(len(units["units"]), 2)
+        self.assertEqual(convert_unit(client, 0, 0, 1, 1000)["value"], "1")
+        self.assertEqual(read_constants(client)[0]["symbol"], "c")
+        self.assertEqual(evaluate_complex(client, "1+2i", "DEG")["imag"], "2")
+        self.assertEqual(analyze_statistics(client, "SUMMARY")["mean"], "1.5")
+        self.assertEqual(analyze_statistics(client, "REGRESSION")["slope"], "2")
+        self.assertIn("bins", analyze_statistics(client, "HISTOGRAM"))
 
 
 if __name__ == "__main__":

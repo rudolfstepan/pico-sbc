@@ -30,6 +30,16 @@ class FakeClient:
             "GET BASIC": "OK BASIC\t2",
             "GET BASIC 0": "OK BASIC\t0\t10\tPRINT \"HELLO\"",
             "GET BASIC 1": "OK BASIC\t1\t20\tEND",
+            "GET ANGLE": "OK ANGLE\tDEG",
+            "GET MEMORY": "OK MEMORY\t7.5",
+            "GET PROGRAMMER": (
+                "OK PROGRAMMER_STATE\tvalue=255\tbase=HEX\tsigned=1\tbit=7"
+            ),
+            "GET FORMAT": "OK FORMAT_STATE\tbits=8\tfraction=4",
+            "GET GRAPH": (
+                "OK GRAPH\txmin=-4\txmax=4\tymin=-3\tymax=3"
+                "\ttable=0\tstep=1"
+            ),
         }
         if command.startswith("GET VAR "):
             name = command[-1]
@@ -37,6 +47,9 @@ class FakeClient:
         if command.startswith("GET FUNC "):
             name = command[-2:]
             return f"OK FUNC\t{name}\tx+1"
+        if command.startswith("GET FAVORITE "):
+            index = command[-1]
+            return f"OK FAVORITE\t{index}\tsin("
         if command.startswith("GET"):
             return responses[command]
         return "OK"
@@ -66,6 +79,12 @@ class CliStateTests(unittest.TestCase):
         self.assertEqual(exported["history"][0]["value"], 42.0)
         self.assertEqual(exported["statistics"]["values"], [[1.0, 3.0], [2.0, 5.0]])
         self.assertEqual(exported["program"], ['10 PRINT "HELLO"', "20 END"])
+        self.assertEqual(exported["angle"], "DEG")
+        self.assertEqual(exported["memory"], 7.5)
+        self.assertEqual(exported["programmer"]["value"], 255)
+        self.assertEqual(exported["number_format"], {"bits": 8, "fraction": 4})
+        self.assertEqual(exported["favorites"]["FAV1"], "sin(")
+        self.assertEqual(exported["graph"]["xmin"], -4.0)
 
     def test_import_state(self):
         client = FakeClient()
@@ -76,10 +95,25 @@ class CliStateTests(unittest.TestCase):
             "functions": {"F1": "x+A"},
             "statistics": {"mode": 2, "values": [[1, 3], [2, 5]]},
             "program": ['10 PRINT "HELLO"', "20 END"],
+            "angle": "RAD",
+            "memory": 2.5,
+            "favorites": {"FAV1": "atan("},
+            "number_format": {"bits": 16, "fraction": 8},
+            "programmer": {
+                "value": 255, "base": "HEX", "signed": True,
+                "selected_bit": 7,
+            },
+            "graph": {"xmin": -2, "xmax": 2, "ymin": -1, "ymax": 1},
         })
         self.assertIn("SET EXPR A+1", client.commands)
         self.assertIn("SET VAR A 3.5", client.commands)
         self.assertIn("SET FUNC F1 x+A", client.commands)
+        self.assertIn("SET ANGLE RAD", client.commands)
+        self.assertIn("SET MEMORY 2.5", client.commands)
+        self.assertIn("SET FAVORITE 1 atan(", client.commands)
+        self.assertIn("SET FORMAT 16 8", client.commands)
+        self.assertIn("SET PROGRAMMER 255 HEX 1 7", client.commands)
+        self.assertIn("SET GRAPH -2 2 -1 1", client.commands)
         self.assertIn("STAT ADD 1 3", client.commands)
         self.assertEqual(client.commands[-3:], [
             "BASIC CLEAR", 'BASIC LINE 10 PRINT "HELLO"',

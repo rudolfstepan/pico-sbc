@@ -220,13 +220,16 @@ Landscape-/Portrait-Darstellung mit gemeinsam gedrehten Touchkoordinaten.
 **Fertig, wenn:** Daten zwischen Rechner und PC in beide Richtungen uebertragen
 werden koennen, ohne Touchbedienung oder Berechnungen zu blockieren.
 
-Softwarestand: Protokollversion 3 und Firmware 1.5.0 stellen einen begrenzten
+Softwarestand: Protokollversion 4 und Firmware 1.6.0 stellen einen begrenzten
 ASCII-Zeilenparser, verlustfreie Dezimalergebnisse, transaktionale
 Funktionsimporte, Statistik- und BASIC-Programmlisten sowie Firmware- und
-Diagnoseinformationen bereit. CLI und
+Diagnoseinformationen bereit. Programmer, Zahlenformate, Graphanalyse, Logik,
+Einheiten, Konstanten und komplexe Zahlen sind ebenfalls ueber Modulbefehle
+erreichbar. CLI und
 `Pico Calculator Link` unter `tools/` unterstuetzen Portsuche, Einzelbefehle,
-Berechnung, Speicher-/Statistiksynchronisation, BASIC-Steuerung und
-JSON-Import/-Export. Pro Hauptschleife werden hoechstens 32 USB-Zeichen und ein
+Berechnung, vollstaendige Modulbedienung, Speicher-/Statistiksynchronisation,
+BASIC-Steuerung und erweiterten JSON-Import/-Export. Pro Hauptschleife werden
+hoechstens 32 USB-Zeichen und ein
 Befehl bearbeitet; die Ausgabe wartet maximal 2 ms. Die Reaktionszeit bei
 gleichzeitiger Touchbedienung steht noch als Hardwaretest aus.
 

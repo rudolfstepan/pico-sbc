@@ -36,9 +36,10 @@ third_party/tinyexpr/ TinyExpr als gepinntes Git-Submodul
 ## Pico Calculator Link
 
 Die plattformunabhaengige Desktop-App verbindet den Scientific Calculator mit
-Windows, Linux oder macOS. Sie fuehrt Ausdruecke aus, synchronisiert Variablen,
-Benutzerfunktionen, Statistiklisten und BASIC-Programme und verwaltet Verlauf
-sowie JSON-Backups.
+Windows, Linux oder macOS. Sie bildet alle Rechner-Module ab: Wissenschaft,
+Programmer und Zahlenformate, Graphanalyse, Logik, Einheiten und Konstanten,
+komplexe Zahlen, Statistik, Speicher/Favoriten und BASIC. Persistente Daten
+werden synchronisiert und als JSON gesichert.
 
 ![Pico Calculator Link](docs/images/pico-calculator-link.png)
 

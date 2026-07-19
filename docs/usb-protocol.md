@@ -8,6 +8,9 @@ Seit Firmware `1.3.0` erweitert Protokollversion 2 die Schnittstelle um
 BASIC-Programme, nicht blockierende Ausfuehrung, Ausgabe und `INPUT`.
 Seit Firmware `1.4.0` liefert Protokollversion 3 Dezimalergebnisse und `ANS`
 verlustfrei als Text mit bis zu 80 Stellen.
+Seit Firmware `1.6.0` stellt Protokollversion 4 alle Rechner-Module fuer die
+Desktop-Anwendung bereit und synchronisiert auch Winkelmodus, Speicher,
+Favoriten, Programmer-, Zahlenformat- und Graphzustand.
 
 ## Rahmenformat
 
@@ -17,8 +20,8 @@ verlustfrei als Text mit bis zu 80 Stellen.
 - Nutzdaten wie Ausdruecke bleiben unveraendert.
 - Erfolgreiche Antworten beginnen mit `OK`, Fehler mit `ERR`.
 - Antwortfelder sind durch Tabulatoren getrennt.
-- Verlauf und Statistik werden einzeln per Index gelesen, damit jede Antwort
-  kleiner als 192 Byte bleibt.
+- Antworten sind einschliesslich Abschlusszeichen auf 256 Byte begrenzt.
+- Verlauf und Statistikdaten werden einzeln per Index gelesen.
 
 Beispiel, wobei `<TAB>` jeweils ein Tabulatorzeichen bezeichnet:
 
@@ -38,6 +41,13 @@ Beispiel, wobei `<TAB>` jeweils ein Tabulatorzeichen bezeichnet:
 | `GET EXPR` | Ausdruck im sichtbaren Editor lesen |
 | `GET VAR A` ... `GET VAR F` | Variable lesen |
 | `GET FUNC F1` ... `GET FUNC F3` | Benutzerfunktion lesen |
+| `GET ANGLE` / `SET ANGLE DEG|RAD` | Winkelmodus lesen oder setzen |
+| `GET MEMORY` / `SET MEMORY wert` | Speicher M lesen oder setzen |
+| `GET FAVORITE 1` ... `GET FAVORITE 6` | Favoritentaste lesen |
+| `SET FAVORITE 1 token` ... `SET FAVORITE 6 token` | Favoritentaste setzen |
+| `GET PROGRAMMER` / `SET PROGRAMMER wert basis signed bit` | Programmer-Zustand uebertragen |
+| `GET FORMAT` / `SET FORMAT bits fraction` | Wortbreite und Q-Nachkommabits uebertragen |
+| `GET GRAPH` / `SET GRAPH xmin xmax ymin ymax` | Graphbereich lesen oder setzen |
 | `GET HISTORY` | Anzahl der Verlaufseintraege lesen |
 | `GET HISTORY index` | Einen Verlaufseintrag lesen |
 | `GET STATS` | Statistikmodus und Anzahl der Zeilen lesen |
@@ -55,10 +65,36 @@ Beispiel, wobei `<TAB>` jeweils ein Tabulatorzeichen bezeichnet:
 | `STAT CLEAR` | Statistikliste leeren |
 | `STAT ADD x` | Zeile im 1VAR-Modus anfuegen |
 | `STAT ADD x y` | Wertepaar im 2VAR-Modus anfuegen |
+| `STAT SUMMARY X|Y` | Kennwerte einer Statistikspalte berechnen |
+| `STAT REGRESSION` | Lineare Regression im 2VAR-Modus berechnen |
+| `STAT HISTOGRAM` | Acht Histogrammklassen berechnen |
 | `BASIC LINE zeile` | Zeile speichern oder nur per Nummer loeschen |
 | `BASIC CLEAR` | BASIC-Programm und Ausgabe leeren |
 | `BASIC RUN` / `BASIC STOP` | Programm nicht blockierend starten oder stoppen |
 | `BASIC INPUT wert` | Angeforderten Wert oder Ausdruck an `INPUT` liefern |
+
+### Modulbefehle
+
+Die `MODULE`-Befehle verwenden direkt dieselben Firmware-Engines wie die
+LCD-Oberflaeche. Ganzzahlen und rohe IEEE-Bitmuster werden dezimal uebertragen;
+die Desktop-App nimmt BIN-/HEX-Eingaben an und konvertiert sie verlustfrei.
+
+| Befehl | Funktion |
+|---|---|
+| `MODULE PROGRAMMER aktion wert bits [operand]` | `VIEW`, `AND`, `OR`, `XOR`, `NOT`, `NEG`, Shift, Rotate, Endian, Inkrement und Bitoperationen |
+| `MODULE FORMAT wert bits fraction` | Unsigned, 2er-Komplement, Q-Fixpunkt sowie Float32-/Float64-Bits |
+| `MODULE IEEE 32|64 raw` | IEEE-Vorzeichen, Exponent, Mantisse, Klasse und Wert |
+| `MODULE GRAPH EVAL F1 x` | Eine Benutzerfunktion an einer Stelle auswerten |
+| `MODULE GRAPH ROOT|DERIV|INTEGR|XING|EXTREMA ...` | Numerische Graphanalyse |
+| `MODULE LOGIC INFO|EVAL|ROW ...` | Logikausdruck kompilieren, Gatter simulieren oder Wahrheitstabellenzeile lesen |
+| `MODULE LOGIC FORM DNF|KNF SIMPLE|CANONICAL offset ausdruck` | Normalform stueckweise lesen |
+| `MODULE UNIT CATEGORY|ITEM|CONVERT ...` | Einheitenkatalog und Umrechnung |
+| `MODULE CONSTANT COUNT|index` | Physikalische Konstanten lesen |
+| `MODULE COMPLEX DEG|RAD ausdruck` | Komplexen Ausdruck kartesisch und polar berechnen |
+
+Lange KNF-/DNF-Ausgaben werden in maximal 112 Zeichen grossen Teilen gelesen.
+`total` und `offset` in `OK LOGIC_FORM` erlauben dem Client, die Antwort ohne
+Verlust zusammenzusetzen.
 
 `EVAL` verwendet den am Rechner aktiven DEG- oder RAD-Modus und aktualisiert
 `ANS`, den sichtbaren Editor und den Verlauf. Reine Dezimalarithmetik wird
@@ -72,7 +108,7 @@ Zustand nicht.
 Typische Antworten:
 
 ```text
-OK INFO<TAB>protocol=3<TAB>firmware=1.5.0<TAB>model=scientific-calculator
+OK INFO<TAB>protocol=4<TAB>firmware=1.6.0<TAB>model=scientific-calculator
 OK DIAG<TAB>page=0<TAB>angle=DEG<TAB>history=2<TAB>stats=3<TAB>mode=1<TAB>basic=4<TAB>basic_state=STOPPED
 OK VAR<TAB>A<TAB>3.5
 OK HISTORY<TAB>0<TAB>42<TAB>6*7<TAB>42
@@ -108,9 +144,10 @@ python tools/pico_calc_cli.py --port COM5 export calculator-state.json
 python tools/pico_calc_cli.py --port COM5 import calculator-state.json
 ```
 
-Der JSON-Export enthaelt Ausdruck, Ergebnis, A-F, F1-F3, Verlauf, BASIC-
-Programm und Statistikliste. Beim Import werden Ausdruck, Variablen,
-Funktionen, BASIC-Zeilen und Statistikdaten uebertragen. Abhaengige
+Der JSON-Export enthaelt Ausdruck, Ergebnis, A-F, F1-F3, M, Favoriten,
+Winkelmodus, Programmer- und Zahlenformatzustand, Graphbereich, Verlauf,
+BASIC-Programm und Statistikliste. Beim Import werden diese persistenten
+Daten wieder uebertragen. Abhaengige
 Benutzerfunktionen werden automatisch
 in einer gueltigen Reihenfolge wiederholt; Rekursionen werden abgelehnt.
 
@@ -128,10 +165,17 @@ Die Anwendung erkennt serielle Ports und haelt die ausgewaehlte Verbindung bis
 zum Trennen offen. Alle USB-Operationen laufen in einem Hintergrund-Worker,
 damit Fenster und Eingaben auch bei einem Timeout bedienbar bleiben.
 
-- `Rechner` fuehrt wissenschaftliche Ausdruecke aus und zeigt die Sitzung.
-- `Speicher` bearbeitet A-F und F1-F3 gemeinsam.
-- `Statistik` verwaltet bis zu 32 lokale Werte oder Wertepaare und uebertraegt
-  sie gesammelt zum Rechner.
+- `Rechner` fuehrt wissenschaftliche Ausdruecke aus und schaltet DEG/RAD.
+- `Code` bietet Programmer-, Bit-, 2er-Komplement-, Fixpunkt- und
+  IEEE-Gleitkommafunktionen.
+- `Graph` plottet F1-F3 und fuehrt Nullstellen-, Schnittpunkt-, Ableitungs-,
+  Integral- und Extremwertanalyse auf dem Pico aus.
+- `Logik` simuliert Gatter und erzeugt Wahrheitstabelle, DNF und KNF.
+- `Einheiten` verwendet den vollstaendigen Einheiten- und Konstantenkatalog.
+- `Komplex` wertet komplexe Ausdruecke kartesisch und polar aus.
+- `Statistik` verwaltet Datensaetze und zeigt Summary, Regression und
+  Histogramm.
+- `Speicher` bearbeitet A-F, F1-F3, M und sechs Favoritentasten gemeinsam.
 - `BASIC` laedt und speichert `.bas`-Dateien, synchronisiert den Programmspeicher,
   startet oder stoppt Programme und zeigt Ausgabe sowie `INPUT`-Zustand.
 - `Verlauf` liest die acht persistenten Eintraege und uebernimmt Ausdruecke
