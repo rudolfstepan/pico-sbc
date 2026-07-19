@@ -11,6 +11,8 @@ verlustfrei als Text mit bis zu 80 Stellen.
 Seit Firmware `1.6.0` stellt Protokollversion 4 alle Rechner-Module fuer die
 Desktop-Anwendung bereit und synchronisiert auch Winkelmodus, Speicher,
 Favoriten, Programmer-, Zahlenformat- und Graphzustand.
+Seit Firmware `1.7.0` werden wissenschaftliche Ergebnisse sowie A-F und M mit
+bis zu 80 signifikanten Stellen ueber dasselbe Protokoll uebertragen.
 
 ## Rahmenformat
 
@@ -108,7 +110,7 @@ Zustand nicht.
 Typische Antworten:
 
 ```text
-OK INFO<TAB>protocol=4<TAB>firmware=1.6.0<TAB>model=scientific-calculator
+OK INFO<TAB>protocol=4<TAB>firmware=1.7.0<TAB>model=scientific-calculator
 OK DIAG<TAB>page=0<TAB>angle=DEG<TAB>history=2<TAB>stats=3<TAB>mode=1<TAB>basic=4<TAB>basic_state=STOPPED
 OK VAR<TAB>A<TAB>3.5
 OK HISTORY<TAB>0<TAB>42<TAB>6*7<TAB>42

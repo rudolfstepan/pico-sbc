@@ -23,7 +23,7 @@ void calculator_page_render_format(const programmer_engine_t *programmer,
                                    unsigned int fixed_fraction_bits,
                                    calculator_format_view_t view,
                                    const char *message);
-void calculator_page_render_tools(double memory_value, const char *message,
+void calculator_page_render_tools(const char *memory_text, const char *message,
                                   const expression_editor_t *editor,
                                   size_t history_count,
                                   size_t history_index,

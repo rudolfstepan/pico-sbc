@@ -9,6 +9,7 @@
 #define STATISTICS_PERSISTENCE_VERSION 2u
 #define BASIC_PERSISTENCE_VERSION 3u
 #define PRECISION_PERSISTENCE_VERSION 4u
+#define SYMBOL_PRECISION_PERSISTENCE_VERSION 5u
 #define LEGACY_RESULT_CAPACITY 32u
 
 static const uint8_t record_magic[4] = {'P', 'C', 'A', 'L'};
@@ -114,6 +115,12 @@ static bool string_is_terminated(const char *text, size_t capacity) {
     return memchr(text, '\0', capacity) != NULL;
 }
 
+static bool decimal_text_is_valid(const char *text, size_t capacity) {
+    uint8_t packed[DECIMAL_ENGINE_PACKED_CAPACITY];
+    return string_is_terminated(text, capacity) &&
+           decimal_engine_pack_text(text, packed, sizeof packed);
+}
+
 static void write_decimal_text(writer_t *writer, const char *text) {
     uint8_t packed[DECIMAL_ENGINE_PACKED_CAPACITY];
     if (!decimal_engine_pack_text(text, packed, sizeof packed)) {
@@ -188,7 +195,9 @@ static bool state_is_valid(const calculator_persisted_state_t *state) {
         !format_bits_valid(state->format_bits) ||
         state->fixed_fraction_bits >= state->format_bits ||
         !isfinite(state->ans) || !isfinite(state->memory_value) ||
-        !string_is_terminated(state->ans_text, sizeof state->ans_text) ||
+        !decimal_text_is_valid(state->ans_text, sizeof state->ans_text) ||
+        !decimal_text_is_valid(state->memory_text,
+                               sizeof state->memory_text) ||
         !base_valid(state->programmer_base) ||
         state->programmer_selected_bit >= state->format_bits ||
         state->history_count > CALCULATOR_PERSISTENCE_HISTORY_CAPACITY ||
@@ -197,7 +206,11 @@ static bool state_is_valid(const calculator_persisted_state_t *state) {
         return false;
     }
     for (size_t i = 0; i < CALCULATOR_VARIABLE_COUNT; ++i) {
-        if (!isfinite(state->symbols.variables[i])) return false;
+        if (!isfinite(state->symbols.variables[i]) ||
+            !decimal_text_is_valid(state->symbols.variable_text[i],
+                                   sizeof state->symbols.variable_text[i])) {
+            return false;
+        }
     }
     for (size_t i = 0; i < CALCULATOR_USER_FUNCTION_COUNT; ++i) {
         if (!string_is_terminated(state->symbols.functions[i],
@@ -233,6 +246,7 @@ void calculator_persistence_defaults(calculator_persisted_state_t *state) {
     state->fixed_fraction_bits = 16;
     state->programmer_base = PROGRAMMER_DEC;
     snprintf(state->ans_text, sizeof state->ans_text, "0");
+    snprintf(state->memory_text, sizeof state->memory_text, "0");
     calculator_symbols_init(&state->symbols);
     graph_model_init(&state->graph);
     graph_model_reset_range(&state->graph);
@@ -324,6 +338,10 @@ static void write_payload(writer_t *writer,
     for (size_t i = 0; i < CALCULATOR_PERSISTENCE_HISTORY_CAPACITY; ++i) {
         write_decimal_text(writer, state->history[i].result[0]
             ? state->history[i].result : "0");
+    }
+    write_decimal_text(writer, state->memory_text);
+    for (size_t i = 0; i < CALCULATOR_VARIABLE_COUNT; ++i) {
+        write_decimal_text(writer, state->symbols.variable_text[i]);
     }
 }
 
@@ -475,6 +493,22 @@ static void read_payload(reader_t *reader, uint16_t version,
     } else {
         snprintf(state->ans_text, sizeof state->ans_text, "%.17g", state->ans);
     }
+    if (version >= SYMBOL_PRECISION_PERSISTENCE_VERSION) {
+        read_decimal_text(reader, state->memory_text,
+                          sizeof state->memory_text);
+        for (size_t i = 0; i < CALCULATOR_VARIABLE_COUNT; ++i) {
+            read_decimal_text(reader, state->symbols.variable_text[i],
+                              sizeof state->symbols.variable_text[i]);
+        }
+    } else {
+        snprintf(state->memory_text, sizeof state->memory_text, "%.17g",
+                 state->memory_value);
+        for (size_t i = 0; i < CALCULATOR_VARIABLE_COUNT; ++i) {
+            snprintf(state->symbols.variable_text[i],
+                     sizeof state->symbols.variable_text[i], "%.17g",
+                     state->symbols.variables[i]);
+        }
+    }
 }
 
 static bool record_is_erased(const uint8_t *record, size_t size) {
@@ -515,6 +549,7 @@ calculator_persistence_status_t calculator_persistence_decode(
     if (version != LEGACY_PERSISTENCE_VERSION &&
         version != STATISTICS_PERSISTENCE_VERSION &&
         version != BASIC_PERSISTENCE_VERSION &&
+        version != PRECISION_PERSISTENCE_VERSION &&
         version != CALCULATOR_PERSISTENCE_VERSION) {
         return CALCULATOR_PERSISTENCE_UNSUPPORTED;
     }

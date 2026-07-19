@@ -14,8 +14,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define CALCULATOR_PERSISTENCE_VERSION 4u
-#define CALCULATOR_PERSISTENCE_RECORD_CAPACITY 4096u
+#define CALCULATOR_PERSISTENCE_VERSION 5u
+#define CALCULATOR_PERSISTENCE_RECORD_CAPACITY 8192u
 #define CALCULATOR_PERSISTENCE_HISTORY_CAPACITY 8u
 #define CALCULATOR_PERSISTENCE_RESULT_CAPACITY DECIMAL_ENGINE_TEXT_CAPACITY
 
@@ -33,6 +33,7 @@ typedef struct {
     double ans;
     char ans_text[CALCULATOR_PERSISTENCE_RESULT_CAPACITY];
     double memory_value;
+    char memory_text[CALCULATOR_PERSISTENCE_RESULT_CAPACITY];
     programmer_base_t programmer_base;
     uint64_t programmer_value;
     bool programmer_signed;

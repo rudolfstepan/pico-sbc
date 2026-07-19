@@ -53,6 +53,7 @@ typedef calculator_persisted_history_entry_t history_entry_t;
 static history_entry_t history[HISTORY_MAX];
 static calculator_list_t history_list;
 static double memory_value;
+static char memory_text[CALCULATOR_RESULT_TEXT_CAPACITY] = "0";
 static calculator_graph_t graph;
 static calculator_symbols_t symbols;
 static calculator_logic_t logic;
@@ -77,6 +78,7 @@ static void capture_persisted_state(calculator_persisted_state_t *state) {
     state->ans = ans;
     snprintf(state->ans_text, sizeof state->ans_text, "%s", ans_text);
     state->memory_value = memory_value;
+    snprintf(state->memory_text, sizeof state->memory_text, "%s", memory_text);
     state->programmer_base = programmer.base;
     state->programmer_value = programmer.value;
     state->programmer_signed = programmer.signed_mode;
@@ -98,6 +100,7 @@ static void apply_persisted_state(
     ans = state->ans;
     snprintf(ans_text, sizeof ans_text, "%s", state->ans_text);
     memory_value = state->memory_value;
+    snprintf(memory_text, sizeof memory_text, "%s", state->memory_text);
     symbols = state->symbols;
     memcpy(history, state->history, sizeof history);
     calculator_list_set_count(&history_list, state->history_count);
@@ -211,7 +214,7 @@ static void render_display(void) {
             ? history[history_list.index].formula : "";
         const char *history_result = history_list.count
             ? history[history_list.index].result : "";
-        calculator_page_render_tools(memory_value, message, &expression_state,
+        calculator_page_render_tools(memory_text, message, &expression_state,
                                      history_list.count, history_list.index,
                                      formula, history_result, result_text);
         return;
@@ -272,8 +275,8 @@ static bool token_is_operator(const char *token) {
     return token && token[0] && token[1] == '\0' && strchr("+-*/^%", token[0]);
 }
 
-static void insert_token(const char *token) {
-    if (!token || !*token) return;
+static bool insert_token(const char *token) {
+    if (!token || !*token) return false;
 
     if (just_evaluated) {
         if (token_is_operator(token)) {
@@ -286,9 +289,10 @@ static void insert_token(const char *token) {
 
     if (!expression_editor_insert(&expression_state, token)) {
         snprintf(message, sizeof message, "INPUT FULL");
-        return;
+        return false;
     }
     snprintf(message, sizeof message, "READY");
+    return true;
 }
 
 static void delete_expression_char(void) {
@@ -571,28 +575,42 @@ static void activate_format_key(const calc_key_t *key) {
 
 static void activate_memory_key(const calc_key_t *key) {
     if (strcmp(key->token, "M+") == 0) {
-        double updated = memory_value + ans;
-        if (isfinite(updated)) {
-            memory_value = updated;
+        char expression[2u * CALCULATOR_RESULT_TEXT_CAPACITY + 8u];
+        snprintf(expression, sizeof expression, "(%s)+(%s)",
+                 memory_text, ans_text);
+        calculator_result_t result;
+        int error_position = 0;
+        if (calc_engine_evaluate_precise_symbols(
+                expression, 0.0, "0", NULL, &result,
+                &error_position) == CALC_OK) {
+            memory_value = result.value;
+            snprintf(memory_text, sizeof memory_text, "%s", result.text);
             snprintf(message, sizeof message, "MEMORY PLUS");
         } else {
             snprintf(message, sizeof message, "MEMORY RANGE");
         }
     } else if (strcmp(key->token, "M-") == 0) {
-        double updated = memory_value - ans;
-        if (isfinite(updated)) {
-            memory_value = updated;
+        char expression[2u * CALCULATOR_RESULT_TEXT_CAPACITY + 8u];
+        snprintf(expression, sizeof expression, "(%s)-(%s)",
+                 memory_text, ans_text);
+        calculator_result_t result;
+        int error_position = 0;
+        if (calc_engine_evaluate_precise_symbols(
+                expression, 0.0, "0", NULL, &result,
+                &error_position) == CALC_OK) {
+            memory_value = result.value;
+            snprintf(memory_text, sizeof memory_text, "%s", result.text);
             snprintf(message, sizeof message, "MEMORY MINUS");
         } else {
             snprintf(message, sizeof message, "MEMORY RANGE");
         }
     } else if (strcmp(key->token, "MR") == 0) {
-        char token[32];
-        snprintf(token, sizeof token, "%.12g", memory_value);
-        insert_token(token);
-        snprintf(message, sizeof message, "MEMORY RECALLED");
+        if (insert_token(memory_text)) {
+            snprintf(message, sizeof message, "MEMORY RECALLED");
+        }
     } else {
         memory_value = 0.0;
+        snprintf(memory_text, sizeof memory_text, "0");
         snprintf(message, sizeof message, "MEMORY CLEARED");
     }
 }
@@ -681,9 +699,10 @@ static void activate_symbol_key(const calc_key_t *key) {
     switch (key->action) {
         case ACT_SYMBOL_STORE:
             index = (size_t)(key->token[0] - 'A');
-            if (calculator_symbols_set_variable(&symbols, index, ans)) {
-                snprintf(message, sizeof message, "%s = %.10g",
-                         calculator_variable_name(index), ans);
+            if (calculator_symbols_set_variable_precise(
+                    &symbols, index, ans, ans_text)) {
+                snprintf(message, sizeof message, "%s SAVED",
+                         calculator_variable_name(index));
             } else {
                 snprintf(message, sizeof message, "STORE FAILED");
             }

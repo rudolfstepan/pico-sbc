@@ -14,6 +14,7 @@ endif()
 
 pico_sdk_init()
 
+add_subdirectory(third_party/libbf)
 add_subdirectory(lib/board)
 add_subdirectory(firmware/mini-computer)
 add_subdirectory(firmware/scientific-calculator)

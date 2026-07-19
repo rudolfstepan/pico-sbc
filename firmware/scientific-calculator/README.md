@@ -13,7 +13,7 @@ Installation, Bedienung, alle Rechnermodi und die PC-Anwendung.
 - `sin`, `cos`, `tan`, `asin`, `acos`, `atan`
 - `sinh`, `cosh`, `tanh`, `ln`, `log`, `exp`, `sqrt`
 - Betrag, Abrunden, Fakultaet, Kombinationen und Permutationen
-- Konstanten Pi und e
+- 80-stellige wissenschaftliche Funktionen und Konstanten Pi, e, Tau und Phi
 - Elf Touch-Ebenen: `BASIC`, `SCIENTIFIC`, `PROGRAMMER`, `FORMAT`, `TOOLS`,
   `SYMBOLS`, `LOGIC`, `UNITS`, `COMPLEX`, `STATS` und `CODE`
 - `PROGRAMMER`-Ebene fuer exakte 64-Bit-Werte
@@ -378,16 +378,22 @@ Modulen. Hardwareunabhaengige Teile werden durch die Host-Tests unter
 
 ## Rechenkern
 
-Der Rechner besitzt einen hybriden Rechenkern. Reine Dezimalausdruecke mit
-`+`, `-`, `*`, `/`, `%`, Klammern, ganzzahligen Potenzen und `ANS` werden mit
-bis zu 80 Dezimalstellen verarbeitet. Endliche Ergebnisse bleiben exakt;
-periodische Divisionen werden nach 80 Stellen mit Round-to-even gerundet und
-auf dem LCD als `ROUNDED` markiert. Exakte Ergebnisse bleiben in `ANS`, im
-Verlauf, ueber USB und nach einem Neustart erhalten.
+Der normale Ausdruckseditor besitzt zwei aufeinander abgestimmte
+Multipraezisionskerne. Reine Dezimalausdruecke mit `+`, `-`, `*`, `/`, `%`,
+Klammern, ganzzahligen Potenzen und `ANS` bleiben bis zur Kapazitaetsgrenze
+exakt. Periodische Divisionen werden mit Round-to-nearest-even gerundet.
 
-Wissenschaftliche Funktionen, Variablen, Benutzerfunktionen, Graphen,
-Statistik, numerische Verfahren und BASIC-Zahlen nutzen weiterhin `double`. Ihr
-Ausdrucksparser ist TinyExpr von Lewis Van Winkle und steht unter der
-Zlib-Lizenz. Der unveraenderte Quelltext (Revision
-`4a7456e2eab88b4c76053c1c4157639ccb930e2b`) und die Lizenz befinden sich unter
-`../../third_party/tinyexpr`.
+Alle wissenschaftlichen Funktionen, allgemeine Potenzen, Benutzerfunktionen
+und die mathematischen Konstanten `pi`, `e`, `tau` und `phi` laufen ueber
+LibBF mit 320 Bit Arbeitsgenauigkeit und werden auf 80 signifikante
+Stellen gerundet. Es gibt keine `double`-Zwischenwerte bei
+Trigonometrie, Wurzeln, Logarithmen oder Konstanten. Ergebnisse bleiben als
+vollstaendiger Dezimaltext in `ANS`, Verlauf, USB und Flash erhalten.
+
+A-F und das Speicherregister bewahren wie `ANS` ihren vollstaendigen
+Dezimaltext und werden im normalen Editor hochpraezise weiterverarbeitet.
+Graphabtastung, Statistik, numerische Verfahren, komplexe Zahlen und
+BASIC-Programme verwenden aus Geschwindigkeitsgruenden weiterhin eine
+`double`-Naeherung und TinyExpr. TinyExpr steht unter der Zlib-Lizenz; LibBF
+steht unter der MIT-Lizenz. Quelltexte und Lizenztexte befinden sich unter
+`../../third_party`.

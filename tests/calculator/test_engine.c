@@ -68,10 +68,11 @@ int main(void) {
     }
     precise_status = calc_engine_evaluate_precise_symbols(
         "sin(30)", 0.0, "0", NULL, &precise, &precise_error);
-    if (precise_status != CALC_OK || precise.decimal ||
+    if (precise_status != CALC_OK || !precise.decimal || precise.exact ||
+        strcmp(precise.text, "0.5") != 0 ||
         fabs(precise.value - 0.5) > 1e-12) {
-        printf("FAIL: precise fallback status=%d value=%.17g\n",
-               precise_status, precise.value);
+        printf("FAIL: high precision function status=%d text=%s value=%.17g\n",
+               precise_status, precise.text, precise.value);
         failures++;
     }
 

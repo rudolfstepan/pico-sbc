@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CALCULATOR_FIRMWARE_VERSION "1.6.0"
+#define CALCULATOR_FIRMWARE_VERSION "1.7.0"
 #define LOGIC_USB_CHUNK_CAPACITY 112u
 
 static void respond(char *response, size_t size, const char *format, ...) {
@@ -196,9 +196,10 @@ static void execute_get(calculator_usb_context_t *context, char *cursor,
         if (!variable_index(name, &index) || *remaining_text(cursor)) {
             respond(response, response_size, "ERR ARGUMENT VAR A-F");
         } else {
-            respond(response, response_size, "OK VAR\t%s\t%.17g",
+            respond(response, response_size, "OK VAR\t%s\t%s",
                     calculator_variable_name(index),
-                    state->symbols.variables[index]);
+                    state->symbols.variable_text[index][0]
+                        ? state->symbols.variable_text[index] : "0");
         }
         return;
     }
@@ -295,8 +296,8 @@ static void execute_get(calculator_usb_context_t *context, char *cursor,
         if (*remaining_text(cursor)) {
             respond(response, response_size, "ERR ARGUMENT MEMORY");
         } else {
-            respond(response, response_size, "OK MEMORY\t%.17g",
-                    state->memory_value);
+            respond(response, response_size, "OK MEMORY\t%s",
+                    state->memory_text[0] ? state->memory_text : "0");
         }
         return;
     }
@@ -418,11 +419,16 @@ static void execute_set(calculator_usb_context_t *context, char *cursor,
             respond(response, response_size, "ERR ARGUMENT VAR A-F value");
             return;
         }
-        state->symbols.variables[index] = value;
+        if (!calculator_symbols_set_variable_precise(
+                &state->symbols, index, value, value_word)) {
+            respond(response, response_size, "ERR ARGUMENT VAR A-F value");
+            return;
+        }
         effect->changed = true;
         effect->persistent_changed = true;
-        respond(response, response_size, "OK VAR\t%s\t%.17g",
-                calculator_variable_name(index), value);
+        respond(response, response_size, "OK VAR\t%s\t%s",
+                calculator_variable_name(index),
+                state->symbols.variable_text[index]);
         return;
     }
     if (word_is(subject, "FUNC")) {
@@ -481,9 +487,11 @@ static void execute_set(calculator_usb_context_t *context, char *cursor,
             return;
         }
         state->memory_value = value;
+        snprintf(state->memory_text, sizeof state->memory_text, "%s",
+                 value_word);
         effect->changed = true;
         effect->persistent_changed = true;
-        respond(response, response_size, "OK MEMORY\t%.17g", value);
+        respond(response, response_size, "OK MEMORY\t%s", state->memory_text);
         return;
     }
     if (word_is(subject, "PROGRAMMER")) {

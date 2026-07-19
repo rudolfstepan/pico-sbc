@@ -90,6 +90,14 @@ int main(void) {
                  "OK FUNC\tF1\tx+A") == 0);
     CHECK(strcmp(run(&context, "EVAL f1(2)", &effect),
                  "OK RESULT\t7") == 0);
+    CHECK(strcmp(run(&context,
+        "SET VAR A 5.0000000000000000000000000000000000000000000001",
+        &effect),
+        "OK VAR\tA\t5.0000000000000000000000000000000000000000000001") == 0);
+    CHECK(strcmp(run(&context,
+        "EVAL A+0.0000000000000000000000000000000000000000000001",
+        &effect),
+        "OK RESULT\t5.0000000000000000000000000000000000000000000002") == 0);
     CHECK(strncmp(run(&context, "SET FUNC F1 f1(x)", &effect),
                   "ERR INVALID_FUNC", 16) == 0);
     CHECK(strcmp(state.symbols.functions[0], "x+A") == 0);

@@ -10,6 +10,9 @@ set(PROJECT_ROOT ${CMAKE_CURRENT_LIST_DIR}/..)
 set(CALCULATOR_SRC ${PROJECT_ROOT}/firmware/scientific-calculator/src)
 set(TINYEXPR_SRC ${PROJECT_ROOT}/third_party/tinyexpr)
 
+add_subdirectory(${PROJECT_ROOT}/third_party/libbf
+                 ${CMAKE_BINARY_DIR}/third_party/libbf)
+
 function(enable_project_warnings target)
     if(MSVC)
         target_compile_options(${target} PRIVATE /W4 /WX)
@@ -25,6 +28,7 @@ add_executable(calculator_engine_tests
     ${CALCULATOR_SRC}/calculator_engine.c
     ${CALCULATOR_SRC}/calculator_symbols.c
     ${CALCULATOR_SRC}/decimal_engine.c
+    ${CALCULATOR_SRC}/high_precision_engine.c
     ${TINYEXPR_SRC}/tinyexpr.c
 )
 target_include_directories(calculator_engine_tests PRIVATE
@@ -32,8 +36,21 @@ target_include_directories(calculator_engine_tests PRIVATE
     ${TINYEXPR_SRC}
 )
 target_compile_definitions(calculator_engine_tests PRIVATE TE_POW_FROM_RIGHT)
+target_link_libraries(calculator_engine_tests PRIVATE libbf)
 enable_project_warnings(calculator_engine_tests)
 add_test(NAME calculator_engine COMMAND calculator_engine_tests)
+
+add_executable(high_precision_engine_tests
+    calculator/test_high_precision_engine.c
+    ${CALCULATOR_SRC}/calculator_symbols.c
+    ${CALCULATOR_SRC}/high_precision_engine.c
+)
+target_include_directories(high_precision_engine_tests PRIVATE
+    ${CALCULATOR_SRC}
+)
+target_link_libraries(high_precision_engine_tests PRIVATE libbf)
+enable_project_warnings(high_precision_engine_tests)
+add_test(NAME high_precision_engine COMMAND high_precision_engine_tests)
 
 add_executable(decimal_engine_tests
     calculator/test_decimal_engine.c
@@ -158,6 +175,7 @@ add_executable(graph_renderer_tests
     ${CALCULATOR_SRC}/calculator_engine.c
     ${CALCULATOR_SRC}/calculator_symbols.c
     ${CALCULATOR_SRC}/decimal_engine.c
+    ${CALCULATOR_SRC}/high_precision_engine.c
     ${CALCULATOR_SRC}/calculator_graph.c
     ${CALCULATOR_SRC}/calculator_keymaps.c
     ${CALCULATOR_SRC}/calculator_widgets.c
@@ -172,6 +190,7 @@ target_include_directories(graph_renderer_tests PRIVATE
     calculator
 )
 target_compile_definitions(graph_renderer_tests PRIVATE TE_POW_FROM_RIGHT)
+target_link_libraries(graph_renderer_tests PRIVATE libbf)
 enable_project_warnings(graph_renderer_tests)
 add_test(NAME graph_renderer COMMAND graph_renderer_tests)
 
@@ -321,6 +340,7 @@ add_executable(calculator_usb_protocol_tests
     ${CALCULATOR_SRC}/decimal_engine.c
     ${CALCULATOR_SRC}/expression_editor.c
     ${CALCULATOR_SRC}/graph_model.c
+    ${CALCULATOR_SRC}/high_precision_engine.c
     ${CALCULATOR_SRC}/logic_engine.c
     ${CALCULATOR_SRC}/number_formats.c
     ${CALCULATOR_SRC}/numerical_analysis.c
@@ -336,6 +356,7 @@ target_include_directories(calculator_usb_protocol_tests PRIVATE
 target_compile_definitions(calculator_usb_protocol_tests PRIVATE
     TE_POW_FROM_RIGHT
 )
+target_link_libraries(calculator_usb_protocol_tests PRIVATE libbf)
 enable_project_warnings(calculator_usb_protocol_tests)
 add_test(NAME calculator_usb_protocol COMMAND calculator_usb_protocol_tests)
 

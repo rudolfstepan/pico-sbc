@@ -21,6 +21,8 @@ ein Test auf dem echten LCD erfolgreich sind.
 | 9 | Statistikmodus | Phasen 2 und 3 | Hardwaretest offen |
 | 10 | USB-Datenaustausch | Phasen 4 und 9 | Hardwaretest offen |
 | 11 | BASIC-Programmiermodus | Phasen 0 und 4 | Hardwaretest offen |
+| 12 | Exakte Dezimalarithmetik | Phase 0 | abgeschlossen |
+| 13 | Hochpraezise Wissenschaftsmathematik | Phase 12 | Hardwaretest offen |
 
 ## Phase 0: Technische Grundlage
 
@@ -284,6 +286,29 @@ Graphen und BASIC-Zahlen bleiben fuer Geschwindigkeit und Kompatibilitaet
 `double`-basiert.
 Firmware 1.4.0, USB-Protokoll 3 und Flashformat 4 transportieren die neuen
 Ergebnisstrings. Der Hardwaretest von Anzeige und Neustart steht noch aus.
+
+## Phase 13: Hochpraezise Wissenschaftsmathematik
+
+- [x] LibBF als eingebettete MIT-Abhaengigkeit integrieren.
+- [x] Wissenschaftliche Ausdruecke mit 320 Bit Arbeitsgenauigkeit auswerten.
+- [x] Trigonometrie, Umkehr- und Hyperbelfunktionen, Wurzeln, Logarithmen,
+  Exponentialfunktion und allgemeine Potenzen auf Multipraezision umstellen.
+- [x] `pi`, `e`, `tau` und `phi` ohne `double`-Zwischenwert berechnen.
+- [x] DEG/RAD, `ANS`, F1-F3, Fakultaet, `ncr` und `npr` unterstuetzen.
+- [x] A-F und Speicherregister M verlustfrei als Dezimaltext weiterreichen.
+- [x] Flashformat 5 mit Migration der Versionen 1 bis 4 implementieren.
+- [x] Referenzwerte mit mehr als 50 Dezimalstellen per Host-Test pruefen.
+- [x] RP2040-Release-Build sowie Flash- und statischen RAMbedarf pruefen.
+- [ ] Laufzeit, Heapreserve und Bedienung auf dem echten Pico testen.
+
+**Fertig, wenn:** Alle Funktionen des normalen BASIC/SCIENTIFIC-Editors bis
+auf 80 signifikante Stellen reproduzierbar rechnen und `pi` sowie `e` nicht
+mehr auf binaere 64-Bit-Konstanten begrenzt sind.
+
+Softwarestand: Firmware 1.7.0 verwendet fuer wissenschaftliche Ausdruecke
+LibBF mit 320 Bit. 30 Host-Tests bestehen; der RP2040-Build belegt 312360 Byte
+Flashcode und 83480 Byte statischen RAM. Graph, Statistik, komplexe Zahlen
+und BASIC-Programme behalten vorerst ihre bestehenden `double`-Datenmodelle.
 
 ## Arbeitsweise pro Phase
 

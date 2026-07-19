@@ -1,6 +1,6 @@
 # Benutzerhandbuch: Pico Scientific Calculator
 
-Gueltig fuer Firmware `1.6.0`, USB-Protokoll `4` und das LAFVIN Pico
+Gueltig fuer Firmware `1.7.0`, USB-Protokoll `4` und das LAFVIN Pico
 Development Kit mit RP2040, ST7796U-LCD und GT911-Touchscreen.
 
 ## Inhalt
@@ -213,15 +213,21 @@ Schrift stufenweise, statt Stellen am Anfang oder Ende abzuschneiden.
 
 ### Exakte und angenaeherte Ergebnisse
 
-Der Rechner arbeitet hybrid:
+Der normale Ausdruckseditor kombiniert exakte Dezimalarithmetik mit einem
+hochpraezisen wissenschaftlichen Kern:
 
 - Reine Dezimalarithmetik mit `+`, `-`, `*`, `/`, `%`, Klammern,
   ganzzahligen Potenzen und `ANS` verwendet bis zu 80 signifikante Stellen.
 - Endliche Ergebnisse bleiben innerhalb dieser Kapazitaet exakt.
 - Periodische Divisionen werden nach 80 Stellen mit Round-to-even gerundet.
   Die Statuszeile zeigt dann `ROUNDED`.
-- Wissenschaftliche Funktionen, A-F, F1-F3, Graph, Statistik und BASIC
-  verwenden binaeres `double`-Gleitkomma.
+- Wissenschaftliche Funktionen, allgemeine Potenzen, F1-F3 sowie `pi`, `e`,
+  `tau` und `phi` verwenden intern 320 Bit und liefern 80 signifikante
+  Dezimalstellen. Gerundete Resultate werden ebenfalls mit `ROUNDED`
+  gekennzeichnet.
+- A-F und das Speicherregister M bewahren ebenfalls den vollstaendigen
+  Dezimaltext. Graph, Statistik, komplexe Zahlen und BASIC-Programme verwenden
+  weiterhin eine binaere `double`-Naeherung.
 
 Beispiele:
 
@@ -230,8 +236,9 @@ Beispiele:
 | `0.1+0.2` | exakt `0.3` |
 | `9007199254740993+1` | exakt `9007199254740994` |
 | `1/3` | auf 80 Stellen gerundet, Status `ROUNDED` |
-| `sqrt(2)` | Gleitkomma-Naeherung |
-| `A+0.1` | Gleitkomma, weil eine Variable verwendet wird |
+| `sqrt(2)` | 80-stellige Multipraezisions-Naeherung |
+| `sin(pi/6)` | 80-stellige Multipraezisions-Naeherung |
+| `A+0.1` | Hochpraezise Rechnung mit dem vollstaendigen A-F-Wert |
 
 Wird die Kapazitaet eines exakten Zwischenergebnisses ueberschritten, erscheint
 `RANGE ERROR`. In diesem Fall kann eine wissenschaftliche Schreibweise oder
@@ -265,6 +272,7 @@ immer mit `x` im Bogenmass ausgewertet.
 | `ncr(n,r)` | Kombinationen | `ncr(6,2)` |
 | `npr(n,r)` | Permutationen | `npr(6,2)` |
 | `pi`, `e` | Mathematische Konstanten | `2*pi` |
+| `tau`, `phi` | Kreiszahl `2*pi` und goldener Schnitt | Eingabe ueber USB/PC |
 
 Bei `ncr` und `npr` trennt das Komma die beiden Argumente. Fakultaet,
 Kombinationen und Permutationen erwarten nichtnegative ganze Zahlen;
@@ -281,7 +289,9 @@ Kombinationen und Permutationen erwarten nichtnegative ganze Zahlen;
 | `MR` | Speicherwert in den Editor einfuegen |
 | `MC` | Speicher auf null setzen |
 
-Das Speicherregister arbeitet mit `double`. Es wird automatisch gespeichert.
+Das Speicherregister bewahrt wie `ANS` bis zu 80 signifikante Stellen. `M+`,
+`M-` und `MR` verwenden den vollstaendigen Dezimaltext; der Wert wird
+automatisch im Flash gespeichert.
 
 ### Verlauf
 
@@ -309,8 +319,9 @@ Graphausdruecken hilfreich.
 4. `A` fuegt die Variable spaeter in einen Ausdruck ein und wechselt zu
    `TOOLS`.
 
-Variablen werden als `double` gespeichert. Ihre Verwendung schaltet den
-Ausdruck deshalb auf den wissenschaftlichen Gleitkommakern um.
+A-F bewahren bis zu 80 signifikante Stellen und werden vom hochpraezisen
+wissenschaftlichen Kern ausgewertet. Fuer Graphen wird parallel eine
+`double`-Naeherung gehalten, damit das LCD schnell genug abgetastet werden kann.
 
 ### Benutzerfunktionen F1 bis F3
 
@@ -806,7 +817,7 @@ geaendert wurden.
 
 Zwei CRC-geschuetzte Flashkopien werden abwechselnd beschrieben. Ein
 Stromausfall waehrend des Speicherns zerstoert dadurch nicht den vorherigen
-gueltigen Zustand. Flashformat 4 liest auch Zustaende der Versionen 1 bis 3.
+gueltigen Zustand. Flashformat 5 liest auch Zustaende der Versionen 1 bis 4.
 
 ### Werksreset
 
@@ -826,7 +837,7 @@ normalen Verlauf, Statistikdaten und BASIC-Programme.
 | Meldung | Bedeutung und Abhilfe |
 |---|---|
 | `OK` | Operation erfolgreich |
-| `ROUNDED` | Periodisches Dezimalergebnis wurde auf 80 Stellen gerundet |
+| `ROUNDED` | Ergebnis wurde reproduzierbar auf 80 signifikante Stellen gerundet |
 | `ENTER EXPRESSION` | Editor ist leer |
 | `SYNTAX ERROR` / `SYNTAX AT n` | Klammern, Operatoren oder Argumente pruefen |
 | `MATH ERROR` | Mathematisch ungueltiger Wert, etwa `sqrt(-1)` im reellen Modus |
@@ -865,9 +876,12 @@ dort Tasten wirklich, aktuelle Firmware neu flashen.
 
 ### Ergebnis wirkt ungenau
 
-Pruefen, ob der Ausdruck Funktionen, Variablen oder Benutzerfunktionen
-enthaelt. Diese verwenden `double`. Fuer exakte Dezimalrechnung nur Literale,
-`ANS`, Grundoperatoren, Klammern und ganzzahlige Potenzen verwenden.
+Fuer mathematische Funktionen Firmware `1.7.0` oder neuer verwenden. Diese
+rechnet im normalen Ausdruckseditor mit 320 Bit Arbeitsgenauigkeit und zeigt
+bis zu 80 Stellen. Graph, Statistik, komplexe Zahlen und BASIC-Programme
+verwenden weiterhin `double`. Fuer exakt endliche Ergebnisse nur Literale,
+`ANS`, A-F, Grundoperatoren, Klammern und ganzzahlige Potenzen verwenden;
+transzendente Werte sind prinzipbedingt gerundete Naeherungen.
 
 ### PC findet keinen Port
 
@@ -890,6 +904,7 @@ verfuegbar sind.
 |---|---:|
 | Normaler Ausdruck | 95 Zeichen |
 | Exakter Dezimalkern | 80 signifikante Stellen |
+| Wissenschaftlicher Kern | 320 Bit intern, 80 signifikante Stellen |
 | Normaler Verlauf | 8 Eintraege |
 | Komplexer Verlauf | 8 Eintraege |
 | Variablen | A-F |

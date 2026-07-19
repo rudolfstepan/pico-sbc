@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static const char *variable_names[CALCULATOR_VARIABLE_COUNT] = {
@@ -19,6 +20,10 @@ static const char *default_favorites[CALCULATOR_FAVORITE_COUNT] = {
 
 void calculator_symbols_init(calculator_symbols_t *symbols) {
     memset(symbols, 0, sizeof *symbols);
+    for (size_t i = 0; i < CALCULATOR_VARIABLE_COUNT; ++i) {
+        snprintf(symbols->variable_text[i],
+                 sizeof symbols->variable_text[i], "0");
+    }
     for (size_t i = 0; i < CALCULATOR_FAVORITE_COUNT; ++i) {
         snprintf(symbols->favorites[i], sizeof symbols->favorites[i],
                  "%s", default_favorites[i]);
@@ -37,6 +42,24 @@ bool calculator_symbols_set_variable(calculator_symbols_t *symbols,
                                      size_t index, double value) {
     if (index >= CALCULATOR_VARIABLE_COUNT || !isfinite(value)) return false;
     symbols->variables[index] = value;
+    snprintf(symbols->variable_text[index],
+             sizeof symbols->variable_text[index], "%.17g", value);
+    return true;
+}
+
+bool calculator_symbols_set_variable_precise(calculator_symbols_t *symbols,
+                                             size_t index, double value,
+                                             const char *text) {
+    if (index >= CALCULATOR_VARIABLE_COUNT || !isfinite(value) || !text ||
+        !*text || strlen(text) >= sizeof symbols->variable_text[index]) {
+        return false;
+    }
+    char *end = NULL;
+    double parsed = strtod(text, &end);
+    if (!end || *end || !isfinite(parsed)) return false;
+    symbols->variables[index] = value;
+    snprintf(symbols->variable_text[index],
+             sizeof symbols->variable_text[index], "%s", text);
     return true;
 }
 

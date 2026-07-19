@@ -306,7 +306,7 @@ void calculator_page_render_format(const programmer_engine_t *programmer,
     finish_display();
 }
 
-void calculator_page_render_tools(double memory_value, const char *message,
+void calculator_page_render_tools(const char *memory_text, const char *message,
                                   const expression_editor_t *editor,
                                   size_t history_count,
                                   size_t history_index,
@@ -318,7 +318,8 @@ void calculator_page_render_tools(double memory_value, const char *message,
     char history_line[80];
     char result_line[48];
 
-    snprintf(status, sizeof status, "TOOLS  M %.10g  %s", memory_value, message);
+    snprintf(status, sizeof status, "TOOLS  M %s  %s",
+             calculator_widget_tail(memory_text, 24), message);
     if (history_count) {
         snprintf(history_line, sizeof history_line, "H%u %s",
                  (unsigned int)(history_index + 1), history_formula);

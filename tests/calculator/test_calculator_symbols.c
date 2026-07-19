@@ -16,9 +16,18 @@ int main(void) {
     }
     if (!calculator_symbols_set_variable(&symbols, 0, 42.5) ||
         fabs(symbols.variables[0] - 42.5) > 1e-12 ||
+        strcmp(symbols.variable_text[0], "42.5") != 0 ||
         calculator_symbols_set_variable(&symbols, 6, 1.0)) {
         printf("FAIL: variables\n");
         failures++;
+    }
+    if (!calculator_symbols_set_variable_precise(
+            &symbols, 1, 0.1,
+            "0.10000000000000000000000000000000000000000000001") ||
+        strcmp(symbols.variable_text[1],
+               "0.10000000000000000000000000000000000000000000001") != 0) {
+        puts("FAIL: precise variable storage");
+        return 1;
     }
 
     if (calculator_symbols_set_function(&symbols, 0, "x^2+A") !=

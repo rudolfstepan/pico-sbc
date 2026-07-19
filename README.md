@@ -22,6 +22,7 @@ tests/tools/          Tests fuer die PC-Werkzeuge
 tools/                USB-Kommandozeile und grafische Synchronisations-App
 docs/                 Hardware- und Architekturunterlagen
 third_party/tinyexpr/ TinyExpr als gepinntes Git-Submodul
+third_party/libbf/    LibBF fuer hochpraezise wissenschaftliche Funktionen
 ```
 
 ## Voraussetzungen
@@ -107,4 +108,6 @@ Die geplanten Rechner-Erweiterungen und ihre Umsetzungsreihenfolge stehen in
 ## Lizenz
 
 Der eigene Projektcode steht unter der [MIT-Lizenz](LICENSE). TinyExpr ist ein
-separates Projekt unter der Zlib-Lizenz; dessen Lizenz liegt im Submodul.
+separates Projekt unter der Zlib-Lizenz. Das eingebettete LibBF steht ebenfalls
+unter der MIT-Lizenz. Die jeweiligen Lizenztexte liegen in den
+`third_party`-Verzeichnissen.

@@ -8,6 +8,7 @@
 #define CALCULATOR_USER_FUNCTION_COUNT 3
 #define CALCULATOR_FAVORITE_COUNT 6
 #define CALCULATOR_SYMBOL_EXPRESSION_CAPACITY 96
+#define CALCULATOR_SYMBOL_VALUE_CAPACITY 96
 #define CALCULATOR_FAVORITE_CAPACITY 24
 
 typedef enum {
@@ -19,6 +20,8 @@ typedef enum {
 
 typedef struct {
     double variables[CALCULATOR_VARIABLE_COUNT];
+    char variable_text[CALCULATOR_VARIABLE_COUNT]
+                      [CALCULATOR_SYMBOL_VALUE_CAPACITY];
     char functions[CALCULATOR_USER_FUNCTION_COUNT]
                   [CALCULATOR_SYMBOL_EXPRESSION_CAPACITY];
     char favorites[CALCULATOR_FAVORITE_COUNT]
@@ -30,6 +33,9 @@ const char *calculator_variable_name(size_t index);
 const char *calculator_function_name(size_t index);
 bool calculator_symbols_set_variable(calculator_symbols_t *symbols,
                                      size_t index, double value);
+bool calculator_symbols_set_variable_precise(calculator_symbols_t *symbols,
+                                             size_t index, double value,
+                                             const char *text);
 calculator_symbol_status_t calculator_symbols_set_function(
     calculator_symbols_t *symbols, size_t index, const char *expression);
 calculator_symbol_status_t calculator_symbols_set_favorite(

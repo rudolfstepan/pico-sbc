@@ -1,6 +1,7 @@
 #include "calculator_engine.h"
 
 #include "decimal_engine.h"
+#include "high_precision_engine.h"
 #include "tinyexpr.h"
 
 #include <math.h>
@@ -270,6 +271,28 @@ calc_status_t calc_engine_evaluate_precise_symbols(
     if (decimal_status != DECIMAL_STATUS_UNSUPPORTED) {
         if (decimal_status == DECIMAL_STATUS_SYNTAX) return CALC_PARSE_ERROR;
         if (decimal_status == DECIMAL_STATUS_DIV_ZERO) return CALC_OVERFLOW;
+        return CALC_RANGE_ERROR;
+    }
+
+    high_precision_result_t precise_result;
+    high_precision_status_t precise_status = high_precision_engine_evaluate(
+        expression, ans_text, symbols, use_degrees, &precise_result,
+        error_position);
+    if (precise_status == HIGH_PRECISION_STATUS_OK) {
+        result->value = precise_result.approximation;
+        snprintf(result->text, sizeof result->text, "%s",
+                 precise_result.text);
+        result->decimal = true;
+        result->exact = false;
+        return CALC_OK;
+    }
+    if (precise_status != HIGH_PRECISION_STATUS_UNSUPPORTED) {
+        if (precise_status == HIGH_PRECISION_STATUS_SYNTAX) {
+            return CALC_PARSE_ERROR;
+        }
+        if (precise_status == HIGH_PRECISION_STATUS_DOMAIN) {
+            return CALC_DOMAIN_ERROR;
+        }
         return CALC_RANGE_ERROR;
     }
 
