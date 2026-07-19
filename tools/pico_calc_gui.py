@@ -52,7 +52,7 @@ from pico_calc_gui_model import (
 
 
 APP_NAME = "Pico Calculator Link"
-APP_VERSION = "2.0"
+APP_VERSION = "2.1"
 BG = "#eef1f4"
 PANEL = "#ffffff"
 INK = "#202428"
@@ -120,7 +120,8 @@ class CalculatorLinkApp:
         self.device_vars = {
             name: tk.StringVar(value="-")
             for name in ("Modell", "Firmware", "Protokoll", "Winkel",
-                         "Seite", "Verlauf", "Statistik", "BASIC")
+                         "Präzision", "Seite", "Verlauf", "Statistik",
+                         "BASIC")
         }
         self.variable_vars = {
             name: tk.StringVar(value="0") for name in "ABCDEF"
@@ -129,6 +130,7 @@ class CalculatorLinkApp:
             name: tk.StringVar() for name in ("F1", "F2", "F3")
         }
         self.angle_var = tk.StringVar(value="DEG")
+        self.precision_var = tk.StringVar(value="HIGH")
         self.memory_var = tk.StringVar(value="0")
         self.favorite_vars = {
             f"FAV{index}": tk.StringVar() for index in range(1, 7)
@@ -366,6 +368,14 @@ class CalculatorLinkApp:
                              values=("DEG", "RAD"), state="readonly", width=5)
         angle.pack(side=tk.LEFT)
         angle.bind("<<ComboboxSelected>>", lambda _event: self._set_angle())
+        ttk.Label(actions, text="Präzision", style="Panel.TLabel").pack(
+            side=tk.LEFT, padx=(14, 5))
+        precision = ttk.Combobox(
+            actions, textvariable=self.precision_var,
+            values=("NORMAL", "HIGH", "ULTRA"), state="readonly", width=8)
+        precision.pack(side=tk.LEFT)
+        precision.bind("<<ComboboxSelected>>",
+                       lambda _event: self._set_precision())
         ttk.Button(actions, text="Ausführen", style="Accent.TButton",
                    command=self._evaluate).pack(side=tk.RIGHT)
 
@@ -994,7 +1004,7 @@ class CalculatorLinkApp:
         length = len(text)
         size = 28 if length <= 16 else (
             20 if length <= 24 else (14 if length <= 40 else (
-                11 if length <= 60 else 9)))
+                11 if length <= 60 else (9 if length <= 90 else 7))))
         self.result_var.set(text)
         self.result_label.configure(font=("Consolas", size, "bold"))
 
@@ -1042,6 +1052,18 @@ class CalculatorLinkApp:
             return read_device_snapshot(self.client)
 
         self._submit("Setze Winkelmodus", operation, self._apply_snapshot)
+
+    def _set_precision(self) -> None:
+        if not self._require_connection():
+            return
+        mode = self.precision_var.get()
+
+        def operation() -> DeviceSnapshot:
+            self.client.command(f"SET PRECISION {mode}")
+            return read_device_snapshot(self.client)
+
+        self._submit("Setze Präzisionsmodus", operation,
+                     self._apply_snapshot)
 
     def _programmer_action(self, action: str) -> None:
         if not self._require_connection():
@@ -1702,6 +1724,7 @@ class CalculatorLinkApp:
         self.device_vars["Firmware"].set(info.get("firmware", "-"))
         self.device_vars["Protokoll"].set(info.get("protocol", "-"))
         self.device_vars["Winkel"].set(diag.get("angle", "-"))
+        self.device_vars["Präzision"].set(diag.get("precision", "-"))
         self.device_vars["Seite"].set(diag.get("page", "-"))
         self.device_vars["Verlauf"].set(diag.get("history", "0"))
         self.device_vars["Statistik"].set(
@@ -1709,6 +1732,8 @@ class CalculatorLinkApp:
         self.device_vars["BASIC"].set(
             f"{diag.get('basic', '0')} / {diag.get('basic_state', '-')}")
         self.angle_var.set(str(state.get("angle", diag.get("angle", "DEG"))))
+        self.precision_var.set(str(
+            state.get("precision", diag.get("precision", "HIGH"))))
         self.complex_angle_var.set(self.angle_var.get())
         self.expression_var.set(str(state.get("expression", "")))
         self._set_result(format_number(

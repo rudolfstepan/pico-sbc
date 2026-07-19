@@ -5,9 +5,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define DECIMAL_ENGINE_MAX_DIGITS 80u
-#define DECIMAL_ENGINE_TEXT_CAPACITY 96u
-#define DECIMAL_ENGINE_PACKED_CAPACITY 44u
+#define DECIMAL_ENGINE_MAX_DIGITS 128u
+#define DECIMAL_ENGINE_DEFAULT_DIGITS 80u
+#define DECIMAL_ENGINE_TEXT_CAPACITY 160u
+#define DECIMAL_ENGINE_PACKED_CAPACITY 68u
 
 typedef enum {
     DECIMAL_STATUS_OK,
@@ -28,6 +29,10 @@ decimal_status_t decimal_engine_evaluate(const char *expression,
                                          const char *ans_text,
                                          decimal_result_t *result,
                                          int *error_position);
+decimal_status_t decimal_engine_evaluate_precision(
+    const char *expression, const char *ans_text,
+    unsigned int significant_digits, decimal_result_t *result,
+    int *error_position);
 bool decimal_engine_pack_text(const char *text, uint8_t *packed,
                               size_t packed_size);
 bool decimal_engine_unpack_text(const uint8_t *packed, size_t packed_size,

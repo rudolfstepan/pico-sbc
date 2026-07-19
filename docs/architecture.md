@@ -49,9 +49,9 @@ Der Rechner trennt Darstellung und Rechenlogik:
 - `calculator_engine`: mathematische Ausdruecke, Symbolauflosung und
   Auswahl zwischen exakter Dezimal-, LibBF- und TinyExpr-Auswertung
 - `decimal_engine`: begrenzte Multipraezisions-Dezimalarithmetik fuer bis zu
-  80 Stellen, exaktes `ANS` und kompakte BCD-Serialisierung
+  128 Stellen, exaktes `ANS` und kompakte BCD-Serialisierung
 - `high_precision_engine`: rekursiver wissenschaftlicher Ausdrucksparser mit
-  320 Bit Arbeitsgenauigkeit, 80-stelliger Ausgabe und LibBF-Funktionen
+  waehlbarer 192-, 320- oder 512-Bit-Arbeitsgenauigkeit und LibBF-Funktionen
 - `programmer_engine`: wortbreitenabhaengige Zahlenbasen, Einzelbitoperationen,
   Rotationen sowie Carry- und Overflowstatus
 - `number_formats`: Zweierkomplement, Festkomma, Byte-Reihenfolge und
@@ -64,10 +64,11 @@ Testlauf zu benoetigen.
 
 Der Rechenkern arbeitet dreistufig. Reine Dezimalausdruecke mit `+`, `-`, `*`,
 `/`, `%`, ganzzahligen Potenzen, Klammern und `ANS` werden exakt verarbeitet.
-Wissenschaftliche Funktionen, allgemeine Potenzen, Benutzerfunktionen und
-mathematische Konstanten laufen mit 320 Bit ueber LibBF und werden auf 80
-signifikante Dezimalstellen gerundet. `ANS`, A-F, M und der Verlauf bewahren
-den vollstaendigen Text. TinyExpr bleibt fuer schnelle Graphabtastung und die
+Der gemeinsame Praezisionszustand begrenzt die Ausgabe auf 40, 80 oder 128
+signifikante Stellen. Wissenschaftliche Funktionen, allgemeine Potenzen,
+Benutzerfunktionen und mathematische Konstanten laufen passend dazu mit 192,
+320 oder 512 Bit ueber LibBF. `ANS`, A-F, M und der Verlauf bewahren den
+vollstaendigen Text. TinyExpr bleibt fuer schnelle Graphabtastung und die
 bestehenden `double`-Datenmodelle erhalten; dafuer wird parallel eine
 Double-Nachbildung gehalten.
 
@@ -76,7 +77,7 @@ Firmware getrennt und bilden zwei redundante 8-KiB-Slots. Ein neuer Zustand
 wird immer in den jeweils anderen Slot geschrieben und erst nach erfolgreicher
 CRC-Pruefung aktiviert. Bei defekten oder unbekannten Daten startet der Rechner
 mit sicheren Werkseinstellungen.
-Flashformat 5 speichert `ANS`, M, A-F und die acht Verlaufsergebnisse
-BCD-komprimiert. Beim ersten Start prueft die Firmware beide ehemaligen
-4-KiB-Slots und migriert weiterhin den neuesten gueltigen Datensatz der
-Versionen 1 bis 4.
+Flashformat 6 speichert den Praezisionsmodus sowie `ANS`, M, A-F und die acht
+Verlaufsergebnisse BCD-komprimiert. Der Decoder akzeptiert ausschliesslich
+Format 6. Aeltere oder unbekannte Datensaetze werden nicht migriert, sondern
+durch Werkseinstellungen ersetzt.

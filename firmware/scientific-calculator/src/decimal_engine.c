@@ -745,6 +745,7 @@ static decimal_status_t format_decimal(const decimal_value_t *value,
         return DECIMAL_STATUS_OK;
     }
     int point = (int)value->count - value->scale;
+    int exponent = point - 1;
     size_t sign = value->negative ? 1u : 0u;
     size_t plain_length;
     if (point <= 0) {
@@ -761,7 +762,7 @@ static decimal_status_t format_decimal(const decimal_value_t *value,
     *cursor++ = (character); \
     remaining--; \
 } while (0)
-    if (plain_length < output_size) {
+    if (exponent >= -6 && plain_length < output_size) {
         if (value->negative) PUT_CHARACTER('-');
         if (point <= 0) {
             PUT_CHARACTER('0');
@@ -794,7 +795,6 @@ static decimal_status_t format_decimal(const decimal_value_t *value,
             PUT_CHARACTER((char)('0' + value->digits[i - 1u]));
         }
     }
-    int exponent = (int)value->count - 1 - value->scale;
     int written = snprintf(cursor, remaining, "e%+d", exponent);
     if (written < 0 || (size_t)written >= remaining) {
         return DECIMAL_STATUS_RANGE;
@@ -803,10 +803,44 @@ static decimal_status_t format_decimal(const decimal_value_t *value,
     return DECIMAL_STATUS_OK;
 }
 
-decimal_status_t decimal_engine_evaluate(const char *expression,
-                                         const char *ans_text,
-                                         decimal_result_t *result,
-                                         int *error_position) {
+static decimal_status_t round_significant(decimal_value_t *value,
+                                          unsigned int significant_digits) {
+    if (significant_digits == 0u ||
+        significant_digits > DECIMAL_ENGINE_MAX_DIGITS) {
+        return DECIMAL_STATUS_RANGE;
+    }
+    if (value->count <= significant_digits) return DECIMAL_STATUS_OK;
+
+    size_t discarded = value->count - significant_digits;
+    uint8_t rounding_digit = value->digits[discarded - 1u];
+    bool sticky = false;
+    for (size_t i = 0; i + 1u < discarded; ++i) {
+        if (value->digits[i] != 0u) {
+            sticky = true;
+            break;
+        }
+    }
+    bool round_up = rounding_digit > 5u ||
+        (rounding_digit == 5u &&
+         (sticky || (value->digits[discarded] & 1u)));
+    memmove(value->digits, value->digits + discarded,
+            significant_digits);
+    memset(value->digits + significant_digits, 0,
+           DECIMAL_ENGINE_MAX_DIGITS - significant_digits);
+    value->count = significant_digits;
+    value->scale -= (int)discarded;
+    value->inexact = true;
+    if (round_up && !increment_unsigned(value)) {
+        return DECIMAL_STATUS_PRECISION;
+    }
+    decimal_normalize(value);
+    return DECIMAL_STATUS_OK;
+}
+
+decimal_status_t decimal_engine_evaluate_precision(
+    const char *expression, const char *ans_text,
+    unsigned int significant_digits, decimal_result_t *result,
+    int *error_position) {
     if (error_position) *error_position = 0;
     if (!expression || !result) return DECIMAL_STATUS_SYNTAX;
     parser_t parser = {
@@ -829,6 +863,8 @@ decimal_status_t decimal_engine_evaluate(const char *expression,
         if (error_position) *error_position = parser.error_position;
         return status;
     }
+    status = round_significant(value, significant_digits);
+    if (status != DECIMAL_STATUS_OK) return status;
     status = format_decimal(value, result->text, sizeof result->text);
     if (status != DECIMAL_STATUS_OK) return status;
     errno = 0;
@@ -839,6 +875,15 @@ decimal_status_t decimal_engine_evaluate(const char *expression,
     }
     result->exact = !value->inexact;
     return DECIMAL_STATUS_OK;
+}
+
+decimal_status_t decimal_engine_evaluate(const char *expression,
+                                         const char *ans_text,
+                                         decimal_result_t *result,
+                                         int *error_position) {
+    return decimal_engine_evaluate_precision(
+        expression, ans_text, DECIMAL_ENGINE_DEFAULT_DIGITS,
+        result, error_position);
 }
 
 bool decimal_engine_pack_text(const char *text, uint8_t *packed,

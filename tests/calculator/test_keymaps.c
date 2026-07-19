@@ -34,6 +34,13 @@ int main(void) {
     CHECK(check_page(PAGE_PROGRAMMER, 30) == 0);
     CHECK(check_page(PAGE_FORMAT, 30) == 0);
     CHECK(check_page(PAGE_TOOLS, 30) == 0);
+    size_t tools_count = 0;
+    const calc_key_t *tools = calculator_keymap(PAGE_TOOLS, &tools_count);
+    bool found_precision = false;
+    for (size_t i = 0; i < tools_count; ++i) {
+        if (tools[i].action == ACT_PRECISION) found_precision = true;
+    }
+    CHECK(found_precision);
     CHECK(check_page(PAGE_SYMBOLS, 30) == 0);
     CHECK(check_page(PAGE_GRAPH, 6) == 0);
     CHECK(check_page(PAGE_LOGIC, 30) == 0);

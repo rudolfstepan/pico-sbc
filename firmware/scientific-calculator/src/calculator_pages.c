@@ -102,15 +102,17 @@ static void draw_wrapped_text(const char *text, size_t chars_per_row,
 }
 
 void calculator_page_render_expression(calc_page_t page, bool degrees,
+                                       calculator_precision_t precision,
                                        const char *message,
                                        const expression_editor_t *editor,
                                        const char *result_text) {
     char status[48];
     char shown_result[CALCULATOR_RESULT_TEXT_CAPACITY + 2u];
 
-    snprintf(status, sizeof status, "%s  %s  %s",
+    snprintf(status, sizeof status, "%s  %s  %s  %s",
              degrees ? "DEG" : "RAD",
-             page == PAGE_SCIENTIFIC ? "SCIENTIFIC" : "BASIC", message);
+             page == PAGE_SCIENTIFIC ? "SCIENTIFIC" : "BASIC",
+             calculator_precision_label(precision), message);
     snprintf(shown_result, sizeof shown_result, "=%s", result_text);
 
     const int content_top = 18;
@@ -306,19 +308,22 @@ void calculator_page_render_format(const programmer_engine_t *programmer,
     finish_display();
 }
 
-void calculator_page_render_tools(const char *memory_text, const char *message,
+void calculator_page_render_tools(const char *memory_text,
+                                  calculator_precision_t precision,
+                                  const char *message,
                                   const expression_editor_t *editor,
                                   size_t history_count,
                                   size_t history_index,
                                   const char *history_formula,
                                   const char *history_result,
                                   const char *result_text) {
-    char status[48];
+    char status[64];
     char editor_text[EXPRESSION_EDITOR_CAPACITY + 2];
-    char history_line[80];
-    char result_line[48];
+    char history_line[EXPRESSION_EDITOR_CAPACITY + 8u];
+    char result_line[DECIMAL_ENGINE_TEXT_CAPACITY + 8u];
 
-    snprintf(status, sizeof status, "TOOLS  M %s  %s",
+    snprintf(status, sizeof status, "TOOLS %s  M %s  %s",
+             calculator_precision_label(precision),
              calculator_widget_tail(memory_text, 24), message);
     if (history_count) {
         snprintf(history_line, sizeof history_line, "H%u %s",

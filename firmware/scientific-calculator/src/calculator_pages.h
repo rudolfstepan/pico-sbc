@@ -4,6 +4,7 @@
 #include "calculator_ui_types.h"
 #include "calculator_logic.h"
 #include "calculator_complex.h"
+#include "calculator_precision.h"
 #include "calculator_statistics.h"
 #include "calculator_units.h"
 #include "calculator_symbols.h"
@@ -14,6 +15,7 @@
 #include <stddef.h>
 
 void calculator_page_render_expression(calc_page_t page, bool degrees,
+                                       calculator_precision_t precision,
                                        const char *message,
                                        const expression_editor_t *editor,
                                        const char *result_text);
@@ -23,7 +25,9 @@ void calculator_page_render_format(const programmer_engine_t *programmer,
                                    unsigned int fixed_fraction_bits,
                                    calculator_format_view_t view,
                                    const char *message);
-void calculator_page_render_tools(const char *memory_text, const char *message,
+void calculator_page_render_tools(const char *memory_text,
+                                  calculator_precision_t precision,
+                                  const char *message,
                                   const expression_editor_t *editor,
                                   size_t history_count,
                                   size_t history_index,

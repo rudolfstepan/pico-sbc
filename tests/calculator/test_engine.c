@@ -76,6 +76,31 @@ int main(void) {
         failures++;
     }
 
+    calc_engine_set_precision(CALCULATOR_PRECISION_NORMAL);
+    precise_status = calc_engine_evaluate_precise_symbols(
+        "pi", 0.0, "0", NULL, &precise, &precise_error);
+    if (precise_status != CALC_OK ||
+        strcmp(precise.text,
+               "3.141592653589793238462643383279502884197") != 0) {
+        printf("FAIL: normal precision pi status=%d text=%s\n",
+               precise_status, precise.text);
+        failures++;
+    }
+    calc_engine_set_precision(CALCULATOR_PRECISION_ULTRA);
+    precise_status = calc_engine_evaluate_precise_symbols(
+        "pi", 0.0, "0", NULL, &precise, &precise_error);
+    if (precise_status != CALC_OK || strlen(precise.text) != 129u) {
+        printf("FAIL: ultra precision pi status=%d length=%zu\n",
+               precise_status, strlen(precise.text));
+        failures++;
+    }
+    calc_engine_set_precision(CALCULATOR_PRECISION_COUNT);
+    if (calc_engine_precision() != CALCULATOR_PRECISION_ULTRA) {
+        puts("FAIL: invalid precision changed mode");
+        failures++;
+    }
+    calc_engine_set_precision(CALCULATOR_PRECISION_HIGH);
+
     calc_engine_set_degrees(false);
     expect_value("sin(pi/2)", 1.0, 1e-12);
 

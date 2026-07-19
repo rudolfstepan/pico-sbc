@@ -26,6 +26,7 @@ add_executable(calculator_engine_tests
     calculator/test_engine.c
     ${CALCULATOR_SRC}/calculation_status.c
     ${CALCULATOR_SRC}/calculator_engine.c
+    ${CALCULATOR_SRC}/calculator_precision.c
     ${CALCULATOR_SRC}/calculator_symbols.c
     ${CALCULATOR_SRC}/decimal_engine.c
     ${CALCULATOR_SRC}/high_precision_engine.c
@@ -43,6 +44,7 @@ add_test(NAME calculator_engine COMMAND calculator_engine_tests)
 add_executable(high_precision_engine_tests
     calculator/test_high_precision_engine.c
     ${CALCULATOR_SRC}/calculator_symbols.c
+    ${CALCULATOR_SRC}/calculator_precision.c
     ${CALCULATOR_SRC}/high_precision_engine.c
 )
 target_include_directories(high_precision_engine_tests PRIVATE
@@ -173,6 +175,7 @@ add_executable(graph_renderer_tests
     calculator/mock_lcd.c
     ${CALCULATOR_SRC}/calculation_status.c
     ${CALCULATOR_SRC}/calculator_engine.c
+    ${CALCULATOR_SRC}/calculator_precision.c
     ${CALCULATOR_SRC}/calculator_symbols.c
     ${CALCULATOR_SRC}/decimal_engine.c
     ${CALCULATOR_SRC}/high_precision_engine.c
@@ -220,6 +223,7 @@ add_executable(calculator_pages_tests
     ${CALCULATOR_SRC}/calculator_statistics.c
     ${CALCULATOR_SRC}/calculator_units.c
     ${CALCULATOR_SRC}/calculator_pages.c
+    ${CALCULATOR_SRC}/calculator_precision.c
     ${CALCULATOR_SRC}/calculator_symbols.c
     ${CALCULATOR_SRC}/calculator_widgets.c
     ${CALCULATOR_SRC}/complex_engine.c
@@ -334,6 +338,7 @@ add_executable(calculator_usb_protocol_tests
     ${CALCULATOR_SRC}/basic_engine.c
     ${CALCULATOR_SRC}/calculation_status.c
     ${CALCULATOR_SRC}/calculator_engine.c
+    ${CALCULATOR_SRC}/calculator_precision.c
     ${CALCULATOR_SRC}/calculator_symbols.c
     ${CALCULATOR_SRC}/calculator_usb_protocol.c
     ${CALCULATOR_SRC}/complex_engine.c

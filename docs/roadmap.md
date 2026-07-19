@@ -296,7 +296,7 @@ Ergebnisstrings. Der Hardwaretest von Anzeige und Neustart steht noch aus.
 - [x] `pi`, `e`, `tau` und `phi` ohne `double`-Zwischenwert berechnen.
 - [x] DEG/RAD, `ANS`, F1-F3, Fakultaet, `ncr` und `npr` unterstuetzen.
 - [x] A-F und Speicherregister M verlustfrei als Dezimaltext weiterreichen.
-- [x] Flashformat 5 mit Migration der Versionen 1 bis 4 implementieren.
+- [x] Flashformat 5 fuer den damaligen 80-Stellen-Zustand implementieren.
 - [x] Referenzwerte mit mehr als 50 Dezimalstellen per Host-Test pruefen.
 - [x] RP2040-Release-Build sowie Flash- und statischen RAMbedarf pruefen.
 - [ ] Laufzeit, Heapreserve und Bedienung auf dem echten Pico testen.
@@ -309,6 +309,30 @@ Softwarestand: Firmware 1.7.0 verwendet fuer wissenschaftliche Ausdruecke
 LibBF mit 320 Bit. 30 Host-Tests bestehen; der RP2040-Build belegt 312360 Byte
 Flashcode und 83480 Byte statischen RAM. Graph, Statistik, komplexe Zahlen
 und BASIC-Programme behalten vorerst ihre bestehenden `double`-Datenmodelle.
+
+## Phase 14: Waehlbare Praezision
+
+- [x] Gemeinsame Modi NORMAL, HIGH und ULTRA definieren.
+- [x] Dezimalkern auf 40, 80 oder 128 signifikante Stellen umschalten.
+- [x] LibBF-Arbeitsgenauigkeit passend auf 192, 320 oder 512 Bit setzen.
+- [x] Dynamische Taste `P40`/`P80`/`P128` auf TOOLS integrieren.
+- [x] Aktiven Modus in Statuszeile, USB-Diagnose und Desktop-App anzeigen.
+- [x] `GET PRECISION` und `SET PRECISION` sowie JSON-Format 5 implementieren.
+- [x] Flashformat 6 mit 128-stelliger BCD-Speicherung implementieren.
+- [x] Rueckwaertskompatibilitaet entfernen; nur Format 6 wird akzeptiert.
+- [x] NORMAL-, HIGH- und ULTRA-Referenzwerte per Host-Test pruefen.
+- [x] RP2040-Release-Build sowie Flash- und RAMbedarf pruefen.
+- [ ] Laufzeit und Bedienung aller drei Modi auf dem echten Pico testen.
+
+**Fertig, wenn:** Der Modus auf LCD und PC eindeutig waehlbar ist, alle
+normalen wissenschaftlichen Operationen die aktive Genauigkeit verwenden und
+128-stellige Werte in `ANS`, A-F, M, Verlauf, USB und Flash erhalten bleiben.
+
+Softwarestand: Firmware 1.8.0 verwendet 40 Stellen bei 192 Bit, 80 Stellen bei
+320 Bit oder 128 Stellen bei 512 Bit. Alle 30 Host-Tests bestehen; der
+RP2040-Release-Build belegt 314280 Byte Flashcode und 99752 Byte statischen
+RAM laut `arm-none-eabi-size`. Flashformat 6 ersetzt alle aelteren Formate
+ohne Migration; unbekannte Datensaetze fuehren zu Werkseinstellungen.
 
 ## Arbeitsweise pro Phase
 

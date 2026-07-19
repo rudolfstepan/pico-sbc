@@ -40,7 +40,8 @@ class FakeClient:
         responses = {
             "INFO": "OK INFO\tprotocol=4\tfirmware=1.6.0\tmodel=scientific-calculator",
             "DIAG": (
-                "OK DIAG\tpage=0\tangle=DEG\thistory=1\tstats=1\tmode=1"
+                "OK DIAG\tpage=0\tangle=DEG\tprecision=HIGH"
+                "\thistory=1\tstats=1\tmode=1"
                 "\tbasic=1\tbasic_state=STOPPED"
             ),
             "GET RESULT": "OK RESULT\t42",
@@ -62,6 +63,7 @@ class FakeClient:
             "GET BASIC OUTPUT": "OK BASIC_OUTPUT\t1",
             "GET BASIC OUTPUT 0": "OK BASIC_OUTPUT\t0\tDONE",
             "GET ANGLE": "OK ANGLE\tDEG",
+            "GET PRECISION": "OK PRECISION\tHIGH\t80",
             "GET MEMORY": "OK MEMORY\t0",
             "GET PROGRAMMER": (
                 "OK PROGRAMMER_STATE\tvalue=0\tbase=DEC\tsigned=0\tbit=0"
@@ -158,6 +160,7 @@ class GuiModelTests(unittest.TestCase):
         snapshot = read_device_snapshot(FakeClient())
         self.assertEqual(snapshot.info["firmware"], "1.6.0")
         self.assertEqual(snapshot.diagnostics["angle"], "DEG")
+        self.assertEqual(snapshot.state["precision"], "HIGH")
         self.assertEqual(snapshot.state["history"][0]["expression"], "6*7")
         self.assertEqual(snapshot.state["program"], ["10 END"])
 

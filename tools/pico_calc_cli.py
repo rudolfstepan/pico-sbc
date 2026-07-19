@@ -182,10 +182,10 @@ def read_basic_output(client: Any) -> list[str]:
 def export_state(client: Any) -> dict[str, Any]:
     result_fields = fields(client.command("GET RESULT"), "RESULT")
     expression_fields = fields(client.command("GET EXPR"), "EXPR")
-    variables: dict[str, float] = {}
+    variables: dict[str, str] = {}
     for name in "ABCDEF":
         item = fields(client.command(f"GET VAR {name}"), "VAR")
-        variables[item[0]] = float(item[1])
+        variables[item[0]] = item[1]
     functions: dict[str, str] = {}
     for number in range(1, 4):
         item = fields(client.command(f"GET FUNC F{number}"), "FUNC")
@@ -215,6 +215,7 @@ def export_state(client: Any) -> dict[str, Any]:
     program = read_basic_program(client)
 
     angle_fields = fields(client.command("GET ANGLE"), "ANGLE")
+    precision_fields = fields(client.command("GET PRECISION"), "PRECISION")
     memory_fields = fields(client.command("GET MEMORY"), "MEMORY")
     programmer = property_fields(
         client.command("GET PROGRAMMER"), "PROGRAMMER_STATE")
@@ -230,7 +231,7 @@ def export_state(client: Any) -> dict[str, Any]:
 
     return {
         "format": "pico-sbc-calculator-state",
-        "version": 4,
+        "version": 5,
         "result": float(result_fields[0]),
         "result_text": result_fields[0],
         "expression": expression_fields[0] if expression_fields else "",
@@ -240,7 +241,8 @@ def export_state(client: Any) -> dict[str, Any]:
         "statistics": {"mode": mode, "values": values},
         "program": program,
         "angle": angle_fields[0],
-        "memory": float(memory_fields[0]),
+        "precision": precision_fields[0],
+        "memory": memory_fields[0],
         "favorites": favorites,
         "programmer": {
             "value": int(programmer["value"]),
@@ -269,11 +271,22 @@ def import_state(client: Any, data: dict[str, Any]) -> None:
             raise ProtocolError("Winkelmodus muss DEG oder RAD sein")
         client.command(f"SET ANGLE {angle}")
 
+    if "precision" in data:
+        precision = str(data["precision"]).upper()
+        if precision not in ("NORMAL", "HIGH", "ULTRA"):
+            raise ProtocolError(
+                "Praezisionsmodus muss NORMAL, HIGH oder ULTRA sein")
+        client.command(f"SET PRECISION {precision}")
+
     if "memory" in data:
-        memory = float(data["memory"])
-        if not math.isfinite(memory):
+        memory = str(data["memory"])
+        try:
+            finite_memory = math.isfinite(float(memory))
+        except ValueError as error:
+            raise ProtocolError("Speicherwert muss endlich sein") from error
+        if not finite_memory:
             raise ProtocolError("Speicherwert muss endlich sein")
-        client.command(f"SET MEMORY {memory:.17g}")
+        client.command(f"SET MEMORY {memory}")
 
     favorites = data.get("favorites", {})
     if not isinstance(favorites, dict):
@@ -330,12 +343,17 @@ def import_state(client: Any, data: dict[str, Any]) -> None:
         normalized = str(name).upper()
         if normalized not in tuple("ABCDEF"):
             raise ProtocolError(f"Ungueltige Variable: {name}")
-        number = float(value)
-        if not math.isfinite(number):
+        number = str(value)
+        try:
+            finite_number = math.isfinite(float(number))
+        except ValueError as error:
+            raise ProtocolError(
+                f"Ungueltiger Variablenwert: {name}") from error
+        if not finite_number:
             raise ProtocolError(f"Ungueltiger Variablenwert: {name}")
         normalized_variables.append((normalized, number))
     for name, value in normalized_variables:
-        client.command(f"SET VAR {name} {value:.17g}")
+        client.command(f"SET VAR {name} {value}")
 
     functions = data.get("functions", {})
     if not isinstance(functions, dict):

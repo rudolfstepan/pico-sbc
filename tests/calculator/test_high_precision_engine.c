@@ -17,7 +17,8 @@ static int expect_prefix(const char *expression, bool degrees,
     high_precision_result_t result;
     int error = 0;
     high_precision_status_t status = high_precision_engine_evaluate(
-        expression, "0", NULL, degrees, &result, &error);
+        expression, "0", NULL, degrees, CALCULATOR_PRECISION_HIGH,
+        &result, &error);
     if (status != HIGH_PRECISION_STATUS_OK ||
         strncmp(result.text, prefix, strlen(prefix)) != 0) {
         fprintf(stderr, "%s -> %s '%s' error=%d\n", expression,
@@ -42,6 +43,21 @@ int main(void) {
     CHECK(expect_prefix(
         "phi", false,
         "1.61803398874989484820458683436563811772030917980576") == 0);
+
+    high_precision_result_t mode_result;
+    int mode_error = 0;
+    CHECK(high_precision_engine_evaluate(
+              "pi", "0", NULL, false, CALCULATOR_PRECISION_NORMAL,
+              &mode_result, &mode_error) == HIGH_PRECISION_STATUS_OK);
+    CHECK(strcmp(mode_result.text,
+                 "3.141592653589793238462643383279502884197") == 0);
+    CHECK(high_precision_engine_evaluate(
+              "pi", "0", NULL, false, CALCULATOR_PRECISION_ULTRA,
+              &mode_result, &mode_error) == HIGH_PRECISION_STATUS_OK);
+    CHECK(strlen(mode_result.text) == 129u);
+    CHECK(strncmp(mode_result.text,
+                  "3.14159265358979323846264338327950288419716939937510",
+                  52u) == 0);
     CHECK(expect_prefix(
         "sqrt(2)", false,
         "1.41421356237309504880168872420969807856967187537694") == 0);
@@ -90,7 +106,8 @@ int main(void) {
     high_precision_result_t result;
     int error = 0;
     CHECK(high_precision_engine_evaluate(
-              "f1(2)", "0", &symbols, false, &result, &error) ==
+              "f1(2)", "0", &symbols, false, CALCULATOR_PRECISION_HIGH,
+              &result, &error) ==
           HIGH_PRECISION_STATUS_OK);
     CHECK(strncmp(result.text,
                   "3.41421356237309504880168872420969807856967187537694",
@@ -100,19 +117,23 @@ int main(void) {
         "2.0000000000000000000000000000000000000000000001"));
     CHECK(high_precision_engine_evaluate(
               "A+0.0000000000000000000000000000000000000000000001",
-              "0", &symbols, false, &result, &error) ==
+              "0", &symbols, false, CALCULATOR_PRECISION_HIGH,
+              &result, &error) ==
           HIGH_PRECISION_STATUS_OK);
     CHECK(strcmp(result.text,
                  "2.0000000000000000000000000000000000000000000002") == 0);
 
     CHECK(high_precision_engine_evaluate(
-              "sqrt(-1)", "0", NULL, false, &result, &error) ==
+              "sqrt(-1)", "0", NULL, false, CALCULATOR_PRECISION_HIGH,
+              &result, &error) ==
           HIGH_PRECISION_STATUS_DOMAIN);
     CHECK(high_precision_engine_evaluate(
-              "1/0", "0", NULL, false, &result, &error) ==
+              "1/0", "0", NULL, false, CALCULATOR_PRECISION_HIGH,
+              &result, &error) ==
           HIGH_PRECISION_STATUS_DIV_ZERO);
     CHECK(high_precision_engine_evaluate(
-              "sin(", "0", NULL, false, &result, &error) ==
+              "sin(", "0", NULL, false, CALCULATOR_PRECISION_HIGH,
+              &result, &error) ==
           HIGH_PRECISION_STATUS_SYNTAX);
 
     puts("high precision engine tests passed");

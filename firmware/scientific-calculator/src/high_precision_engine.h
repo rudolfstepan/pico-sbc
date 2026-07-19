@@ -1,12 +1,11 @@
 #ifndef HIGH_PRECISION_ENGINE_H
 #define HIGH_PRECISION_ENGINE_H
 
+#include "calculator_precision.h"
 #include "calculator_symbols.h"
 #include "decimal_engine.h"
 
 #include <stdbool.h>
-
-#define HIGH_PRECISION_DECIMAL_DIGITS 80u
 
 typedef enum {
     HIGH_PRECISION_STATUS_OK,
@@ -26,6 +25,7 @@ typedef struct {
 high_precision_status_t high_precision_engine_evaluate(
     const char *expression, const char *ans_text,
     const calculator_symbols_t *symbols, bool degrees,
+    calculator_precision_t precision,
     high_precision_result_t *result, int *error_position);
 const char *high_precision_status_text(high_precision_status_t status);
 

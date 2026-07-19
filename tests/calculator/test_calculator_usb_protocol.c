@@ -31,6 +31,7 @@ int main(void) {
     memset(&state, 0, sizeof state);
     snprintf(state.ans_text, sizeof state.ans_text, "0");
     state.degrees = true;
+    state.precision = CALCULATOR_PRECISION_HIGH;
     state.page = PAGE_BASIC;
     state.format_bits = 64;
     state.fixed_fraction_bits = 16;
@@ -50,7 +51,7 @@ int main(void) {
     CHECK(strcmp(run(&context, "PING", &effect), "OK PONG") == 0);
     CHECK(!effect.changed);
     CHECK(strstr(run(&context, "INFO", &effect), "protocol=4") != NULL);
-    CHECK(strstr(run(&context, "DIAG", &effect), "mode=1") != NULL);
+    CHECK(strstr(run(&context, "DIAG", &effect), "precision=HIGH") != NULL);
 
     CHECK(strcmp(run(&context, "SET EXPR 6*7", &effect),
                  "OK EXPR\t6*7") == 0);
@@ -107,6 +108,17 @@ int main(void) {
     CHECK(strcmp(run(&context, "SET ANGLE RAD", &effect),
                  "OK ANGLE\tRAD") == 0);
     CHECK(!state.degrees && effect.persistent_changed);
+    CHECK(strcmp(run(&context, "GET PRECISION", &effect),
+                 "OK PRECISION\tHIGH\t80") == 0);
+    CHECK(strcmp(run(&context, "SET PRECISION ULTRA", &effect),
+                 "OK PRECISION\tULTRA\t128") == 0);
+    CHECK(state.precision == CALCULATOR_PRECISION_ULTRA &&
+          effect.persistent_changed);
+    const char *ultra_pi = run(&context, "EVAL pi", &effect);
+    CHECK(strncmp(ultra_pi, "OK RESULT\t3.14159265358979323846", 31u) == 0);
+    CHECK(strlen(ultra_pi) == 139u);
+    CHECK(strcmp(run(&context, "SET PRECISION HIGH", &effect),
+                 "OK PRECISION\tHIGH\t80") == 0);
     CHECK(strcmp(run(&context, "SET MEMORY 12.5", &effect),
                  "OK MEMORY\t12.5") == 0);
     CHECK(strcmp(run(&context, "GET MEMORY", &effect),

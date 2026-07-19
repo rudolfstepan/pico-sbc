@@ -8,8 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* 80 decimal digits need 266 bits; the remainder are guard bits. */
-#define HP_WORK_BITS 320u
 #define HP_MAX_DEPTH 12u
 #define HP_FLAGS (BF_RNDN | BF_FLAG_EXT_EXP)
 
@@ -21,6 +19,8 @@ typedef struct {
     const calculator_symbols_t *symbols;
     const bf_t *x;
     bool degrees;
+    limb_t work_bits;
+    unsigned int decimal_digits;
     unsigned int active_functions;
     unsigned int depth;
     int bf_status;
@@ -90,7 +90,7 @@ static bool identifier_is(const char *name, size_t length,
 static bool hp_set_text(hp_parser_t *parser, bf_t *value, const char *text,
                         const char *position) {
     const char *end = NULL;
-    int status = bf_atof(value, text, &end, 10, HP_WORK_BITS,
+    int status = bf_atof(value, text, &end, 10, parser->work_bits,
                          HP_FLAGS | BF_ATOF_NO_NAN_INF);
     if (!end || end == text || *end) {
         hp_fail_at(parser, HIGH_PRECISION_STATUS_SYNTAX, position);
@@ -111,7 +111,7 @@ static bool hp_set_double(hp_parser_t *parser, bf_t *value, double input,
 
 static bool hp_constant_pi(hp_parser_t *parser, bf_t *result,
                            const char *position) {
-    int status = bf_const_pi(result, HP_WORK_BITS, HP_FLAGS);
+    int status = bf_const_pi(result, parser->work_bits, HP_FLAGS);
     return hp_accept_status(parser, status, result, position);
 }
 
@@ -121,7 +121,7 @@ static bool hp_constant_e(hp_parser_t *parser, bf_t *result,
     bf_init(parser->context, &one);
     int status = bf_set_ui(&one, 1u);
     if (hp_accept_status(parser, status, &one, position)) {
-        status = bf_exp(result, &one, HP_WORK_BITS, HP_FLAGS);
+        status = bf_exp(result, &one, parser->work_bits, HP_FLAGS);
         hp_accept_status(parser, status, result, position);
     }
     bf_delete(&one);
@@ -136,15 +136,15 @@ static bool hp_constant_phi(hp_parser_t *parser, bf_t *result,
     bf_init(parser->context, &root);
     int status = bf_set_ui(&five, 5u);
     if (hp_accept_status(parser, status, &five, position)) {
-        status = bf_sqrt(&root, &five, HP_WORK_BITS, HP_FLAGS);
+        status = bf_sqrt(&root, &five, parser->work_bits, HP_FLAGS);
     }
     if (parser->status == HIGH_PRECISION_STATUS_OK &&
         hp_accept_status(parser, status, &root, position)) {
-        status = bf_add_si(&root, &root, 1, HP_WORK_BITS, HP_FLAGS);
+        status = bf_add_si(&root, &root, 1, parser->work_bits, HP_FLAGS);
     }
     if (parser->status == HIGH_PRECISION_STATUS_OK &&
         hp_accept_status(parser, status, &root, position)) {
-        status = bf_mul_2exp(&root, -1, HP_WORK_BITS, HP_FLAGS);
+        status = bf_mul_2exp(&root, -1, parser->work_bits, HP_FLAGS);
     }
     if (parser->status == HIGH_PRECISION_STATUS_OK &&
         hp_accept_status(parser, status, &root, position)) {
@@ -163,23 +163,23 @@ static bool hp_apply_binary(hp_parser_t *parser, char operation,
     int status = 0;
     switch (operation) {
         case '+':
-            status = bf_add(&combined, left, right, HP_WORK_BITS, HP_FLAGS);
+            status = bf_add(&combined, left, right, parser->work_bits, HP_FLAGS);
             break;
         case '-':
-            status = bf_sub(&combined, left, right, HP_WORK_BITS, HP_FLAGS);
+            status = bf_sub(&combined, left, right, parser->work_bits, HP_FLAGS);
             break;
         case '*':
-            status = bf_mul(&combined, left, right, HP_WORK_BITS, HP_FLAGS);
+            status = bf_mul(&combined, left, right, parser->work_bits, HP_FLAGS);
             break;
         case '/':
-            status = bf_div(&combined, left, right, HP_WORK_BITS, HP_FLAGS);
+            status = bf_div(&combined, left, right, parser->work_bits, HP_FLAGS);
             break;
         case '%':
-            status = bf_rem(&combined, left, right, HP_WORK_BITS, HP_FLAGS,
+            status = bf_rem(&combined, left, right, parser->work_bits, HP_FLAGS,
                             BF_RNDZ);
             break;
         case '^':
-            status = bf_pow(&combined, left, right, HP_WORK_BITS, HP_FLAGS);
+            status = bf_pow(&combined, left, right, parser->work_bits, HP_FLAGS);
             break;
         default:
             hp_fail_at(parser, HIGH_PRECISION_STATUS_SYNTAX, position);
@@ -206,17 +206,17 @@ static bool hp_scale_angle(hp_parser_t *parser, bf_t *value, bool to_radians,
     if (hp_accept_status(parser, status, &divisor, position) &&
         hp_constant_pi(parser, &pi, position)) {
         if (to_radians) {
-            status = bf_mul(&converted, value, &pi, HP_WORK_BITS, HP_FLAGS);
+            status = bf_mul(&converted, value, &pi, parser->work_bits, HP_FLAGS);
             if (hp_accept_status(parser, status, &converted, position)) {
                 status = bf_div(&converted, &converted, &divisor,
-                                HP_WORK_BITS, HP_FLAGS);
+                                parser->work_bits, HP_FLAGS);
             }
         } else {
             status = bf_mul(&converted, value, &divisor,
-                            HP_WORK_BITS, HP_FLAGS);
+                            parser->work_bits, HP_FLAGS);
             if (hp_accept_status(parser, status, &converted, position)) {
                 status = bf_div(&converted, &converted, &pi,
-                                HP_WORK_BITS, HP_FLAGS);
+                                parser->work_bits, HP_FLAGS);
             }
         }
         if (parser->status == HIGH_PRECISION_STATUS_OK &&
@@ -256,7 +256,7 @@ static bool hp_factorial(hp_parser_t *parser, bf_t *result,
     for (int i = 2; i <= n &&
          hp_accept_status(parser, status, result, position); ++i) {
         status = bf_mul_ui(result, result, (uint64_t)i,
-                           HP_WORK_BITS, HP_FLAGS);
+                           parser->work_bits, HP_FLAGS);
     }
     return hp_accept_status(parser, status, result, position);
 }
@@ -277,7 +277,7 @@ static bool hp_combinatoric(hp_parser_t *parser, bf_t *result,
          hp_accept_status(parser, status, result, position); ++i) {
         int factor = permutation ? n - i + 1 : n - r + i;
         status = bf_mul_ui(result, result, (uint64_t)factor,
-                           HP_WORK_BITS, HP_FLAGS);
+                           parser->work_bits, HP_FLAGS);
         if (!permutation &&
             hp_accept_status(parser, status, result, position)) {
             bf_t denominator;
@@ -287,7 +287,7 @@ static bool hp_combinatoric(hp_parser_t *parser, bf_t *result,
             status = bf_set_ui(&denominator, (uint64_t)i);
             if (hp_accept_status(parser, status, &denominator, position)) {
                 status = bf_div(&quotient, result, &denominator,
-                                HP_WORK_BITS, HP_FLAGS);
+                                parser->work_bits, HP_FLAGS);
             }
             if (hp_accept_status(parser, status, &quotient, position)) {
                 hp_move(result, &quotient);
@@ -310,20 +310,22 @@ static bool hp_hyperbolic(hp_parser_t *parser, bf_t *result,
     bf_init(parser->context, &negative_argument);
     bf_init(parser->context, &negative);
     bf_init(parser->context, &combined);
-    int status = bf_exp(&positive, argument, HP_WORK_BITS, HP_FLAGS);
+    int status = bf_exp(&positive, argument, parser->work_bits, HP_FLAGS);
     if (hp_accept_status(parser, status, &positive, position)) {
         status = bf_set(&negative_argument, argument);
     }
     if (hp_accept_status(parser, status, &negative_argument, position)) {
         bf_neg(&negative_argument);
         status = bf_exp(&negative, &negative_argument,
-                        HP_WORK_BITS, HP_FLAGS);
+                        parser->work_bits, HP_FLAGS);
     }
     if (hp_accept_status(parser, status, &negative, position)) {
         bool cosine = identifier_is(name, name_length, "cosh");
         status = cosine
-            ? bf_add(&combined, &positive, &negative, HP_WORK_BITS, HP_FLAGS)
-            : bf_sub(&combined, &positive, &negative, HP_WORK_BITS, HP_FLAGS);
+            ? bf_add(&combined, &positive, &negative,
+                     parser->work_bits, HP_FLAGS)
+            : bf_sub(&combined, &positive, &negative,
+                     parser->work_bits, HP_FLAGS);
     }
     if (hp_accept_status(parser, status, &combined, position)) {
         if (identifier_is(name, name_length, "tanh")) {
@@ -332,10 +334,10 @@ static bool hp_hyperbolic(hp_parser_t *parser, bf_t *result,
             bf_init(parser->context, &denominator);
             bf_init(parser->context, &quotient);
             status = bf_add(&denominator, &positive, &negative,
-                            HP_WORK_BITS, HP_FLAGS);
+                            parser->work_bits, HP_FLAGS);
             if (hp_accept_status(parser, status, &denominator, position)) {
                 status = bf_div(&quotient, &combined, &denominator,
-                                HP_WORK_BITS, HP_FLAGS);
+                                parser->work_bits, HP_FLAGS);
             }
             if (hp_accept_status(parser, status, &quotient, position)) {
                 hp_move(result, &quotient);
@@ -343,7 +345,8 @@ static bool hp_hyperbolic(hp_parser_t *parser, bf_t *result,
             bf_delete(&denominator);
             bf_delete(&quotient);
         } else {
-            status = bf_mul_2exp(&combined, -1, HP_WORK_BITS, HP_FLAGS);
+            status = bf_mul_2exp(&combined, -1,
+                                 parser->work_bits, HP_FLAGS);
             if (hp_accept_status(parser, status, &combined, position)) {
                 hp_move(result, &combined);
             }
@@ -371,27 +374,28 @@ static bool hp_apply_function(hp_parser_t *parser, const char *name,
         status = bf_set(result, first);
         if (status == 0) status = bf_rint(result, BF_RNDU);
     } else if (identifier_is(name, name_length, "sqrt") && !has_second) {
-        status = bf_sqrt(result, first, HP_WORK_BITS, HP_FLAGS);
+        status = bf_sqrt(result, first, parser->work_bits, HP_FLAGS);
     } else if (identifier_is(name, name_length, "exp") && !has_second) {
-        status = bf_exp(result, first, HP_WORK_BITS, HP_FLAGS);
+        status = bf_exp(result, first, parser->work_bits, HP_FLAGS);
     } else if (identifier_is(name, name_length, "ln") && !has_second) {
-        status = bf_log(result, first, HP_WORK_BITS, HP_FLAGS);
+        status = bf_log(result, first, parser->work_bits, HP_FLAGS);
     } else if ((identifier_is(name, name_length, "log") ||
                 identifier_is(name, name_length, "log10")) && !has_second) {
         bf_t ten;
         bf_t denominator;
         bf_init(parser->context, &ten);
         bf_init(parser->context, &denominator);
-        status = bf_log(result, first, HP_WORK_BITS, HP_FLAGS);
+        status = bf_log(result, first, parser->work_bits, HP_FLAGS);
         if (hp_accept_status(parser, status, result, position)) {
             status = bf_set_ui(&ten, 10u);
         }
         if (hp_accept_status(parser, status, &ten, position)) {
-            status = bf_log(&denominator, &ten, HP_WORK_BITS, HP_FLAGS);
+            status = bf_log(&denominator, &ten,
+                            parser->work_bits, HP_FLAGS);
         }
         if (hp_accept_status(parser, status, &denominator, position)) {
             status = bf_div(result, result, &denominator,
-                            HP_WORK_BITS, HP_FLAGS);
+                            parser->work_bits, HP_FLAGS);
         }
         bf_delete(&ten);
         bf_delete(&denominator);
@@ -400,21 +404,21 @@ static bool hp_apply_function(hp_parser_t *parser, const char *name,
                 identifier_is(name, name_length, "tan")) && !has_second) {
         if (!hp_scale_angle(parser, first, true, position)) return false;
         if (identifier_is(name, name_length, "sin")) {
-            status = bf_sin(result, first, HP_WORK_BITS, HP_FLAGS);
+            status = bf_sin(result, first, parser->work_bits, HP_FLAGS);
         } else if (identifier_is(name, name_length, "cos")) {
-            status = bf_cos(result, first, HP_WORK_BITS, HP_FLAGS);
+            status = bf_cos(result, first, parser->work_bits, HP_FLAGS);
         } else {
-            status = bf_tan(result, first, HP_WORK_BITS, HP_FLAGS);
+            status = bf_tan(result, first, parser->work_bits, HP_FLAGS);
         }
     } else if ((identifier_is(name, name_length, "asin") ||
                 identifier_is(name, name_length, "acos") ||
                 identifier_is(name, name_length, "atan")) && !has_second) {
         if (identifier_is(name, name_length, "asin")) {
-            status = bf_asin(result, first, HP_WORK_BITS, HP_FLAGS);
+            status = bf_asin(result, first, parser->work_bits, HP_FLAGS);
         } else if (identifier_is(name, name_length, "acos")) {
-            status = bf_acos(result, first, HP_WORK_BITS, HP_FLAGS);
+            status = bf_acos(result, first, parser->work_bits, HP_FLAGS);
         } else {
-            status = bf_atan(result, first, HP_WORK_BITS, HP_FLAGS);
+            status = bf_atan(result, first, parser->work_bits, HP_FLAGS);
         }
         if (hp_accept_status(parser, status, result, position) &&
             !hp_scale_angle(parser, result, false, position)) {
@@ -428,9 +432,11 @@ static bool hp_apply_function(hp_parser_t *parser, const char *name,
     } else if (identifier_is(name, name_length, "fac") && !has_second) {
         return hp_factorial(parser, result, first, position);
     } else if (identifier_is(name, name_length, "pow") && has_second) {
-        status = bf_pow(result, first, second, HP_WORK_BITS, HP_FLAGS);
+        status = bf_pow(result, first, second,
+                        parser->work_bits, HP_FLAGS);
     } else if (identifier_is(name, name_length, "atan2") && has_second) {
-        status = bf_atan2(result, first, second, HP_WORK_BITS, HP_FLAGS);
+        status = bf_atan2(result, first, second,
+                          parser->work_bits, HP_FLAGS);
         if (hp_accept_status(parser, status, result, position) &&
             !hp_scale_angle(parser, result, false, position)) {
             return false;
@@ -466,6 +472,8 @@ static bool hp_evaluate_user_function(hp_parser_t *parser, size_t function,
         .symbols = parser->symbols,
         .x = argument,
         .degrees = parser->degrees,
+        .work_bits = parser->work_bits,
+        .decimal_digits = parser->decimal_digits,
         .active_functions = parser->active_functions | (1u << function),
         .depth = parser->depth + 1u,
         .status = HIGH_PRECISION_STATUS_OK,
@@ -522,7 +530,8 @@ static bool hp_parse_identifier(hp_parser_t *parser, bf_t *value) {
         }
         if (identifier_is(name, length, "tau")) {
             if (!hp_constant_pi(parser, value, position)) return false;
-            int status = bf_mul_ui(value, value, 2u, HP_WORK_BITS, HP_FLAGS);
+            int status = bf_mul_ui(value, value, 2u,
+                                   parser->work_bits, HP_FLAGS);
             return hp_accept_status(parser, status, value, position);
         }
         if (identifier_is(name, length, "phi")) {
@@ -611,7 +620,8 @@ static bool hp_parse_primary(hp_parser_t *parser, bf_t *value) {
     }
     const char *position = parser->cursor;
     const char *end = NULL;
-    int status = bf_atof(value, parser->cursor, &end, 10, HP_WORK_BITS,
+    int status = bf_atof(value, parser->cursor, &end, 10,
+                         parser->work_bits,
                          HP_FLAGS | BF_ATOF_NO_NAN_INF);
     if (!end || end == parser->cursor) {
         hp_fail_at(parser, HIGH_PRECISION_STATUS_SYNTAX, position);
@@ -702,9 +712,11 @@ static void trim_formatted_number(char *text) {
 high_precision_status_t high_precision_engine_evaluate(
     const char *expression, const char *ans_text,
     const calculator_symbols_t *symbols, bool degrees,
+    calculator_precision_t precision,
     high_precision_result_t *result, int *error_position) {
     if (error_position) *error_position = 0;
-    if (!expression || !*expression || !result) {
+    if (!expression || !*expression || !result ||
+        precision >= CALCULATOR_PRECISION_COUNT) {
         return HIGH_PRECISION_STATUS_SYNTAX;
     }
 
@@ -717,6 +729,8 @@ high_precision_status_t high_precision_engine_evaluate(
         .ans_text = ans_text,
         .symbols = symbols,
         .degrees = degrees,
+        .work_bits = calculator_precision_work_bits(precision),
+        .decimal_digits = calculator_precision_digits(precision),
         .status = HIGH_PRECISION_STATUS_OK,
     };
     bf_t value;
@@ -729,7 +743,7 @@ high_precision_status_t high_precision_engine_evaluate(
     if (parser.status == HIGH_PRECISION_STATUS_OK) {
         size_t length = 0u;
         char *formatted = bf_ftoa(
-            &length, &value, 10, HIGH_PRECISION_DECIMAL_DIGITS,
+            &length, &value, 10, parser.decimal_digits,
             BF_RNDN | BF_FTOA_FORMAT_FIXED);
         if (!formatted) {
             hp_fail(&parser, HIGH_PRECISION_STATUS_MEMORY);

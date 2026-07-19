@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CALCULATOR_FIRMWARE_VERSION "1.7.0"
+#define CALCULATOR_FIRMWARE_VERSION "1.8.0"
 #define LOGIC_USB_CHUNK_CAPACITY 112u
 
 static void respond(char *response, size_t size, const char *format, ...) {
@@ -268,6 +268,16 @@ static void execute_get(calculator_usb_context_t *context, char *cursor,
         }
         return;
     }
+    if (word_is(subject, "PRECISION")) {
+        if (*remaining_text(cursor)) {
+            respond(response, response_size, "ERR ARGUMENT PRECISION");
+        } else {
+            respond(response, response_size, "OK PRECISION\t%s\t%u",
+                    calculator_precision_name(state->precision),
+                    calculator_precision_digits(state->precision));
+        }
+        return;
+    }
     if (word_is(subject, "PROGRAMMER")) {
         if (*remaining_text(cursor)) {
             respond(response, response_size, "ERR ARGUMENT PROGRAMMER");
@@ -479,6 +489,24 @@ static void execute_set(calculator_usb_context_t *context, char *cursor,
                 state->degrees ? "DEG" : "RAD");
         return;
     }
+    if (word_is(subject, "PRECISION")) {
+        char *mode = next_word(&cursor);
+        calculator_precision_t precision;
+        if (!mode || *remaining_text(cursor) ||
+            !calculator_precision_parse(mode, &precision)) {
+            respond(response, response_size,
+                    "ERR ARGUMENT PRECISION NORMAL|HIGH|ULTRA");
+            return;
+        }
+        state->precision = precision;
+        calc_engine_set_precision(precision);
+        effect->changed = true;
+        effect->persistent_changed = true;
+        respond(response, response_size, "OK PRECISION\t%s\t%u",
+                calculator_precision_name(precision),
+                calculator_precision_digits(precision));
+        return;
+    }
     if (word_is(subject, "MEMORY")) {
         char *value_word = next_word(&cursor);
         double value = 0.0;
@@ -618,6 +646,8 @@ static void execute_eval(calculator_usb_context_t *context, char *cursor,
         respond(response, response_size, "ERR TOO_LONG EXPR");
         return;
     }
+    calc_engine_set_degrees(context->state->degrees);
+    calc_engine_set_precision(context->state->precision);
     calculator_result_t result;
     int error_position = 0;
     calc_status_t status = calc_engine_evaluate_precise_symbols(
@@ -1505,10 +1535,12 @@ void calculator_usb_execute(calculator_usb_context_t *context,
             respond(response, response_size, "ERR ARGUMENT DIAG");
         } else {
             respond(response, response_size,
-                    "OK DIAG\tpage=%u\tangle=%s\thistory=%u\tstats=%u\tmode=%u"
+                    "OK DIAG\tpage=%u\tangle=%s\tprecision=%s\thistory=%u"
+                    "\tstats=%u\tmode=%u"
                     "\tbasic=%u\tbasic_state=%s",
                     (unsigned int)context->state->page,
                     context->state->degrees ? "DEG" : "RAD",
+                    calculator_precision_name(context->state->precision),
                     (unsigned int)context->state->history_count,
                     (unsigned int)context->state->statistics.count,
                     context->state->statistics.two_variable ? 2u : 1u,

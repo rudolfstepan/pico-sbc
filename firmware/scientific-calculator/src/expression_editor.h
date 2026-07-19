@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#define EXPRESSION_EDITOR_CAPACITY 96
+#define EXPRESSION_EDITOR_CAPACITY 192
 
 typedef enum {
     EDITOR_CURSOR_LEFT,

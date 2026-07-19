@@ -5,12 +5,6 @@
 #include <string.h>
 
 #define RECORD_HEADER_SIZE 20u
-#define LEGACY_PERSISTENCE_VERSION 1u
-#define STATISTICS_PERSISTENCE_VERSION 2u
-#define BASIC_PERSISTENCE_VERSION 3u
-#define PRECISION_PERSISTENCE_VERSION 4u
-#define SYMBOL_PRECISION_PERSISTENCE_VERSION 5u
-#define LEGACY_RESULT_CAPACITY 32u
 
 static const uint8_t record_magic[4] = {'P', 'C', 'A', 'L'};
 
@@ -192,6 +186,7 @@ static bool statistics_is_valid(const statistics_dataset_t *statistics) {
 static bool state_is_valid(const calculator_persisted_state_t *state) {
     if (!state || state->page < PAGE_BASIC ||
         state->page > PAGE_BASIC_PROGRAM ||
+        state->precision >= CALCULATOR_PRECISION_COUNT ||
         !format_bits_valid(state->format_bits) ||
         state->fixed_fraction_bits >= state->format_bits ||
         !isfinite(state->ans) || !isfinite(state->memory_value) ||
@@ -241,6 +236,7 @@ static bool state_is_valid(const calculator_persisted_state_t *state) {
 void calculator_persistence_defaults(calculator_persisted_state_t *state) {
     memset(state, 0, sizeof *state);
     state->degrees = true;
+    state->precision = CALCULATOR_PRECISION_HIGH;
     state->page = PAGE_BASIC;
     state->format_bits = 32;
     state->fixed_fraction_bits = 16;
@@ -280,8 +276,6 @@ static void write_payload(writer_t *writer,
     for (size_t i = 0; i < CALCULATOR_PERSISTENCE_HISTORY_CAPACITY; ++i) {
         write_bytes(writer, state->history[i].formula,
                     sizeof state->history[i].formula);
-        write_bytes(writer, state->history[i].result,
-                    LEGACY_RESULT_CAPACITY);
         write_double(writer, state->history[i].value);
     }
 
@@ -343,6 +337,7 @@ static void write_payload(writer_t *writer,
     for (size_t i = 0; i < CALCULATOR_VARIABLE_COUNT; ++i) {
         write_decimal_text(writer, state->symbols.variable_text[i]);
     }
+    write_u8(writer, (uint8_t)state->precision);
 }
 
 static uint32_t crc32_update(uint32_t crc, const uint8_t *data, size_t size) {
@@ -403,7 +398,7 @@ bool calculator_persistence_encode(
     return true;
 }
 
-static void read_payload(reader_t *reader, uint16_t version,
+static void read_payload(reader_t *reader,
                          calculator_persisted_state_t *state) {
     calculator_persistence_defaults(state);
     state->degrees = read_u8(reader) != 0;
@@ -430,12 +425,12 @@ static void read_payload(reader_t *reader, uint16_t version,
     state->history_index = read_u8(reader);
     for (unsigned int i = 0; i < 6; ++i) (void)read_u8(reader);
     for (size_t i = 0; i < CALCULATOR_PERSISTENCE_HISTORY_CAPACITY; ++i) {
+        memset(state->history[i].formula, 0,
+               sizeof state->history[i].formula);
         read_bytes(reader, state->history[i].formula,
                    sizeof state->history[i].formula);
         memset(state->history[i].result, 0,
                sizeof state->history[i].result);
-        read_bytes(reader, state->history[i].result,
-                   LEGACY_RESULT_CAPACITY);
         state->history[i].value = read_double(reader);
     }
 
@@ -465,50 +460,33 @@ static void read_payload(reader_t *reader, uint16_t version,
     }
     state->graph.analysis_text[0] = '\0';
 
-    if (version >= 2u) {
-        state->statistics.count = read_u8(reader);
-        state->statistics.two_variable = read_u8(reader) != 0;
-        for (unsigned int i = 0; i < 6; ++i) (void)read_u8(reader);
-        for (size_t i = 0; i < STATISTICS_CAPACITY; ++i) {
-            state->statistics.x[i] = read_double(reader);
-            state->statistics.y[i] = read_double(reader);
-        }
+    state->statistics.count = read_u8(reader);
+    state->statistics.two_variable = read_u8(reader) != 0;
+    for (unsigned int i = 0; i < 6; ++i) (void)read_u8(reader);
+    for (size_t i = 0; i < STATISTICS_CAPACITY; ++i) {
+        state->statistics.x[i] = read_double(reader);
+        state->statistics.y[i] = read_double(reader);
     }
-    if (version >= BASIC_PERSISTENCE_VERSION) {
-        state->basic_program.count = read_u8(reader);
-        for (unsigned int i = 0; i < 7; ++i) (void)read_u8(reader);
-        for (size_t i = 0; i < BASIC_PROGRAM_MAX_LINES; ++i) {
-            state->basic_program.lines[i].number = read_u16(reader);
-            read_bytes(reader, state->basic_program.lines[i].text,
-                       sizeof state->basic_program.lines[i].text);
-        }
+    state->basic_program.count = read_u8(reader);
+    for (unsigned int i = 0; i < 7; ++i) (void)read_u8(reader);
+    for (size_t i = 0; i < BASIC_PROGRAM_MAX_LINES; ++i) {
+        state->basic_program.lines[i].number = read_u16(reader);
+        read_bytes(reader, state->basic_program.lines[i].text,
+                   sizeof state->basic_program.lines[i].text);
     }
-    if (version >= PRECISION_PERSISTENCE_VERSION) {
-        read_decimal_text(reader, state->ans_text, sizeof state->ans_text);
-        for (size_t i = 0; i < CALCULATOR_PERSISTENCE_HISTORY_CAPACITY; ++i) {
-            read_decimal_text(reader, state->history[i].result,
-                              sizeof state->history[i].result);
-            if (i >= state->history_count) state->history[i].result[0] = '\0';
-        }
-    } else {
-        snprintf(state->ans_text, sizeof state->ans_text, "%.17g", state->ans);
+    read_decimal_text(reader, state->ans_text, sizeof state->ans_text);
+    for (size_t i = 0; i < CALCULATOR_PERSISTENCE_HISTORY_CAPACITY; ++i) {
+        read_decimal_text(reader, state->history[i].result,
+                          sizeof state->history[i].result);
+        if (i >= state->history_count) state->history[i].result[0] = '\0';
     }
-    if (version >= SYMBOL_PRECISION_PERSISTENCE_VERSION) {
-        read_decimal_text(reader, state->memory_text,
-                          sizeof state->memory_text);
-        for (size_t i = 0; i < CALCULATOR_VARIABLE_COUNT; ++i) {
-            read_decimal_text(reader, state->symbols.variable_text[i],
-                              sizeof state->symbols.variable_text[i]);
-        }
-    } else {
-        snprintf(state->memory_text, sizeof state->memory_text, "%.17g",
-                 state->memory_value);
-        for (size_t i = 0; i < CALCULATOR_VARIABLE_COUNT; ++i) {
-            snprintf(state->symbols.variable_text[i],
-                     sizeof state->symbols.variable_text[i], "%.17g",
-                     state->symbols.variables[i]);
-        }
+    read_decimal_text(reader, state->memory_text,
+                      sizeof state->memory_text);
+    for (size_t i = 0; i < CALCULATOR_VARIABLE_COUNT; ++i) {
+        read_decimal_text(reader, state->symbols.variable_text[i],
+                          sizeof state->symbols.variable_text[i]);
     }
+    state->precision = (calculator_precision_t)read_u8(reader);
 }
 
 static bool record_is_erased(const uint8_t *record, size_t size) {
@@ -546,11 +524,7 @@ calculator_persistence_status_t calculator_persistence_decode(
         payload_size > record_size - RECORD_HEADER_SIZE) {
         return CALCULATOR_PERSISTENCE_CORRUPT;
     }
-    if (version != LEGACY_PERSISTENCE_VERSION &&
-        version != STATISTICS_PERSISTENCE_VERSION &&
-        version != BASIC_PERSISTENCE_VERSION &&
-        version != PRECISION_PERSISTENCE_VERSION &&
-        version != CALCULATOR_PERSISTENCE_VERSION) {
+    if (version != CALCULATOR_PERSISTENCE_VERSION) {
         return CALCULATOR_PERSISTENCE_UNSUPPORTED;
     }
     if (record_crc(record, payload_size) != expected_crc) {
@@ -563,7 +537,7 @@ calculator_persistence_status_t calculator_persistence_decode(
         .size = payload_size,
         .valid = true,
     };
-    read_payload(&payload, version, &decoded);
+    read_payload(&payload, &decoded);
     if (!payload.valid || payload.position != payload.size ||
         !state_is_valid(&decoded)) {
         return CALCULATOR_PERSISTENCE_CORRUPT;

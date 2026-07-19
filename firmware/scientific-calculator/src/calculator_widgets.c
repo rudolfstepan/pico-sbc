@@ -205,6 +205,9 @@ void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
     char favorite_label[12];
     const char *label = key->action == ACT_ANGLE
         ? (state->degrees ? "DEG" : "RAD") : key->label;
+    if (key->action == ACT_PRECISION) {
+        label = calculator_precision_label(state->precision);
+    }
     if (key->action == ACT_FAVORITE && key->token[0] >= '0' &&
         key->token[0] <= '5' && key->token[1] == '\0') {
         size_t index = (size_t)(key->token[0] - '0');

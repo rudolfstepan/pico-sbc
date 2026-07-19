@@ -13,7 +13,8 @@ Installation, Bedienung, alle Rechnermodi und die PC-Anwendung.
 - `sin`, `cos`, `tan`, `asin`, `acos`, `atan`
 - `sinh`, `cosh`, `tanh`, `ln`, `log`, `exp`, `sqrt`
 - Betrag, Abrunden, Fakultaet, Kombinationen und Permutationen
-- 80-stellige wissenschaftliche Funktionen und Konstanten Pi, e, Tau und Phi
+- Waehlbare 40-, 80- oder 128-stellige wissenschaftliche Funktionen und
+  Konstanten Pi, e, Tau und Phi
 - Elf Touch-Ebenen: `BASIC`, `SCIENTIFIC`, `PROGRAMMER`, `FORMAT`, `TOOLS`,
   `SYMBOLS`, `LOGIC`, `UNITS`, `COMPLEX`, `STATS` und `CODE`
 - `PROGRAMMER`-Ebene fuer exakte 64-Bit-Werte
@@ -63,6 +64,11 @@ Editor den Cursor und im Graphenmodus den sichtbaren Ausschnitt.
 Funktionen setzen automatisch eine oeffnende Klammer. Die schliessende Klammer
 wird ueber `)` eingegeben. Fuer `nCr` und `nPr` trennt `,` die Argumente, zum
 Beispiel `ncr(6,2)`.
+
+Auf `TOOLS` schaltet die dynamisch beschriftete Taste `P40`, `P80` oder
+`P128` zyklisch zwischen NORMAL, HIGH und ULTRA um. Der Modus gilt fuer reine
+Dezimalarithmetik, wissenschaftliche Funktionen, Konstanten, `ANS`, A-F und M
+und wird automatisch gespeichert.
 
 ## Displaylayout
 
@@ -341,7 +347,7 @@ aufgerufen oder in weiteren Graphfunktionen verwendet werden.
 ## Permanente Speicherung
 
 Der Rechner speichert Winkelmodus, `ANS`, Speicherregister, letzte Seite,
-Programmer-Zustand, Verlauf, Variablen, Benutzerfunktionen, Favoriten,
+Praezisionsmodus, Programmer-Zustand, Verlauf, Variablen, Benutzerfunktionen, Favoriten,
 Graphbereiche und Statistiklisten automatisch. Aenderungen werden drei
 Sekunden gesammelt; ein
 unveraenderter Zustand wird nicht erneut in den Flash geschrieben.
@@ -350,6 +356,10 @@ Zwei wechselnde, jeweils mit CRC32 geschuetzte Flashkopien verhindern, dass
 ein Stromausfall waehrend des Speicherns den vorherigen Zustand zerstoert.
 Defekte oder unbekannte Speicherdaten werden beim Start verworfen und durch
 sichere Werkseinstellungen ersetzt.
+
+Firmware 1.8 verwendet ausschliesslich Flashformat 6. Es gibt bewusst keine
+Rueckwaertskompatibilitaet: Datensaetze aelterer Firmwareversionen werden nicht
+gelesen und der Rechner startet stattdessen mit Werkseinstellungen.
 
 Fuer einen Werksreset werden beide Hardwaretasten `K1` und `K2` beim
 Einschalten beziehungsweise Reset gleichzeitig gehalten und nach etwa zwei
@@ -380,13 +390,14 @@ Modulen. Hardwareunabhaengige Teile werden durch die Host-Tests unter
 
 Der normale Ausdruckseditor besitzt zwei aufeinander abgestimmte
 Multipraezisionskerne. Reine Dezimalausdruecke mit `+`, `-`, `*`, `/`, `%`,
-Klammern, ganzzahligen Potenzen und `ANS` bleiben bis zur Kapazitaetsgrenze
-exakt. Periodische Divisionen werden mit Round-to-nearest-even gerundet.
+Klammern, ganzzahligen Potenzen und `ANS` bleiben bis zur gewaehlten
+Kapazitaetsgrenze exakt. Periodische Divisionen werden mit
+Round-to-nearest-even gerundet.
 
 Alle wissenschaftlichen Funktionen, allgemeine Potenzen, Benutzerfunktionen
 und die mathematischen Konstanten `pi`, `e`, `tau` und `phi` laufen ueber
-LibBF mit 320 Bit Arbeitsgenauigkeit und werden auf 80 signifikante
-Stellen gerundet. Es gibt keine `double`-Zwischenwerte bei
+LibBF. NORMAL rechnet mit 192 Bit und 40 Stellen, HIGH mit 320 Bit und 80
+Stellen, ULTRA mit 512 Bit und 128 Stellen. Es gibt keine `double`-Zwischenwerte bei
 Trigonometrie, Wurzeln, Logarithmen oder Konstanten. Ergebnisse bleiben als
 vollstaendiger Dezimaltext in `ANS`, Verlauf, USB und Flash erhalten.
 

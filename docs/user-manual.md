@@ -1,6 +1,6 @@
 # Benutzerhandbuch: Pico Scientific Calculator
 
-Gueltig fuer Firmware `1.7.0`, USB-Protokoll `4` und das LAFVIN Pico
+Gueltig fuer Firmware `1.8.0`, USB-Protokoll `4` und das LAFVIN Pico
 Development Kit mit RP2040, ST7796U-LCD und GT911-Touchscreen.
 
 ## Inhalt
@@ -181,7 +181,7 @@ eigene Taste `CALC`, um zum normalen Rechner zurueckzukehren.
 
 ### Ausdruckseingabe
 
-Der normale Editor nimmt bis zu 95 Zeichen auf und beachtet die uebliche
+Der normale Editor nimmt bis zu 191 Zeichen auf und beachtet die uebliche
 Operatorrangfolge:
 
 1. Klammern
@@ -217,14 +217,14 @@ Der normale Ausdruckseditor kombiniert exakte Dezimalarithmetik mit einem
 hochpraezisen wissenschaftlichen Kern:
 
 - Reine Dezimalarithmetik mit `+`, `-`, `*`, `/`, `%`, Klammern,
-  ganzzahligen Potenzen und `ANS` verwendet bis zu 80 signifikante Stellen.
+  ganzzahligen Potenzen und `ANS` verwendet die gewaehlte Stellenzahl.
 - Endliche Ergebnisse bleiben innerhalb dieser Kapazitaet exakt.
-- Periodische Divisionen werden nach 80 Stellen mit Round-to-even gerundet.
+- Periodische Divisionen werden nach 40, 80 oder 128 Stellen mit
+  Round-to-even gerundet.
   Die Statuszeile zeigt dann `ROUNDED`.
 - Wissenschaftliche Funktionen, allgemeine Potenzen, F1-F3 sowie `pi`, `e`,
-  `tau` und `phi` verwenden intern 320 Bit und liefern 80 signifikante
-  Dezimalstellen. Gerundete Resultate werden ebenfalls mit `ROUNDED`
-  gekennzeichnet.
+  `tau` und `phi` verwenden passend zum Modus 192, 320 oder 512 Bit.
+  Gerundete Resultate werden ebenfalls mit `ROUNDED` gekennzeichnet.
 - A-F und das Speicherregister M bewahren ebenfalls den vollstaendigen
   Dezimaltext. Graph, Statistik, komplexe Zahlen und BASIC-Programme verwenden
   weiterhin eine binaere `double`-Naeherung.
@@ -235,14 +235,30 @@ Beispiele:
 |---|---|
 | `0.1+0.2` | exakt `0.3` |
 | `9007199254740993+1` | exakt `9007199254740994` |
-| `1/3` | auf 80 Stellen gerundet, Status `ROUNDED` |
-| `sqrt(2)` | 80-stellige Multipraezisions-Naeherung |
-| `sin(pi/6)` | 80-stellige Multipraezisions-Naeherung |
+| `1/3` | auf die gewaehlte Stellenzahl gerundet, Status `ROUNDED` |
+| `sqrt(2)` | Multipraezisions-Naeherung mit 40, 80 oder 128 Stellen |
+| `sin(pi/6)` | Multipraezisions-Naeherung im aktiven Modus |
 | `A+0.1` | Hochpraezise Rechnung mit dem vollstaendigen A-F-Wert |
 
 Wird die Kapazitaet eines exakten Zwischenergebnisses ueberschritten, erscheint
 `RANGE ERROR`. In diesem Fall kann eine wissenschaftliche Schreibweise oder
 eine umgestellte Rechnung helfen.
+
+### Praezisionsmodus
+
+Auf `TOOLS` zeigt eine Taste den aktiven Modus und schaltet ihn bei jedem
+Druck weiter:
+
+| Taste | Modus | Ausgabe | LibBF-Arbeitsgenauigkeit |
+|---|---|---:|---:|
+| `P40` | NORMAL | 40 signifikante Stellen | 192 Bit |
+| `P80` | HIGH | 80 signifikante Stellen | 320 Bit |
+| `P128` | ULTRA | 128 signifikante Stellen | 512 Bit |
+
+HIGH ist die Werkseinstellung. Der Modus erscheint in der Statuszeile, gilt
+sofort fuer die naechste Berechnung und wird im Flash gespeichert. ULTRA
+liefert die hoechste Genauigkeit, benoetigt fuer transzendente Funktionen aber
+mehr Rechenzeit.
 
 ### Winkelmodus
 
@@ -289,7 +305,7 @@ Kombinationen und Permutationen erwarten nichtnegative ganze Zahlen;
 | `MR` | Speicherwert in den Editor einfuegen |
 | `MC` | Speicher auf null setzen |
 
-Das Speicherregister bewahrt wie `ANS` bis zu 80 signifikante Stellen. `M+`,
+Das Speicherregister bewahrt wie `ANS` bis zu 128 signifikante Stellen. `M+`,
 `M-` und `MR` verwenden den vollstaendigen Dezimaltext; der Wert wird
 automatisch im Flash gespeichert.
 
@@ -305,9 +321,10 @@ Exakte Dezimalergebnisse werden im Verlauf nicht auf `double` gekuerzt.
 
 ### Cursorwerkzeuge
 
-`<`, `>`, `HOME` und `END` bewegen den Eingabecursor. `DEL` loescht links vom
-Cursor. Diese Tasten sind besonders bei langen Funktionen und
-Graphausdruecken hilfreich.
+`<`, `>` und `END` bewegen den Eingabecursor. An der frueheren `HOME`-Position
+liegt die Praezisionstaste `P40`/`P80`/`P128`. `DEL` loescht links vom Cursor.
+Diese Tasten sind besonders bei langen Funktionen und Graphausdruecken
+hilfreich.
 
 ## 5. Variablen, Funktionen und Favoriten
 
@@ -319,7 +336,7 @@ Graphausdruecken hilfreich.
 4. `A` fuegt die Variable spaeter in einen Ausdruck ein und wechselt zu
    `TOOLS`.
 
-A-F bewahren bis zu 80 signifikante Stellen und werden vom hochpraezisen
+A-F bewahren bis zu 128 signifikante Stellen und werden vom hochpraezisen
 wissenschaftlichen Kern ausgewertet. Fuer Graphen wird parallel eine
 `double`-Naeherung gehalten, damit das LCD schnell genug abgetastet werden kann.
 
@@ -735,8 +752,8 @@ python tools/pico_calc_gui.py
 ```
 
 Unter Linux kann zusaetzlich `python3-tk` notwendig sein. Unter Windows und
-macOS muss Python mit Tk/Tcl installiert sein. Die Firmware muss mindestens
-Version `1.6.0` mit USB-Protokoll `4` besitzen.
+macOS muss Python mit Tk/Tcl installiert sein. Diese Version der Anwendung
+erwartet Firmware `1.8.0` mit USB-Protokoll `4`.
 
 ### Verbindung
 
@@ -745,14 +762,14 @@ Version `1.6.0` mit USB-Protokoll `4` besitzen.
 3. Angezeigten seriellen Port waehlen, unter Windows beispielsweise `COM5`.
 4. `Verbinden` druecken.
 
-Die Geraeteleiste zeigt Firmware, Protokoll, Winkelmodus, Seite und
-Datenzaehler.
+Die Geraeteleiste zeigt Firmware, Protokoll, Winkel- und Praezisionsmodus,
+Seite und Datenzaehler.
 
 ### Bereiche der Anwendung
 
 | Bereich | Verwendung |
 |---|---|
-| `Rechner` | Wissenschaftlichen Ausdruck senden, Ergebnis anzeigen und DEG/RAD schalten |
+| `Rechner` | Wissenschaftlichen Ausdruck senden, Ergebnis anzeigen sowie DEG/RAD und NORMAL/HIGH/ULTRA schalten |
 | `Code` | BIN/DEC/HEX, Bitoperationen, 2er-Komplement, Q-Fixpunkt und IEEE-754 untersuchen |
 | `Graph` | F1-F3 plotten sowie Nullstelle, Schnittpunkt, Ableitung, Integral und Extrema berechnen |
 | `Logik` | Gatterbelegung auswerten, Wahrheitstabelle sowie vereinfachte oder kanonische DNF/KNF erzeugen |
@@ -781,8 +798,8 @@ Eingabefeld. Die Programmausgabe wird fortlaufend vom Rechner gelesen.
 
 ### JSON-Sicherung
 
-Der Export erfasst Ausdruck, exaktes Ergebnis, Winkelmodus, A-F, F1-F3,
-Speicher M, Favoriten, Programmer- und Zahlenformatzustand, Graphbereich,
+Der Export im JSON-Format 5 erfasst Ausdruck, exaktes Ergebnis, Winkel- und
+Praezisionsmodus, A-F, F1-F3, Speicher M, Favoriten, Programmer- und Zahlenformatzustand, Graphbereich,
 Verlauf, Statistik und BASIC-Programm. Beim Import werden alle persistenten
 Einstellungen ausser `ANS` und Verlauf zurueckgeschrieben; diese beiden dienen
 im JSON als Sicherungs- und Protokolldaten. Abhaengige Benutzerfunktionen
@@ -802,7 +819,7 @@ python tools/pico_calc_cli.py --port COM5 import calculator-state.json
 
 Automatisch gespeichert werden:
 
-- Winkelmodus und `ANS`
+- Winkel- und Praezisionsmodus sowie `ANS`
 - Speicherregister und letzte Seite
 - Programmer-Wortbreite, Basis, signed-Modus und Bitposition
 - normaler Rechenverlauf
@@ -817,7 +834,9 @@ geaendert wurden.
 
 Zwei CRC-geschuetzte Flashkopien werden abwechselnd beschrieben. Ein
 Stromausfall waehrend des Speicherns zerstoert dadurch nicht den vorherigen
-gueltigen Zustand. Flashformat 5 liest auch Zustaende der Versionen 1 bis 4.
+gueltigen Zustand. Firmware 1.8 akzeptiert ausschliesslich Flashformat 6.
+Aeltere Formate werden bewusst nicht migriert; nach einem Update startet der
+Rechner mit Werkseinstellungen.
 
 ### Werksreset
 
@@ -837,7 +856,7 @@ normalen Verlauf, Statistikdaten und BASIC-Programme.
 | Meldung | Bedeutung und Abhilfe |
 |---|---|
 | `OK` | Operation erfolgreich |
-| `ROUNDED` | Ergebnis wurde reproduzierbar auf 80 signifikante Stellen gerundet |
+| `ROUNDED` | Ergebnis wurde reproduzierbar auf die aktive Stellenzahl gerundet |
 | `ENTER EXPRESSION` | Editor ist leer |
 | `SYNTAX ERROR` / `SYNTAX AT n` | Klammern, Operatoren oder Argumente pruefen |
 | `MATH ERROR` | Mathematisch ungueltiger Wert, etwa `sqrt(-1)` im reellen Modus |
@@ -876,9 +895,9 @@ dort Tasten wirklich, aktuelle Firmware neu flashen.
 
 ### Ergebnis wirkt ungenau
 
-Fuer mathematische Funktionen Firmware `1.7.0` oder neuer verwenden. Diese
-rechnet im normalen Ausdruckseditor mit 320 Bit Arbeitsgenauigkeit und zeigt
-bis zu 80 Stellen. Graph, Statistik, komplexe Zahlen und BASIC-Programme
+Fuer mathematische Funktionen Firmware `1.8.0` verwenden und auf `TOOLS` den
+gewuenschten Modus P40, P80 oder P128 waehlen. ULTRA rechnet mit 512 Bit und
+zeigt bis zu 128 Stellen. Graph, Statistik, komplexe Zahlen und BASIC-Programme
 verwenden weiterhin `double`. Fuer exakt endliche Ergebnisse nur Literale,
 `ANS`, A-F, Grundoperatoren, Klammern und ganzzahlige Potenzen verwenden;
 transzendente Werte sind prinzipbedingt gerundete Naeherungen.
@@ -894,17 +913,16 @@ transzendente Werte sind prinzipbedingt gerundete Naeherungen.
 
 ### PC meldet inkompatibles Protokoll
 
-Firmware `1.6.0` oder neuer flashen. Die aktuelle Desktop-Anwendung erwartet
-USB-Protokoll `4`, damit alle Rechner-Module und persistenten Einstellungen
-verfuegbar sind.
+Firmware `1.8.0` flashen. Die aktuelle Desktop-Anwendung erwartet
+USB-Protokoll `4` sowie die Praezisionsbefehle der Firmware 1.8.
 
 ## 17. Grenzen und technische Hinweise
 
 | Bereich | Grenze |
 |---|---:|
-| Normaler Ausdruck | 95 Zeichen |
-| Exakter Dezimalkern | 80 signifikante Stellen |
-| Wissenschaftlicher Kern | 320 Bit intern, 80 signifikante Stellen |
+| Normaler Ausdruck | 191 Zeichen |
+| Exakter Dezimalkern | waehlbar 40, 80 oder 128 signifikante Stellen |
+| Wissenschaftlicher Kern | waehlbar 192/320/512 Bit, 40/80/128 Stellen |
 | Normaler Verlauf | 8 Eintraege |
 | Komplexer Verlauf | 8 Eintraege |
 | Variablen | A-F |
@@ -918,7 +936,7 @@ verfuegbar sind.
 | BASIC-Variablen | A-Z |
 | BASIC-Laufgrenze | 5000 Anweisungen |
 | Programmer | 8, 16, 32 oder 64 Bit |
-| USB-Befehlszeile | 191 druckbare ASCII-Zeichen |
+| USB-Befehlszeile | 255 druckbare ASCII-Zeichen |
 
 Der RP2040 ist ein Mikrocontroller ohne Betriebssystem und besitzt 264 KiB
 SRAM. Die Firmware zeichnet deshalb direkt auf das LCD und verwendet keinen

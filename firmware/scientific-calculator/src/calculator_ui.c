@@ -72,6 +72,7 @@ static void render_graph(void);
 static void capture_persisted_state(calculator_persisted_state_t *state) {
     calculator_persistence_defaults(state);
     state->degrees = calc_engine_uses_degrees();
+    state->precision = calc_engine_precision();
     state->page = page;
     state->format_bits = programmer.word_bits;
     state->fixed_fraction_bits = fixed_fraction_bits;
@@ -95,6 +96,7 @@ static void capture_persisted_state(calculator_persisted_state_t *state) {
 static void apply_persisted_state(
     const calculator_persisted_state_t *state) {
     calc_engine_set_degrees(state->degrees);
+    calc_engine_set_precision(state->precision);
     page = state->page;
     fixed_fraction_bits = state->fixed_fraction_bits;
     ans = state->ans;
@@ -170,6 +172,7 @@ static calculator_widget_state_t current_widget_state(void) {
         .format_view = format_view,
         .programmer_signed = programmer.signed_mode,
         .degrees = calc_engine_uses_degrees(),
+        .precision = calc_engine_precision(),
         .graph_view = graph.view,
         .graph_active_mask = active_mask,
         .graph_selected_function = graph.selected_function,
@@ -214,7 +217,8 @@ static void render_display(void) {
             ? history[history_list.index].formula : "";
         const char *history_result = history_list.count
             ? history[history_list.index].result : "";
-        calculator_page_render_tools(memory_text, message, &expression_state,
+        calculator_page_render_tools(memory_text, calc_engine_precision(),
+                                     message, &expression_state,
                                      history_list.count, history_list.index,
                                      formula, history_result, result_text);
         return;
@@ -242,8 +246,9 @@ static void render_display(void) {
         return;
     }
     if (page == PAGE_GRAPH) return;
-    calculator_page_render_expression(page, calc_engine_uses_degrees(),
-                                      message, &expression_state, result_text);
+    calculator_page_render_expression(
+        page, calc_engine_uses_degrees(), calc_engine_precision(),
+        message, &expression_state, result_text);
 }
 
 static void render_keypad(void) {
@@ -966,6 +971,16 @@ static void activate_key(const calc_key_t *key) {
                      calc_engine_uses_degrees() ? "DEG" : "RAD");
             render_keypad();
             break;
+        case ACT_PRECISION: {
+            calculator_precision_t precision = calc_engine_precision();
+            precision = (calculator_precision_t)(
+                ((unsigned int)precision + 1u) % CALCULATOR_PRECISION_COUNT);
+            calc_engine_set_precision(precision);
+            snprintf(message, sizeof message, "PRECISION %u",
+                     calculator_precision_digits(precision));
+            render_keypad();
+            break;
+        }
         case ACT_PROG_DIGIT:
         case ACT_PROG_BASE:
         case ACT_PROG_BINARY:

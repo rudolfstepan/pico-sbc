@@ -10,6 +10,7 @@ typedef enum {
     ACT_DELETE,
     ACT_PAGE,
     ACT_ANGLE,
+    ACT_PRECISION,
     ACT_PROG_DIGIT,
     ACT_PROG_BASE,
     ACT_PROG_BINARY,

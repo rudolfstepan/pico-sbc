@@ -1,6 +1,7 @@
 #pragma once
 
 #include "calculation_status.h"
+#include "calculator_precision.h"
 #include "calculator_symbols.h"
 #include "decimal_engine.h"
 
@@ -20,6 +21,8 @@ typedef struct {
 
 void calc_engine_set_degrees(bool degrees);
 bool calc_engine_uses_degrees(void);
+void calc_engine_set_precision(calculator_precision_t precision);
+calculator_precision_t calc_engine_precision(void);
 calc_status_t calc_engine_evaluate(const char *expression, double ans,
                                    double *result, int *error_position);
 calc_status_t calc_engine_evaluate_symbols(

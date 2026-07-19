@@ -8,8 +8,8 @@
 #include <stddef.h>
 
 #define CALCULATOR_USB_PROTOCOL_VERSION 4u
-#define CALCULATOR_USB_LINE_CAPACITY 192u
-#define CALCULATOR_USB_RESPONSE_CAPACITY 256u
+#define CALCULATOR_USB_LINE_CAPACITY 256u
+#define CALCULATOR_USB_RESPONSE_CAPACITY 512u
 
 typedef struct {
     calculator_persisted_state_t *state;

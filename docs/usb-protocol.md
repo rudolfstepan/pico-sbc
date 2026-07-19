@@ -13,16 +13,20 @@ Desktop-Anwendung bereit und synchronisiert auch Winkelmodus, Speicher,
 Favoriten, Programmer-, Zahlenformat- und Graphzustand.
 Seit Firmware `1.7.0` werden wissenschaftliche Ergebnisse sowie A-F und M mit
 bis zu 80 signifikanten Stellen ueber dasselbe Protokoll uebertragen.
+Seit Firmware `1.8.0` kann die Rechengenauigkeit mit `GET PRECISION` und
+`SET PRECISION` zwischen 40, 80 und 128 Stellen umgeschaltet werden. Exakte
+Werte bleiben bei Export und Import als Dezimaltext erhalten.
 
 ## Rahmenformat
 
 - Befehle enden mit `LF` oder `CRLF`.
-- Befehle duerfen maximal 191 druckbare ASCII-Zeichen enthalten.
+- Befehle duerfen maximal 255 druckbare ASCII-Zeichen enthalten; der
+  Ausdruckseditor selbst fasst 191 Zeichen.
 - Befehlswoerter sind nicht von Gross-/Kleinschreibung abhaengig.
 - Nutzdaten wie Ausdruecke bleiben unveraendert.
 - Erfolgreiche Antworten beginnen mit `OK`, Fehler mit `ERR`.
 - Antwortfelder sind durch Tabulatoren getrennt.
-- Antworten sind einschliesslich Abschlusszeichen auf 256 Byte begrenzt.
+- Antworten sind einschliesslich Abschlusszeichen auf 512 Byte begrenzt.
 - Verlauf und Statistikdaten werden einzeln per Index gelesen.
 
 Beispiel, wobei `<TAB>` jeweils ein Tabulatorzeichen bezeichnet:
@@ -38,12 +42,13 @@ Beispiel, wobei `<TAB>` jeweils ein Tabulatorzeichen bezeichnet:
 |---|---|
 | `PING` | Verbindung mit `OK PONG` pruefen |
 | `INFO` | Protokoll-, Firmware- und Modellversion lesen |
-| `DIAG` | Seite, Winkelmodus sowie Verlauf- und Statistikstatus lesen |
+| `DIAG` | Seite, Winkel- und Praezisionsmodus sowie Verlauf- und Statistikstatus lesen |
 | `GET RESULT` | Aktuellen Wert von `ANS` lesen |
 | `GET EXPR` | Ausdruck im sichtbaren Editor lesen |
 | `GET VAR A` ... `GET VAR F` | Variable lesen |
 | `GET FUNC F1` ... `GET FUNC F3` | Benutzerfunktion lesen |
 | `GET ANGLE` / `SET ANGLE DEG|RAD` | Winkelmodus lesen oder setzen |
+| `GET PRECISION` / `SET PRECISION NORMAL|HIGH|ULTRA` | 40, 80 oder 128 signifikante Stellen waehlen |
 | `GET MEMORY` / `SET MEMORY wert` | Speicher M lesen oder setzen |
 | `GET FAVORITE 1` ... `GET FAVORITE 6` | Favoritentaste lesen |
 | `SET FAVORITE 1 token` ... `SET FAVORITE 6 token` | Favoritentaste setzen |
@@ -98,8 +103,8 @@ Lange KNF-/DNF-Ausgaben werden in maximal 112 Zeichen grossen Teilen gelesen.
 `total` und `offset` in `OK LOGIC_FORM` erlauben dem Client, die Antwort ohne
 Verlust zusammenzusetzen.
 
-`EVAL` verwendet den am Rechner aktiven DEG- oder RAD-Modus und aktualisiert
-`ANS`, den sichtbaren Editor und den Verlauf. Reine Dezimalarithmetik wird
+`EVAL` verwendet den am Rechner aktiven Winkel- und Praezisionsmodus und
+aktualisiert `ANS`, den sichtbaren Editor und den Verlauf. Reine Dezimalarithmetik wird
 verlustfrei als Dezimaltext uebertragen; die PC-Werkzeuge wandeln diesen Wert
 nicht in binaeres Gleitkomma um. Variablen, Funktionen,
 Ergebnisse, Verlauf und Statistikdaten werden wie bei einer Touch-Eingabe
@@ -110,8 +115,9 @@ Zustand nicht.
 Typische Antworten:
 
 ```text
-OK INFO<TAB>protocol=4<TAB>firmware=1.7.0<TAB>model=scientific-calculator
-OK DIAG<TAB>page=0<TAB>angle=DEG<TAB>history=2<TAB>stats=3<TAB>mode=1<TAB>basic=4<TAB>basic_state=STOPPED
+OK INFO<TAB>protocol=4<TAB>firmware=1.8.0<TAB>model=scientific-calculator
+OK DIAG<TAB>page=0<TAB>angle=DEG<TAB>precision=HIGH<TAB>history=2<TAB>stats=3<TAB>mode=1<TAB>basic=4<TAB>basic_state=STOPPED
+OK PRECISION<TAB>ULTRA<TAB>128
 OK VAR<TAB>A<TAB>3.5
 OK HISTORY<TAB>0<TAB>42<TAB>6*7<TAB>42
 OK STATS<TAB>0<TAB>1<TAB>3
@@ -146,8 +152,8 @@ python tools/pico_calc_cli.py --port COM5 export calculator-state.json
 python tools/pico_calc_cli.py --port COM5 import calculator-state.json
 ```
 
-Der JSON-Export enthaelt Ausdruck, Ergebnis, A-F, F1-F3, M, Favoriten,
-Winkelmodus, Programmer- und Zahlenformatzustand, Graphbereich, Verlauf,
+Der JSON-Export im aktuellen Format 5 enthaelt Ausdruck, Ergebnis, A-F,
+F1-F3, M, Favoriten, Winkel- und Praezisionsmodus, Programmer- und Zahlenformatzustand, Graphbereich, Verlauf,
 BASIC-Programm und Statistikliste. Beim Import werden diese persistenten
 Daten wieder uebertragen. Abhaengige
 Benutzerfunktionen werden automatisch
@@ -167,7 +173,8 @@ Die Anwendung erkennt serielle Ports und haelt die ausgewaehlte Verbindung bis
 zum Trennen offen. Alle USB-Operationen laufen in einem Hintergrund-Worker,
 damit Fenster und Eingaben auch bei einem Timeout bedienbar bleiben.
 
-- `Rechner` fuehrt wissenschaftliche Ausdruecke aus und schaltet DEG/RAD.
+- `Rechner` fuehrt wissenschaftliche Ausdruecke aus und schaltet DEG/RAD
+  sowie NORMAL/HIGH/ULTRA.
 - `Code` bietet Programmer-, Bit-, 2er-Komplement-, Fixpunkt- und
   IEEE-Gleitkommafunktionen.
 - `Graph` plottet F1-F3 und fuehrt Nullstellen-, Schnittpunkt-, Ableitungs-,
@@ -183,7 +190,7 @@ damit Fenster und Eingaben auch bei einem Timeout bedienbar bleiben.
 - `Verlauf` liest die acht persistenten Eintraege und uebernimmt Ausdruecke
   wieder in den Rechner.
 - `Protokoll` sendet einzelne Rohbefehle und protokolliert Antworten.
-- Die Geraeteleiste liest Firmware, Protokoll, Winkelmodus, Seite und
+- Die Geraeteleiste liest Firmware, Protokoll, Winkel- und Praezisionsmodus, Seite und
   Datenzaehler und bietet JSON-Import/-Export.
 
 Die App verwendet nur Python, Tkinter und PySerial. Tkinter ist in den

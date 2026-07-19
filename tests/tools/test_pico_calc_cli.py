@@ -31,6 +31,7 @@ class FakeClient:
             "GET BASIC 0": "OK BASIC\t0\t10\tPRINT \"HELLO\"",
             "GET BASIC 1": "OK BASIC\t1\t20\tEND",
             "GET ANGLE": "OK ANGLE\tDEG",
+            "GET PRECISION": "OK PRECISION\tHIGH\t80",
             "GET MEMORY": "OK MEMORY\t7.5",
             "GET PROGRAMMER": (
                 "OK PROGRAMMER_STATE\tvalue=255\tbase=HEX\tsigned=1\tbit=7"
@@ -80,7 +81,8 @@ class CliStateTests(unittest.TestCase):
         self.assertEqual(exported["statistics"]["values"], [[1.0, 3.0], [2.0, 5.0]])
         self.assertEqual(exported["program"], ['10 PRINT "HELLO"', "20 END"])
         self.assertEqual(exported["angle"], "DEG")
-        self.assertEqual(exported["memory"], 7.5)
+        self.assertEqual(exported["precision"], "HIGH")
+        self.assertEqual(exported["memory"], "7.5")
         self.assertEqual(exported["programmer"]["value"], 255)
         self.assertEqual(exported["number_format"], {"bits": 8, "fraction": 4})
         self.assertEqual(exported["favorites"]["FAV1"], "sin(")
@@ -96,6 +98,7 @@ class CliStateTests(unittest.TestCase):
             "statistics": {"mode": 2, "values": [[1, 3], [2, 5]]},
             "program": ['10 PRINT "HELLO"', "20 END"],
             "angle": "RAD",
+            "precision": "ULTRA",
             "memory": 2.5,
             "favorites": {"FAV1": "atan("},
             "number_format": {"bits": 16, "fraction": 8},
@@ -109,6 +112,7 @@ class CliStateTests(unittest.TestCase):
         self.assertIn("SET VAR A 3.5", client.commands)
         self.assertIn("SET FUNC F1 x+A", client.commands)
         self.assertIn("SET ANGLE RAD", client.commands)
+        self.assertIn("SET PRECISION ULTRA", client.commands)
         self.assertIn("SET MEMORY 2.5", client.commands)
         self.assertIn("SET FAVORITE 1 atan(", client.commands)
         self.assertIn("SET FORMAT 16 8", client.commands)

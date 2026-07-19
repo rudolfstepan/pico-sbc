@@ -239,7 +239,7 @@ static const calc_key_t tools_keys[] = {
 
     {"<", "LEFT", 0, 2, ACT_CURSOR, STYLE_FUNCTION},
     {">", "RIGHT", 1, 2, ACT_CURSOR, STYLE_FUNCTION},
-    {"HOME", "HOME", 2, 2, ACT_CURSOR, STYLE_FUNCTION},
+    {"P80", "PREC", 2, 2, ACT_PRECISION, STYLE_COMMAND},
     {"END", "END", 3, 2, ACT_CURSOR, STYLE_FUNCTION},
     {"DEL", "", 4, 2, ACT_DELETE, STYLE_COMMAND},
     {"AC", "", 5, 2, ACT_CLEAR, STYLE_COMMAND},

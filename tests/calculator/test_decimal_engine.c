@@ -62,15 +62,31 @@ int main(void) {
           DECIMAL_STATUS_DIV_ZERO);
     CHECK(decimal_engine_evaluate("2+(", NULL, &result, &error) ==
           DECIMAL_STATUS_SYNTAX);
+    CHECK(decimal_engine_evaluate_precision(
+              "1/3", NULL, 40u, &result, &error) == DECIMAL_STATUS_OK);
+    CHECK(strlen(result.text) == 42u && !result.exact);
+    CHECK(decimal_engine_evaluate_precision(
+              "1/3", NULL, 128u, &result, &error) == DECIMAL_STATUS_OK);
+    CHECK(strlen(result.text) == 130u && !result.exact);
+
+    char oversized_product[132];
+    memset(oversized_product, '9', 65u);
+    oversized_product[65] = '*';
+    memset(oversized_product + 66, '9', 65u);
+    oversized_product[131] = '\0';
     CHECK(decimal_engine_evaluate(
-        "99999999999999999999999999999999999999999*"
-        "99999999999999999999999999999999999999999",
-        NULL, &result, &error) == DECIMAL_STATUS_PRECISION);
+              oversized_product, NULL, &result, &error) ==
+          DECIMAL_STATUS_PRECISION);
 
     uint8_t packed[DECIMAL_ENGINE_PACKED_CAPACITY];
     char unpacked[DECIMAL_ENGINE_TEXT_CAPACITY];
-    const char *packed_value =
-        "2.000000000000000000000000000000000000000000002";
+    char packed_value[DECIMAL_ENGINE_TEXT_CAPACITY];
+    packed_value[0] = '1';
+    packed_value[1] = '.';
+    for (size_t i = 2; i < 129u; ++i) {
+        packed_value[i] = (char)('1' + (i % 9u));
+    }
+    packed_value[129] = '\0';
     CHECK(decimal_engine_pack_text(packed_value, packed, sizeof packed));
     CHECK(decimal_engine_unpack_text(packed, sizeof packed,
                                      unpacked, sizeof unpacked));

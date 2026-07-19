@@ -2,6 +2,7 @@
 #define CALCULATOR_WIDGETS_H
 
 #include "calculator_ui_types.h"
+#include "calculator_precision.h"
 #include "calculator_logic.h"
 #include "calculator_complex.h"
 #include "calculator_statistics.h"
@@ -31,6 +32,7 @@ typedef struct {
     calculator_format_view_t format_view;
     bool programmer_signed;
     bool degrees;
+    calculator_precision_t precision;
     graph_view_t graph_view;
     unsigned int graph_active_mask;
     size_t graph_selected_function;

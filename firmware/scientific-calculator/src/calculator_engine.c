@@ -13,6 +13,7 @@
 #define CALC_PI 3.14159265358979323846
 
 static bool use_degrees = true;
+static calculator_precision_t use_precision = CALCULATOR_PRECISION_HIGH;
 
 struct calc_compiled;
 
@@ -98,6 +99,14 @@ void calc_engine_set_degrees(bool degrees) {
 
 bool calc_engine_uses_degrees(void) {
     return use_degrees;
+}
+
+void calc_engine_set_precision(calculator_precision_t precision) {
+    if (precision < CALCULATOR_PRECISION_COUNT) use_precision = precision;
+}
+
+calculator_precision_t calc_engine_precision(void) {
+    return use_precision;
 }
 
 static double evaluate_user_function(void *context, double argument) {
@@ -259,8 +268,9 @@ calc_status_t calc_engine_evaluate_precise_symbols(
     if (!result) return CALC_RANGE_ERROR;
 
     decimal_result_t decimal_result;
-    decimal_status_t decimal_status = decimal_engine_evaluate(
-        expression, ans_text, &decimal_result, error_position);
+    decimal_status_t decimal_status = decimal_engine_evaluate_precision(
+        expression, ans_text, calculator_precision_digits(use_precision),
+        &decimal_result, error_position);
     if (decimal_status == DECIMAL_STATUS_OK) {
         result->value = decimal_result.approximation;
         snprintf(result->text, sizeof result->text, "%s", decimal_result.text);
@@ -276,8 +286,8 @@ calc_status_t calc_engine_evaluate_precise_symbols(
 
     high_precision_result_t precise_result;
     high_precision_status_t precise_status = high_precision_engine_evaluate(
-        expression, ans_text, symbols, use_degrees, &precise_result,
-        error_position);
+        expression, ans_text, symbols, use_degrees, use_precision,
+        &precise_result, error_position);
     if (precise_status == HIGH_PRECISION_STATUS_OK) {
         result->value = precise_result.approximation;
         snprintf(result->text, sizeof result->text, "%s",

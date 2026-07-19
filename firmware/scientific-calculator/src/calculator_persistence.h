@@ -3,6 +3,7 @@
 
 #include "basic_engine.h"
 #include "calculator_symbols.h"
+#include "calculator_precision.h"
 #include "calculator_ui_types.h"
 #include "decimal_engine.h"
 #include "expression_editor.h"
@@ -14,7 +15,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define CALCULATOR_PERSISTENCE_VERSION 5u
+#define CALCULATOR_PERSISTENCE_VERSION 6u
 #define CALCULATOR_PERSISTENCE_RECORD_CAPACITY 8192u
 #define CALCULATOR_PERSISTENCE_HISTORY_CAPACITY 8u
 #define CALCULATOR_PERSISTENCE_RESULT_CAPACITY DECIMAL_ENGINE_TEXT_CAPACITY
@@ -27,6 +28,7 @@ typedef struct {
 
 typedef struct {
     bool degrees;
+    calculator_precision_t precision;
     calc_page_t page;
     unsigned int format_bits;
     unsigned int fixed_fraction_bits;

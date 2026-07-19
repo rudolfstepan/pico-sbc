@@ -165,6 +165,7 @@ int main(void) {
 
     calculator_widget_state_t widget_state = {
         .page = PAGE_STATISTICS,
+        .precision = CALCULATOR_PRECISION_HIGH,
         .statistics_two_variable = true,
         .statistics_view = STATISTICS_VIEW_PLOT,
     };
@@ -240,7 +241,8 @@ int main(void) {
         "12345678901234567890123456789012345678901234567890");
     mock_lcd_reset();
     calculator_page_render_expression(
-        PAGE_SCIENTIFIC, true, "LANDSCAPE", &expression,
+        PAGE_SCIENTIFIC, true, CALCULATOR_PRECISION_HIGH,
+        "LANDSCAPE", &expression,
         "98765432109876543210987654321098765432");
     CHECK(!mock_lcd_had_out_of_bounds_draw());
     CHECK(mock_lcd_max_text_scale() == 2);
@@ -259,8 +261,9 @@ int main(void) {
     maximum_result[sizeof maximum_result - 1u] = '\0';
     expression_editor_set(&expression, maximum_expression);
     mock_lcd_reset();
-    calculator_page_render_expression(PAGE_BASIC, true, "LONG",
-                                      &expression, maximum_result);
+    calculator_page_render_expression(
+        PAGE_BASIC, true, CALCULATOR_PRECISION_ULTRA, "LONG",
+        &expression, maximum_result);
     CHECK(!mock_lcd_had_out_of_bounds_draw());
     CHECK(mock_lcd_max_text_scale() == 1);
     CHECK(mock_lcd_drew_text("WRAPPED-TAIL-1234"));
@@ -280,7 +283,8 @@ int main(void) {
 
     mock_lcd_reset();
     calculator_page_render_expression(
-        PAGE_SCIENTIFIC, true, "PORTRAIT", &expression,
+        PAGE_SCIENTIFIC, true, CALCULATOR_PRECISION_HIGH,
+        "PORTRAIT", &expression,
         "98765432109876543210987654321098765432");
     CHECK(!mock_lcd_had_out_of_bounds_draw());
     CHECK(mock_lcd_max_text_scale() == 2);
@@ -291,7 +295,8 @@ int main(void) {
 
     mock_lcd_reset();
     calculator_page_render_expression(
-        PAGE_SCIENTIFIC, true, "PORTRAIT", &expression,
+        PAGE_SCIENTIFIC, true, CALCULATOR_PRECISION_HIGH,
+        "PORTRAIT", &expression,
         "98765432109876543210987654321098765432");
     calculator_page_render_programmer(&programmer, "PORTRAIT");
     calculator_page_render_format(&programmer, 24, FORMAT_VIEW_IEEE64,
@@ -339,9 +344,9 @@ int main(void) {
     calculator_logic_activate(&logic, "TABLE", logic_message,
                               sizeof logic_message);
     mock_lcd_reset();
-    calculator_page_render_expression(PAGE_SCIENTIFIC, true,
-                                      "PORTRAIT FULL", &expression,
-                                      "1111111110");
+    calculator_page_render_expression(
+        PAGE_SCIENTIFIC, true, CALCULATOR_PRECISION_ULTRA,
+        "PORTRAIT FULL", &expression, "1111111110");
     calculator_page_render_programmer(&programmer, "PORTRAIT FULL");
     calculator_page_render_format(&programmer, 24, FORMAT_VIEW_IEEE64,
                                   "PORTRAIT FULL");
