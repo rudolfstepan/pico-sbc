@@ -257,3 +257,137 @@ void calculator_page_render_symbols(const calculator_symbols_t *symbols,
     }
     finish_display();
 }
+
+static const char *logic_view_name(calculator_logic_view_t view) {
+    switch (view) {
+        case LOGIC_VIEW_TABLE: return "TABLE";
+        case LOGIC_VIEW_DNF: return "DNF";
+        case LOGIC_VIEW_KNF: return "KNF";
+        case LOGIC_VIEW_GATES: return "GATES";
+        case LOGIC_VIEW_EDIT:
+        default: return "EDIT";
+    }
+}
+
+static void append_char(char *buffer, size_t capacity, size_t *length,
+                        char value) {
+    if (*length + 1 >= capacity) return;
+    buffer[(*length)++] = value;
+    buffer[*length] = '\0';
+}
+
+static void render_logic_table(const calculator_logic_t *logic) {
+    char header[32] = "ROW ";
+    size_t header_length = strlen(header);
+    for (unsigned int variable = 0; variable < LOGIC_VARIABLE_COUNT;
+         ++variable) {
+        if (!(logic->program.variable_mask & (1u << variable))) continue;
+        append_char(header, sizeof header, &header_length,
+                    (char)('A' + variable));
+        append_char(header, sizeof header, &header_length, ' ');
+    }
+    snprintf(header + header_length, sizeof header - header_length, "| Y");
+    lcd_draw_text(6, 17, header, COL_TEXT, COL_BG, 1);
+
+    size_t rows = logic_engine_truth_row_count(&logic->program);
+    for (size_t line = 0; line < 4 && logic->scroll + line < rows; ++line) {
+        size_t row = logic->scroll + line;
+        uint8_t assignment = logic_engine_assignment_for_row(&logic->program,
+                                                              row);
+        char text[32];
+        int used = snprintf(text, sizeof text, "%3u ", (unsigned int)row);
+        size_t length = used > 0 ? (size_t)used : 0;
+        for (unsigned int variable = 0; variable < LOGIC_VARIABLE_COUNT;
+             ++variable) {
+            if (!(logic->program.variable_mask & (1u << variable))) continue;
+            append_char(text, sizeof text, &length,
+                        (assignment & (1u << variable)) ? '1' : '0');
+            append_char(text, sizeof text, &length, ' ');
+        }
+        snprintf(text + length, sizeof text - length, "| %u",
+                 logic_engine_evaluate(&logic->program, assignment) ? 1u : 0u);
+        lcd_draw_text(6, 30 + (int)line * 13, text, COL_MUTED, COL_BG, 1);
+    }
+}
+
+static void render_logic_form(const calculator_logic_t *logic) {
+    size_t length = strlen(logic->form);
+    size_t offset = logic->scroll < length ? logic->scroll : length;
+    for (size_t line = 0; line < 5 && offset < length; ++line) {
+        char text[79];
+        size_t remaining = length - offset;
+        size_t count = remaining < sizeof text - 1
+            ? remaining : sizeof text - 1;
+        memcpy(text, logic->form + offset, count);
+        text[count] = '\0';
+        lcd_draw_text(6, 17 + (int)line * 13, text,
+                      line ? COL_MUTED : COL_TEXT, COL_BG, 1);
+        offset += count;
+    }
+}
+
+static void render_logic_gates(const calculator_logic_t *logic) {
+    char inputs[48] = "INPUT ";
+    size_t input_length = strlen(inputs);
+    unsigned int counts[7] = {0};
+    for (unsigned int variable = 0; variable < LOGIC_VARIABLE_COUNT;
+         ++variable) {
+        if (!(logic->program.variable_mask & (1u << variable))) continue;
+        int used = snprintf(inputs + input_length,
+                            sizeof inputs - input_length, "%c=%u ",
+                            (char)('A' + variable),
+                            (logic->assignment & (1u << variable)) ? 1u : 0u);
+        if (used > 0) input_length += (size_t)used;
+    }
+    for (size_t i = 0; i < logic->program.node_count; ++i) {
+        logic_node_kind_t kind = logic->program.nodes[i].kind;
+        if (kind >= LOGIC_NODE_NOT && kind <= LOGIC_NODE_XNOR) {
+            counts[kind - LOGIC_NODE_NOT]++;
+        }
+    }
+    char gates[78];
+    snprintf(gates, sizeof gates,
+             "NOT%u AND%u OR%u XOR%u NAND%u NOR%u XNOR%u",
+             counts[0], counts[1], counts[2], counts[3],
+             counts[4], counts[5], counts[6]);
+    char output[16];
+    snprintf(output, sizeof output, "OUT = %u",
+             logic_engine_evaluate(&logic->program, logic->assignment)
+                ? 1u : 0u);
+
+    lcd_draw_text(6, 17, calculator_widget_tail(logic->editor.text, 78),
+                  COL_MUTED, COL_BG, 1);
+    lcd_draw_text(6, 32, inputs, COL_TEXT, COL_BG, 1);
+    lcd_draw_text(6, 47, output, COL_TEXT, COL_BG, 2);
+    lcd_draw_text(6, 70, gates, COL_MUTED, COL_BG, 1);
+}
+
+void calculator_page_render_logic(const calculator_logic_t *logic,
+                                  const char *message) {
+    char status[79];
+    char editor_text[EXPRESSION_EDITOR_CAPACITY + 2];
+    snprintf(status, sizeof status, "LOGIC %s  %.60s",
+             logic_view_name(logic->view), message);
+    clear_display();
+    lcd_draw_text(6, 3, status, COL_MUTED, COL_BG, 1);
+
+    if (logic->view == LOGIC_VIEW_TABLE && logic->compiled) {
+        render_logic_table(logic);
+    } else if ((logic->view == LOGIC_VIEW_DNF ||
+                logic->view == LOGIC_VIEW_KNF) && logic->compiled) {
+        render_logic_form(logic);
+    } else if (logic->view == LOGIC_VIEW_GATES && logic->compiled) {
+        render_logic_gates(logic);
+    } else {
+        lcd_draw_text(6, 20,
+                      expression_editor_view(&logic->editor, editor_text,
+                                             sizeof editor_text, 38),
+                      COL_TEXT, COL_BG, 2);
+        lcd_draw_text(6, 52,
+                      "A-F  NOT AND OR XOR NAND NOR XNOR",
+                      COL_MUTED, COL_BG, 1);
+        lcd_draw_text(6, 67, "CHECK OR SELECT TABLE / DNF / KNF / GATES",
+                      COL_MUTED, COL_BG, 1);
+    }
+    finish_display();
+}

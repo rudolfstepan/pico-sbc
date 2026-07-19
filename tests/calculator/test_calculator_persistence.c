@@ -15,7 +15,7 @@
 static void fill_state(calculator_persisted_state_t *state) {
     calculator_persistence_defaults(state);
     state->degrees = false;
-    state->page = PAGE_SYMBOLS;
+    state->page = PAGE_LOGIC;
     state->format_bits = 64;
     state->fixed_fraction_bits = 24;
     state->ans = 12.5;
@@ -69,7 +69,7 @@ int main(void) {
                                         &sequence) ==
           CALCULATOR_PERSISTENCE_VALID);
     CHECK(sequence == 41);
-    CHECK(!decoded.degrees && decoded.page == PAGE_SYMBOLS);
+    CHECK(!decoded.degrees && decoded.page == PAGE_LOGIC);
     CHECK(decoded.format_bits == 64 && decoded.fixed_fraction_bits == 24);
     CHECK(fabs(decoded.memory_value + 7.25) < 1e-12);
     CHECK(decoded.programmer_value == UINT64_C(0x123456789abcdef0));

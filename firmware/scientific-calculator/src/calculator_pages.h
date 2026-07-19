@@ -2,6 +2,7 @@
 #define CALCULATOR_PAGES_H
 
 #include "calculator_ui_types.h"
+#include "calculator_logic.h"
 #include "calculator_symbols.h"
 #include "expression_editor.h"
 #include "programmer_engine.h"
@@ -29,5 +30,7 @@ void calculator_page_render_tools(double memory_value, const char *message,
 void calculator_page_render_symbols(const calculator_symbols_t *symbols,
                                     size_t selected_function,
                                     const char *message);
+void calculator_page_render_logic(const calculator_logic_t *logic,
+                                  const char *message);
 
 #endif

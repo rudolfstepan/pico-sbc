@@ -3,6 +3,7 @@
 #include "calculator_engine.h"
 #include "calculator_graph.h"
 #include "calculator_list.h"
+#include "calculator_logic.h"
 #include "calculator_navigation.h"
 #include "calculator_pages.h"
 #include "calculator_persistence.h"
@@ -46,6 +47,7 @@ static calculator_list_t history_list;
 static double memory_value;
 static calculator_graph_t graph;
 static calculator_symbols_t symbols;
+static calculator_logic_t logic;
 static bool persistence_dirty;
 static absolute_time_t persistence_deadline;
 
@@ -135,6 +137,9 @@ static calculator_widget_state_t current_widget_state(void) {
         .graph_view = graph.view,
         .graph_active_mask = active_mask,
         .graph_selected_function = graph.selected_function,
+        .logic_view = logic.view,
+        .logic_variable_mask = logic.compiled ? logic.program.variable_mask : 0,
+        .logic_assignment = logic.assignment,
     };
     for (size_t i = 0; i < CALCULATOR_FAVORITE_COUNT; ++i) {
         state.favorites[i] = symbols.favorites[i];
@@ -170,6 +175,10 @@ static void render_display(void) {
     if (page == PAGE_SYMBOLS) {
         calculator_page_render_symbols(&symbols, graph.selected_function,
                                        message);
+        return;
+    }
+    if (page == PAGE_LOGIC) {
+        calculator_page_render_logic(&logic, message);
         return;
     }
     if (page == PAGE_GRAPH) return;
@@ -756,6 +765,11 @@ static void activate_graph_key(const calc_key_t *key) {
     render_graph();
 }
 
+static void activate_logic_key(const calc_key_t *key) {
+    calculator_logic_activate(&logic, key->token, message, sizeof message);
+    render_keypad();
+}
+
 static void activate_key(const calc_key_t *key) {
     switch (key->action) {
         case ACT_INSERT:
@@ -862,6 +876,9 @@ static void activate_key(const calc_key_t *key) {
         case ACT_GRAPH:
             activate_graph_key(key);
             break;
+        case ACT_LOGIC:
+            activate_logic_key(key);
+            break;
     }
     render_display();
     mark_persistence_dirty();
@@ -877,6 +894,7 @@ void calculator_ui_init(void) {
     expression_editor_init(&expression_state);
     calculator_list_init(&history_list);
     programmer_engine_init(&programmer);
+    calculator_logic_init(&logic);
 
     calculator_persisted_state_t persisted;
     calculator_storage_load_status_t load_status =
@@ -947,6 +965,10 @@ void calculator_ui_task(void) {
     if (button2 && !old_button2) {
         if (page == PAGE_PROGRAMMER) {
             programmer_engine_delete(&programmer);
+        } else if (page == PAGE_LOGIC) {
+            calculator_logic_activate(&logic, "DEL",
+                                      message, sizeof message);
+            render_keypad();
         } else if (calculator_page_accepts_expression(page)) {
             delete_expression_char();
         }
@@ -979,6 +1001,13 @@ void calculator_ui_task(void) {
             }
             render_graph();
             mark_persistence_dirty();
+        } else if (page == PAGE_LOGIC) {
+            const char *token = joystick.left ? "LEFT" :
+                (joystick.right ? "RIGHT" :
+                 (joystick.up ? "UP" : "DOWN"));
+            calculator_logic_activate(&logic, token,
+                                      message, sizeof message);
+            render_display();
         } else if (calculator_page_accepts_expression(page)) {
             if (joystick.left) {
                 expression_editor_move(&expression_state, EDITOR_CURSOR_LEFT);

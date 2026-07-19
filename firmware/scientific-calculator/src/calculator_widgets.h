@@ -2,6 +2,7 @@
 #define CALCULATOR_WIDGETS_H
 
 #include "calculator_ui_types.h"
+#include "calculator_logic.h"
 #include "graph_model.h"
 
 #include <stdbool.h>
@@ -26,6 +27,9 @@ typedef struct {
     graph_view_t graph_view;
     unsigned int graph_active_mask;
     size_t graph_selected_function;
+    calculator_logic_view_t logic_view;
+    uint8_t logic_variable_mask;
+    uint8_t logic_assignment;
     const char *favorites[6];
 } calculator_widget_state_t;
 

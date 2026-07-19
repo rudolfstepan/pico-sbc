@@ -61,6 +61,13 @@ static uint16_t key_fill(const calc_key_t *key, bool pressed,
              state->format_view == FORMAT_VIEW_IEEE64);
         if (selected) return COL_TEXT;
     }
+    if (state->page == PAGE_LOGIC && key->action == ACT_LOGIC &&
+        state->logic_view == LOGIC_VIEW_GATES && key->token[0] >= 'A' &&
+        key->token[0] <= 'F' && key->token[1] == '\0') {
+        uint8_t bit = (uint8_t)(1u << (key->token[0] - 'A'));
+        if (!(state->logic_variable_mask & bit)) return COL_COMMAND;
+        if (state->logic_assignment & bit) return COL_TEXT;
+    }
     switch (key->style) {
         case STYLE_NUMBER: return COL_KEY;
         case STYLE_FUNCTION: return COL_FUNCTION;

@@ -40,6 +40,29 @@ int main(void) {
         return 1;
     }
 
+    calculator_logic_t logic;
+    char logic_message[32];
+    calculator_logic_init(&logic);
+    expression_editor_set(&logic.editor, "A^B^C^D^E^F");
+    calculator_logic_compile(&logic, logic_message, sizeof logic_message);
+    calculator_page_render_logic(&logic, logic_message);
+    calculator_logic_activate(&logic, "TABLE", logic_message,
+                              sizeof logic_message);
+    calculator_page_render_logic(&logic, logic_message);
+    calculator_logic_activate(&logic, "DNF", logic_message,
+                              sizeof logic_message);
+    calculator_page_render_logic(&logic, logic_message);
+    calculator_logic_activate(&logic, "KNF", logic_message,
+                              sizeof logic_message);
+    calculator_page_render_logic(&logic, logic_message);
+    calculator_logic_activate(&logic, "GATES", logic_message,
+                              sizeof logic_message);
+    calculator_page_render_logic(&logic, logic_message);
+    if (mock_lcd_had_out_of_bounds_draw()) {
+        puts("FAIL: out-of-bounds drawing on logic pages");
+        return 1;
+    }
+
     puts("calculator page tests passed");
     return 0;
 }

@@ -30,7 +30,8 @@ typedef enum {
     ACT_SYMBOL_SAVE,
     ACT_FAVORITE,
     ACT_FAVORITE_SET,
-    ACT_GRAPH
+    ACT_GRAPH,
+    ACT_LOGIC
 } calc_action_t;
 
 typedef enum {
@@ -40,7 +41,8 @@ typedef enum {
     PAGE_FORMAT,
     PAGE_TOOLS,
     PAGE_SYMBOLS,
-    PAGE_GRAPH
+    PAGE_GRAPH,
+    PAGE_LOGIC
 } calc_page_t;
 
 typedef enum {

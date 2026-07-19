@@ -15,7 +15,7 @@ ein Test auf dem echten LCD erfolgreich sind.
 | 3 | Variablen und Benutzerfunktionen | Phase 2 | abgeschlossen |
 | 4 | Permanente Speicherung | Phase 3 | Hardwaretest offen |
 | 5 | Programmer-Erweiterungen | Phase 0 | Hardwaretest offen |
-| 6 | Schaltalgebra und Gatter | Phase 5 | geplant |
+| 6 | Schaltalgebra und Gatter | Phase 5 | Hardwaretest offen |
 | 7 | Einheiten und Konstanten | Phase 3 | geplant |
 | 8 | Komplexe Zahlen | Phase 3 | geplant |
 | 9 | Statistikmodus | Phasen 2 und 3 | geplant |
@@ -123,17 +123,23 @@ auf dem Pico steht noch aus.
 
 ## Phase 6: Schaltalgebra und Gatter
 
-- [ ] Boolesche Ausdruecke mit Variablen und Klammern parsen.
-- [ ] `NOT`, `AND`, `OR`, `XOR`, `NAND`, `NOR` und `XNOR` unterstuetzen.
-- [ ] Wahrheitstabellen fuer bis zu sechs Eingangsvariablen erzeugen.
-- [ ] Kanonische KNF und DNF berechnen und lesbar anzeigen.
-- [ ] Boolesche Ausdruecke zu vereinfachten KNF-/DNF-Formen reduzieren.
-- [ ] Eine touchbedienbare Gatter-Simulation mit schaltbaren Eingaengen bauen.
-- [ ] Syntaxfehler, unverbundene Signale und zyklische Netze sicher ablehnen.
+- [x] Boolesche Ausdruecke mit Variablen und Klammern parsen.
+- [x] `NOT`, `AND`, `OR`, `XOR`, `NAND`, `NOR` und `XNOR` unterstuetzen.
+- [x] Wahrheitstabellen fuer bis zu sechs Eingangsvariablen erzeugen.
+- [x] Kanonische KNF und DNF berechnen und lesbar anzeigen.
+- [x] Boolesche Ausdruecke zu vereinfachten KNF-/DNF-Formen reduzieren.
+- [x] Eine touchbedienbare Gatter-Simulation mit schaltbaren Eingaengen bauen.
+- [x] Syntaxfehler sicher ablehnen; der Ausdrucksbaum kann keine offenen oder
+  zyklischen Netze erzeugen.
 
 **Fertig, wenn:** Ausdruck, Wahrheitstabelle, KNF/DNF und Gattersimulation fuer
 dieselben Eingangswerte identische Ergebnisse liefern und die wichtigsten
 Gatterkombinationen durch Host-Tests abgesichert sind.
+
+Softwarestand: Der getrennte Logikkern, Editor, Wahrheitstabelle, KNF/DNF und
+die Live-Gatteransicht sind implementiert. Alle 17 Host-Tests und der
+Scientific-Calculator-Firmware-Build laufen erfolgreich. Touchbedienung und
+Lesbarkeit auf dem Pico stehen noch aus.
 
 ## Phase 7: Einheiten und Konstanten
 

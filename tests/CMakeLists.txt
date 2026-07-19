@@ -152,11 +152,13 @@ add_executable(calculator_pages_tests
     calculator/test_calculator_pages.c
     calculator/mock_lcd.c
     ${CALCULATOR_SRC}/calculator_keymaps.c
+    ${CALCULATOR_SRC}/calculator_logic.c
     ${CALCULATOR_SRC}/calculator_pages.c
     ${CALCULATOR_SRC}/calculator_symbols.c
     ${CALCULATOR_SRC}/calculator_widgets.c
     ${CALCULATOR_SRC}/expression_editor.c
     ${CALCULATOR_SRC}/number_formats.c
+    ${CALCULATOR_SRC}/logic_engine.c
     ${CALCULATOR_SRC}/programmer_engine.c
 )
 target_include_directories(calculator_pages_tests PRIVATE
@@ -179,3 +181,21 @@ target_include_directories(calculator_persistence_tests PRIVATE
 )
 enable_project_warnings(calculator_persistence_tests)
 add_test(NAME calculator_persistence COMMAND calculator_persistence_tests)
+
+add_executable(logic_engine_tests
+    calculator/test_logic_engine.c
+    ${CALCULATOR_SRC}/logic_engine.c
+)
+target_include_directories(logic_engine_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(logic_engine_tests)
+add_test(NAME logic_engine COMMAND logic_engine_tests)
+
+add_executable(calculator_logic_tests
+    calculator/test_calculator_logic.c
+    ${CALCULATOR_SRC}/calculator_logic.c
+    ${CALCULATOR_SRC}/expression_editor.c
+    ${CALCULATOR_SRC}/logic_engine.c
+)
+target_include_directories(calculator_logic_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(calculator_logic_tests)
+add_test(NAME calculator_logic COMMAND calculator_logic_tests)

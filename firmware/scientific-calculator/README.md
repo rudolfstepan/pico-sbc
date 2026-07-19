@@ -11,8 +11,8 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 - `sinh`, `cosh`, `tanh`, `ln`, `log`, `exp`, `sqrt`
 - Betrag, Abrunden, Fakultaet, Kombinationen und Permutationen
 - Konstanten Pi und e
-- Sechs Touch-Ebenen: `BASIC`, `SCIENTIFIC`, `PROGRAMMER`, `FORMAT`, `TOOLS`
-  und `SYMBOLS`
+- Sieben Touch-Ebenen: `BASIC`, `SCIENTIFIC`, `PROGRAMMER`, `FORMAT`, `TOOLS`,
+  `SYMBOLS` und `LOGIC`
 - `PROGRAMMER`-Ebene fuer exakte 64-Bit-Werte
 - Direkte Umwandlung zwischen Dezimal, Hexadezimal und Binaer
 - Bitoperationen `AND`, `OR`, `XOR`, `NOT`, Schieben und Zweierkomplement
@@ -23,6 +23,8 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 - IEEE-754-Umwandlung fuer Float32 und Float64, auch von und zu `ANS`
 - IEEE-754-Inspector fuer Vorzeichen, Roh- und Arbeitsexponent, Mantisse und
   Klassifikation als Normal, Subnormal, Null, Unendlich oder NaN
+- Schaltalgebra mit Wahrheitstabelle, vereinfachter und kanonischer KNF/DNF
+  sowie Live-Simulation fuer bis zu sechs Eingaenge
 - Automatisch maximal skalierte Tastenbeschriftungen
 - Ausdruckseditor mit sichtbarem Cursor und Joystick-Navigation
 - Acht Eintraege Rechenverlauf mit erneutem Laden
@@ -40,7 +42,7 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 - K1 berechnet, K2 loescht das letzte Zeichen
 
 Die Seitentaste wechselt
-`BASIC -> SCIENTIFIC -> PROGRAMMER -> FORMAT -> TOOLS -> SYMBOLS -> BASIC`.
+`BASIC -> SCIENTIFIC -> PROGRAMMER -> FORMAT -> TOOLS -> SYMBOLS -> LOGIC -> BASIC`.
 Der Graphenmodus wird von `TOOLS` aus geoeffnet. Der Joystick bewegt im
 Editor den Cursor und im Graphenmodus den sichtbaren Ausschnitt.
 Funktionen setzen automatisch eine oeffnende Klammer. Die schliessende Klammer
@@ -101,6 +103,27 @@ Ergebnisse enthalten die benoetigte Iterationszahl. Fehler wie ungueltige
 Wertebereiche oder fehlende Konvergenz werden direkt im Graphkopf angezeigt.
 Mit `RANGE` und dem Joystick lassen sich Intervall und Startwert vor der
 Berechnung anpassen.
+
+## Schaltalgebra und Gatter
+
+Auf `LOGIC` werden Boolesche Ausdruecke mit den Variablen `A` bis `F`
+eingegeben. Unterstuetzt werden `NOT`, `AND`, `OR`, `XOR`, `NAND`, `NOR`,
+`XNOR`, Konstanten `0` und `1` sowie Klammern. Ein schneller Test fuer ein
+Exklusiv-Oder ist `A -> XOR -> B -> CHECK`.
+
+- `TABLE` zeigt vier Zeilen der Wahrheitstabelle; `UP` und `DOWN` blaettern.
+- `DNF` und `KNF` zeigen zuerst die vereinfachte Form. Erneutes Antippen
+  derselben Taste schaltet auf die kanonische Form um.
+- `USE` laedt eine angezeigte Form in den Editor, sofern sie hineinpasst.
+- `GATES` oeffnet die Live-Simulation. `A` bis `F` schalten die verwendeten
+  Eingaenge; helle Tasten bedeuten logisch `1`. Ausgang und Gatteranzahl werden
+  sofort aktualisiert.
+- `CHECK` prueft Syntax und Gatterbaum. Die Rangfolge ist
+  `NOT`, `AND/NAND`, `XOR/XNOR`, `OR/NOR`.
+
+Die Logik wird als Ausdrucksbaum aufgebaut. Dadurch sind offene Verbindungen
+und zyklische Netze nicht darstellbar; unvollstaendige Ausdruecke werden mit
+der Fehlerposition abgelehnt.
 
 ## Erweiterte Programmer-Werkzeuge
 

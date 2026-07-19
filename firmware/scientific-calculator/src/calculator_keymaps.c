@@ -260,7 +260,7 @@ static const calc_key_t tools_keys[] = {
 };
 
 static const calc_key_t symbol_keys[] = {
-    {"BASIC", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"LOGIC", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
     {"A", "A", 1, 0, ACT_INSERT, STYLE_NUMBER},
     {"B", "B", 2, 0, ACT_INSERT, STYLE_NUMBER},
     {"C", "C", 3, 0, ACT_INSERT, STYLE_NUMBER},
@@ -294,6 +294,43 @@ static const calc_key_t symbol_keys[] = {
     {"SET4", "3", 3, 4, ACT_FAVORITE_SET, STYLE_COMMAND},
     {"SET5", "4", 4, 4, ACT_FAVORITE_SET, STYLE_COMMAND},
     {"SET6", "5", 5, 4, ACT_FAVORITE_SET, STYLE_COMMAND},
+};
+
+static const calc_key_t logic_keys[] = {
+    {"BASIC", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"CHECK", "CHECK", 1, 0, ACT_LOGIC, STYLE_COMMAND},
+    {"TABLE", "TABLE", 2, 0, ACT_LOGIC, STYLE_COMMAND},
+    {"DNF", "DNF", 3, 0, ACT_LOGIC, STYLE_COMMAND},
+    {"KNF", "KNF", 4, 0, ACT_LOGIC, STYLE_COMMAND},
+    {"GATES", "GATES", 5, 0, ACT_LOGIC, STYLE_EQUALS},
+
+    {"A", "A", 0, 1, ACT_LOGIC, STYLE_NUMBER},
+    {"B", "B", 1, 1, ACT_LOGIC, STYLE_NUMBER},
+    {"C", "C", 2, 1, ACT_LOGIC, STYLE_NUMBER},
+    {"D", "D", 3, 1, ACT_LOGIC, STYLE_NUMBER},
+    {"E", "E", 4, 1, ACT_LOGIC, STYLE_NUMBER},
+    {"F", "F", 5, 1, ACT_LOGIC, STYLE_NUMBER},
+
+    {"NOT", "!", 0, 2, ACT_LOGIC, STYLE_FUNCTION},
+    {"AND", "&", 1, 2, ACT_LOGIC, STYLE_FUNCTION},
+    {"OR", "|", 2, 2, ACT_LOGIC, STYLE_FUNCTION},
+    {"XOR", "^", 3, 2, ACT_LOGIC, STYLE_FUNCTION},
+    {"NAND", " NAND ", 4, 2, ACT_LOGIC, STYLE_FUNCTION},
+    {"NOR", " NOR ", 5, 2, ACT_LOGIC, STYLE_FUNCTION},
+
+    {"XNOR", " XNOR ", 0, 3, ACT_LOGIC, STYLE_FUNCTION},
+    {"(", "(", 1, 3, ACT_LOGIC, STYLE_FUNCTION},
+    {")", ")", 2, 3, ACT_LOGIC, STYLE_FUNCTION},
+    {"0", "0", 3, 3, ACT_LOGIC, STYLE_NUMBER},
+    {"1", "1", 4, 3, ACT_LOGIC, STYLE_NUMBER},
+    {"DEL", "DEL", 5, 3, ACT_LOGIC, STYLE_COMMAND},
+
+    {"AC", "AC", 0, 4, ACT_LOGIC, STYLE_COMMAND},
+    {"<", "LEFT", 1, 4, ACT_LOGIC, STYLE_FUNCTION},
+    {">", "RIGHT", 2, 4, ACT_LOGIC, STYLE_FUNCTION},
+    {"UP", "UP", 3, 4, ACT_LOGIC, STYLE_FUNCTION},
+    {"DOWN", "DOWN", 4, 4, ACT_LOGIC, STYLE_FUNCTION},
+    {"USE", "USE", 5, 4, ACT_LOGIC, STYLE_EQUALS},
 };
 
 static const calc_key_t graph_plot_keys[] = {
@@ -407,6 +444,9 @@ const calc_key_t *calculator_keymap(calc_page_t page, size_t *count) {
             return symbol_keys;
         case PAGE_GRAPH:
             return calculator_graph_keymap(GRAPH_VIEW_PLOT, count);
+        case PAGE_LOGIC:
+            *count = sizeof logic_keys / sizeof logic_keys[0];
+            return logic_keys;
         case PAGE_BASIC:
         default:
             *count = sizeof basic_keys / sizeof basic_keys[0];
