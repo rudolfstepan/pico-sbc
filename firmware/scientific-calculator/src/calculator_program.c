@@ -353,23 +353,98 @@ static void render_editor(calculator_program_t *program) {
     lcd_draw_text(6, prompt_top + 9, prompt, COL_TEXT, COL_BG, 2);
 }
 
-static void visible_output(char *destination, size_t capacity,
-                           const char *source) {
+static size_t output_max_chars(void) {
     size_t max_chars = (size_t)(lcd_width() - 12) / 12u;
     if (max_chars > 39u) max_chars = 39u;
-    snprintf(destination, capacity, "%.*s", (int)max_chars, source);
+    return max_chars ? max_chars : 1u;
+}
+
+static size_t output_wrap_chunk(const char *source, size_t offset,
+                                size_t max_chars, size_t *next_offset) {
+    size_t length = strlen(source);
+    size_t remaining = length - offset;
+    size_t chunk = remaining < max_chars ? remaining : max_chars;
+    if (remaining > max_chars) {
+        size_t break_after = chunk;
+        while (break_after > 0u &&
+               source[offset + break_after - 1u] != ' ') {
+            break_after--;
+        }
+        if (break_after > 1u) chunk = break_after - 1u;
+    }
+    size_t next = offset + chunk;
+    while (next < length && source[next] == ' ') next++;
+    *next_offset = next;
+    return chunk;
+}
+
+static size_t output_wrapped_rows(const char *source, size_t max_chars) {
+    if (!source || !*source) return 1u;
+    size_t rows = 0;
+    size_t offset = 0;
+    size_t length = strlen(source);
+    while (offset < length) {
+        size_t next = offset;
+        output_wrap_chunk(source, offset, max_chars, &next);
+        rows++;
+        if (next <= offset) break;
+        offset = next;
+    }
+    return rows;
+}
+
+static bool output_wrapped_row(const char *source, size_t max_chars,
+                               size_t target_row, char *destination,
+                               size_t capacity) {
+    if (!source || !destination || !capacity) return false;
+    if (!*source) {
+        destination[0] = '\0';
+        return target_row == 0u;
+    }
+    size_t offset = 0;
+    size_t length = strlen(source);
+    size_t row = 0;
+    while (offset < length) {
+        size_t next = offset;
+        size_t chunk = output_wrap_chunk(source, offset, max_chars, &next);
+        if (row == target_row) {
+            if (chunk >= capacity) chunk = capacity - 1u;
+            memcpy(destination, source + offset, chunk);
+            destination[chunk] = '\0';
+            return true;
+        }
+        if (next <= offset) break;
+        offset = next;
+        row++;
+    }
+    return false;
 }
 
 static void render_output(const calculator_program_t *program) {
     size_t visible_lines = program_output_visible_lines(program);
-    size_t start = program->engine.output_count > visible_lines
-        ? program->engine.output_count - visible_lines : 0;
+    size_t max_chars = output_max_chars();
+    size_t total_rows = 0;
+    for (size_t i = 0; i < program->engine.output_count; ++i) {
+        total_rows += output_wrapped_rows(program->engine.output[i], max_chars);
+    }
+    size_t first_visible = total_rows > visible_lines
+        ? total_rows - visible_lines : 0;
+    size_t visual_row = 0;
+    size_t drawn_rows = 0;
     char output[40];
-    for (size_t row = 0; start + row < program->engine.output_count; ++row) {
-        visible_output(output, sizeof output,
-                       program->engine.output[start + row]);
-        lcd_draw_text(6, 16 + (int)row * 18, output,
-                      COL_TEXT, COL_BG, 2);
+    for (size_t i = 0; i < program->engine.output_count &&
+                       drawn_rows < visible_lines; ++i) {
+        size_t rows = output_wrapped_rows(program->engine.output[i], max_chars);
+        for (size_t row = 0; row < rows && drawn_rows < visible_lines; ++row) {
+            if (visual_row++ < first_visible) continue;
+            if (!output_wrapped_row(program->engine.output[i], max_chars, row,
+                                    output, sizeof output)) {
+                continue;
+            }
+            lcd_draw_text(6, 16 + (int)drawn_rows * 18, output,
+                          COL_TEXT, COL_BG, 2);
+            drawn_rows++;
+        }
     }
     if (program->engine.state == BASIC_RUN_INPUT) {
         char input[EXPRESSION_EDITOR_CAPACITY + 2];

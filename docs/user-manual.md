@@ -646,7 +646,10 @@ Der Joystick bewegt den Cursor und scrollt die Programmliste. Ein Tippen auf
 den oberen Bildschirmbereich wechselt zwischen Liste und Ausgabe. `K2`
 durchlaeuft die grosse, kompakte und vollstaendig ausgeblendete Tastatur.
 Im Vollbild zeigt CODE bis zu 16 Ausgabezeilen, in der Standardansicht bis zu
-sechs.
+sechs. Lange Ausgaben werden an der verfuegbaren LCD-Breite automatisch auf
+weitere Bildschirmzeilen umgebrochen. Landscape zeigt bei der grossen
+Ausgabeschrift bis zu 39 Zeichen pro Zeile, Portrait bis zu 25 Zeichen; Text
+wird dabei nicht mehr am rechten Rand abgeschnitten.
 
 ### Tastaturebenen
 

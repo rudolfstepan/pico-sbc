@@ -49,6 +49,18 @@ int main(void) {
     calculator_program_render(&program);
     CHECK(!mock_lcd_had_out_of_bounds_draw());
 
+    calculator_program_t wrapped_program;
+    calculator_program_init(&wrapped_program);
+    wrapped_program.output_view = true;
+    wrapped_program.engine.output_count = 1;
+    snprintf(wrapped_program.engine.output[0], BASIC_OUTPUT_CAPACITY,
+             "ALPHA BETA GAMMA DELTA EPSILON ZETA THETALONG");
+    mock_lcd_reset();
+    calculator_program_render(&wrapped_program);
+    CHECK(!mock_lcd_had_out_of_bounds_draw());
+    CHECK(mock_lcd_drew_text("ALPHA BETA GAMMA DELTA EPSILON ZETA"));
+    CHECK(mock_lcd_drew_text("THETALONG"));
+
     calculator_program_touch(&program, 20, 280);
     CHECK(program.clear_armed && program.engine.program.count == 1);
     effects = calculator_program_touch(&program, 20, 280);
@@ -101,6 +113,17 @@ int main(void) {
     CHECK(calculator_program_touch(&portrait_program, 8, 210) &
           CALCULATOR_PROGRAM_RENDER);
     CHECK(strcmp(portrait_program.editor.text, "1") == 0);
+
+    portrait_program.output_view = true;
+    portrait_program.engine.output_count = 1;
+    snprintf(portrait_program.engine.output[0], BASIC_OUTPUT_CAPACITY,
+             "ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghij");
+    mock_lcd_reset();
+    calculator_program_render(&portrait_program);
+    CHECK(!mock_lcd_had_out_of_bounds_draw());
+    CHECK(mock_lcd_drew_text("ABCDEFGHIJKLMNOPQRSTUVWXY"));
+    CHECK(mock_lcd_drew_text("Z1234567890abcdefghij"));
+    portrait_program.output_view = false;
 
     calculator_program_set_layout(&portrait_program,
                                   CALCULATOR_LAYOUT_DATA_FOCUS);
