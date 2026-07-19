@@ -37,6 +37,10 @@ Der Rechner trennt Darstellung und Rechenlogik:
   Rechnerzustands mit CRC32 und Auswahl redundanter Datensaetze
 - `calculator_storage`: RP2040-Flash-Backend mit zwei wechselnden Sektoren,
   Schreibvermeidung fuer unveraenderte Daten und Ruecklesepruefung
+- `basic_engine`: hardwareunabhaengiger, schrittweise ausgefuehrter
+  BASIC-Interpreter mit festen Speicher- und Laufzeitgrenzen
+- `calculator_program`: CODE-Seite mit Programmliste, Ausgabe sowie QWERTZ-
+  und BASIC-Token-Tastatur
 - `numerical_analysis`: hardwareunabhaengige Nullstellen-, Schnittpunkt-,
   Ableitungs-, Integral- und Extremumsalgorithmen mit Toleranzgrenzen
 - `expression_editor`, `calculator_list` und `calculator_dialog`:

@@ -1,5 +1,6 @@
 add_executable(lafvin_scientific_calculator
     src/main.c
+    src/basic_engine.c
     src/calculation_status.c
     src/calculator_dialog.c
     src/calculator_engine.c
@@ -13,6 +14,7 @@ add_executable(lafvin_scientific_calculator
     src/calculator_navigation.c
     src/calculator_pages.c
     src/calculator_persistence.c
+    src/calculator_program.c
     src/calculator_storage.c
     src/calculator_symbols.c
     src/calculator_statistics.c
@@ -57,7 +59,7 @@ pico_add_linker_script_override_path(
 pico_enable_stdio_usb(lafvin_scientific_calculator 1)
 pico_enable_stdio_uart(lafvin_scientific_calculator 0)
 pico_set_program_name(lafvin_scientific_calculator "LAFVIN Scientific Calculator")
-pico_set_program_version(lafvin_scientific_calculator "1.1.0")
+pico_set_program_version(lafvin_scientific_calculator "1.2.0")
 set_target_properties(lafvin_scientific_calculator PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )

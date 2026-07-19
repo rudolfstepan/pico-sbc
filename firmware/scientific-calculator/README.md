@@ -11,8 +11,8 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 - `sinh`, `cosh`, `tanh`, `ln`, `log`, `exp`, `sqrt`
 - Betrag, Abrunden, Fakultaet, Kombinationen und Permutationen
 - Konstanten Pi und e
-- Zehn Touch-Ebenen: `BASIC`, `SCIENTIFIC`, `PROGRAMMER`, `FORMAT`, `TOOLS`,
-  `SYMBOLS`, `LOGIC`, `UNITS`, `COMPLEX` und `STATS`
+- Elf Touch-Ebenen: `BASIC`, `SCIENTIFIC`, `PROGRAMMER`, `FORMAT`, `TOOLS`,
+  `SYMBOLS`, `LOGIC`, `UNITS`, `COMPLEX`, `STATS` und `CODE`
 - `PROGRAMMER`-Ebene fuer exakte 64-Bit-Werte
 - Direkte Umwandlung zwischen Dezimal, Hexadezimal und Binaer
 - Bitoperationen `AND`, `OR`, `XOR`, `NOT`, Schieben und Zweierkomplement
@@ -31,6 +31,8 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
   Konjugation und eigenem verlustfreien Verlauf
 - Ein- und Zwei-Variablen-Statistik mit editierbarer Zahlenliste,
   Standardabweichung, linearer Regression, Histogramm und Streudiagramm
+- Persistenter BASIC-Programmiermodus mit Bildschirmausgabe, QWERTZ- und
+  eigener Token-Tastatur
 - Automatisch maximal skalierte Tastenbeschriftungen
 - Ausdruckseditor mit sichtbarem Cursor und Joystick-Navigation
 - Acht Eintraege Rechenverlauf mit erneutem Laden
@@ -45,13 +47,13 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
   Gelb und Magenta
 - Trace-Cursor, scrollbare Wertetabelle, automatische Skalierung sowie Marker
   fuer Nullstellen und Schnittpunkte
-- K1 berechnet beziehungsweise fuegt Statistikdaten hinzu; K2 schaltet das
-  Displaylayout um
+- K1 berechnet, fuegt Statistikdaten hinzu oder bestaetigt eine CODE-Zeile;
+  K2 schaltet das Displaylayout beziehungsweise die CODE-Ansicht um
 - USB-CDC-Protokoll und Python-CLI fuer Berechnung, Diagnose sowie
   JSON-Import und -Export
 
 Die Seitentaste wechselt
-`BASIC -> SCIENTIFIC -> PROGRAMMER -> FORMAT -> TOOLS -> SYMBOLS -> LOGIC -> UNITS -> COMPLEX -> STATS -> BASIC`.
+`BASIC -> SCIENTIFIC -> PROGRAMMER -> FORMAT -> TOOLS -> SYMBOLS -> LOGIC -> UNITS -> COMPLEX -> STATS -> CODE -> BASIC`.
 Der Graphenmodus wird von `TOOLS` aus geoeffnet. Der Joystick bewegt im
 Editor den Cursor und im Graphenmodus den sichtbaren Ausschnitt.
 Funktionen setzen automatisch eine oeffnende Klammer. Die schliessende Klammer
@@ -60,7 +62,8 @@ Beispiel `ncr(6,2)`.
 
 ## Displaylayout
 
-K2 wechselt jederzeit zwischen zwei Ansichten. Die Standardansicht verwendet
+Ausserhalb der CODE-Seite wechselt K2 zwischen zwei Ansichten. Die
+Standardansicht verwendet
 einen 84 Pixel hohen Datenbereich und grosse Touch-Tasten. Im Datenfokus ist
 der Datenbereich mit 168 Pixeln doppelt so hoch; Inhalte, Diagramme und
 Datenschrift nutzen den zusaetzlichen Platz. Normale Datenzeilen wachsen von
@@ -210,6 +213,45 @@ das letzte normale Rechenergebnis in das aktive Feld.
 K1 entspricht `ADD`. K2 schaltet das Displaylayout um. Der Joystick waehlt
 mit links/rechts eine Zeile und mit oben/unten das X- oder Y-Feld. Modus und
 Zahlenliste werden automatisch im Flash gespeichert.
+
+## BASIC-Programmierung
+
+Die `CODE`-Taste auf der Statistikseite oeffnet den Programmeditor. Eine Zeile
+besteht aus Zeilennummer und Anweisung und wird mit `ENTER` gespeichert. Nur
+die Zeilennummer mit `ENTER` loescht diese Zeile wieder. Bis zu 20 Zeilen mit
+je 63 Zeichen werden automatisch im Flash gespeichert.
+
+`TOK` wechselt von der QWERTZ-Tastatur zu einer eigenen BASIC-Tastatur. Dort
+stehen `LET`, `PRINT`, `INPUT`, `IF`, `THEN`, `GOTO`, `FOR`, `TO`, `STEP`,
+`NEXT`, `END`, `CLS` und `REM` sowie Operatoren und Rechenfunktionen direkt
+bereit. Jede Token-Taste fuegt das vollstaendige Wort samt passender
+Leerzeichen ein. `ABC` wechselt zurueck zur Zeicheneingabe.
+
+Ein direkt eintippbares Beispiel ist:
+
+```basic
+10 CLS
+20 FOR I=1 TO 5
+30 PRINT I^2
+40 NEXT I
+50 END
+```
+
+- `RUN` startet das Programm und wird waehrend der Ausfuehrung zu `STOP`.
+- `PRINT` schreibt Text in Anfuehrungszeichen oder einen Zahlenwert auf den
+  Bildschirm.
+- `INPUT A` wartet auf eine Zahl oder einen Rechenausdruck und speichert das
+  Ergebnis in `A`.
+- `K1` entspricht `ENTER`; `K2` und ein Druck auf den oberen Bildschirmbereich
+  wechseln zwischen Programmliste und Ausgabe.
+- Der Joystick bewegt den Eingabecursor und scrollt die Programmliste.
+- `NEW` muss zur Sicherheit zweimal gedrueckt werden. `CALC` beendet den
+  Programmiermodus und kehrt zum normalen Rechner zurueck.
+
+Es stehen die Variablen `A` bis `Z` zur Verfuegung. Ausdruecke verwenden die
+Rechenfunktionen von TinyExpr, beispielsweise `SIN`, `COS`, `SQRT`, `ABS` und
+`EXP`. Nach 5000 ausgefuehrten Anweisungen wird ein Programm automatisch mit
+`STEP LIMIT` beendet, damit eine Endlosschleife die Bedienung nicht blockiert.
 
 ## USB-Datenaustausch
 

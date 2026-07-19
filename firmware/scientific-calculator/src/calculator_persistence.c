@@ -6,6 +6,7 @@
 
 #define RECORD_HEADER_SIZE 20u
 #define LEGACY_PERSISTENCE_VERSION 1u
+#define STATISTICS_PERSISTENCE_VERSION 2u
 
 static const uint8_t record_magic[4] = {'P', 'C', 'A', 'L'};
 
@@ -160,7 +161,8 @@ static bool statistics_is_valid(const statistics_dataset_t *statistics) {
 }
 
 static bool state_is_valid(const calculator_persisted_state_t *state) {
-    if (!state || state->page < PAGE_BASIC || state->page > PAGE_STATISTICS ||
+    if (!state || state->page < PAGE_BASIC ||
+        state->page > PAGE_BASIC_PROGRAM ||
         !format_bits_valid(state->format_bits) ||
         state->fixed_fraction_bits >= state->format_bits ||
         !isfinite(state->ans) || !isfinite(state->memory_value) ||
@@ -196,7 +198,8 @@ static bool state_is_valid(const calculator_persisted_state_t *state) {
         }
     }
     return graph_is_valid(&state->graph, &state->symbols) &&
-           statistics_is_valid(&state->statistics);
+           statistics_is_valid(&state->statistics) &&
+           basic_program_is_valid(&state->basic_program);
 }
 
 void calculator_persistence_defaults(calculator_persisted_state_t *state) {
@@ -277,6 +280,20 @@ static void write_payload(writer_t *writer,
     for (size_t i = 0; i < STATISTICS_CAPACITY; ++i) {
         write_double(writer, state->statistics.x[i]);
         write_double(writer, state->statistics.y[i]);
+    }
+
+    write_u8(writer, (uint8_t)state->basic_program.count);
+    for (unsigned int i = 0; i < 7; ++i) write_u8(writer, 0);
+    for (size_t i = 0; i < BASIC_PROGRAM_MAX_LINES; ++i) {
+        char text[BASIC_LINE_TEXT_CAPACITY] = {0};
+        uint16_t number = 0;
+        if (i < state->basic_program.count) {
+            number = state->basic_program.lines[i].number;
+            snprintf(text, sizeof text, "%s",
+                     state->basic_program.lines[i].text);
+        }
+        write_u16(writer, number);
+        write_bytes(writer, text, sizeof text);
     }
 }
 
@@ -407,6 +424,15 @@ static void read_payload(reader_t *reader, uint16_t version,
             state->statistics.y[i] = read_double(reader);
         }
     }
+    if (version >= 3u) {
+        state->basic_program.count = read_u8(reader);
+        for (unsigned int i = 0; i < 7; ++i) (void)read_u8(reader);
+        for (size_t i = 0; i < BASIC_PROGRAM_MAX_LINES; ++i) {
+            state->basic_program.lines[i].number = read_u16(reader);
+            read_bytes(reader, state->basic_program.lines[i].text,
+                       sizeof state->basic_program.lines[i].text);
+        }
+    }
 }
 
 static bool record_is_erased(const uint8_t *record, size_t size) {
@@ -445,6 +471,7 @@ calculator_persistence_status_t calculator_persistence_decode(
         return CALCULATOR_PERSISTENCE_CORRUPT;
     }
     if (version != LEGACY_PERSISTENCE_VERSION &&
+        version != STATISTICS_PERSISTENCE_VERSION &&
         version != CALCULATOR_PERSISTENCE_VERSION) {
         return CALCULATOR_PERSISTENCE_UNSUPPORTED;
     }
@@ -452,7 +479,7 @@ calculator_persistence_status_t calculator_persistence_decode(
         return CALCULATOR_PERSISTENCE_CORRUPT;
     }
 
-    calculator_persisted_state_t decoded;
+    static calculator_persisted_state_t decoded;
     reader_t payload = {
         .data = record + RECORD_HEADER_SIZE,
         .size = payload_size,
@@ -477,7 +504,7 @@ calculator_persistence_status_t calculator_persistence_select(
     const uint8_t *second, size_t second_size,
     calculator_persisted_state_t *state, uint32_t *sequence,
     size_t *selected_slot) {
-    calculator_persisted_state_t states[2];
+    static calculator_persisted_state_t states[2];
     uint32_t sequences[2] = {0, 0};
     calculator_persistence_status_t statuses[2] = {
         calculator_persistence_decode(first, first_size, &states[0],

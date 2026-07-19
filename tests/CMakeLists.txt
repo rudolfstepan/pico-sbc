@@ -34,6 +34,37 @@ target_compile_definitions(calculator_engine_tests PRIVATE TE_POW_FROM_RIGHT)
 enable_project_warnings(calculator_engine_tests)
 add_test(NAME calculator_engine COMMAND calculator_engine_tests)
 
+add_executable(basic_engine_tests
+    calculator/test_basic_engine.c
+    ${CALCULATOR_SRC}/basic_engine.c
+    ${TINYEXPR_SRC}/tinyexpr.c
+)
+target_include_directories(basic_engine_tests PRIVATE
+    ${CALCULATOR_SRC}
+    ${TINYEXPR_SRC}
+)
+target_compile_definitions(basic_engine_tests PRIVATE TE_POW_FROM_RIGHT)
+enable_project_warnings(basic_engine_tests)
+add_test(NAME basic_engine COMMAND basic_engine_tests)
+
+add_executable(calculator_program_tests
+    calculator/test_calculator_program.c
+    calculator/mock_lcd.c
+    ${CALCULATOR_SRC}/basic_engine.c
+    ${CALCULATOR_SRC}/calculator_program.c
+    ${CALCULATOR_SRC}/expression_editor.c
+    ${TINYEXPR_SRC}/tinyexpr.c
+)
+target_include_directories(calculator_program_tests PRIVATE
+    ${CALCULATOR_SRC}
+    ${PROJECT_ROOT}/lib/board/include
+    ${TINYEXPR_SRC}
+    calculator
+)
+target_compile_definitions(calculator_program_tests PRIVATE TE_POW_FROM_RIGHT)
+enable_project_warnings(calculator_program_tests)
+add_test(NAME calculator_program COMMAND calculator_program_tests)
+
 add_executable(programmer_engine_tests
     calculator/test_programmer.c
     ${CALCULATOR_SRC}/number_formats.c
@@ -177,13 +208,19 @@ add_test(NAME calculator_pages COMMAND calculator_pages_tests)
 
 add_executable(calculator_persistence_tests
     calculator/test_calculator_persistence.c
+    ${CALCULATOR_SRC}/basic_engine.c
     ${CALCULATOR_SRC}/calculator_persistence.c
     ${CALCULATOR_SRC}/calculator_symbols.c
     ${CALCULATOR_SRC}/calculation_status.c
     ${CALCULATOR_SRC}/graph_model.c
+    ${TINYEXPR_SRC}/tinyexpr.c
 )
 target_include_directories(calculator_persistence_tests PRIVATE
     ${CALCULATOR_SRC}
+    ${TINYEXPR_SRC}
+)
+target_compile_definitions(calculator_persistence_tests PRIVATE
+    TE_POW_FROM_RIGHT
 )
 enable_project_warnings(calculator_persistence_tests)
 add_test(NAME calculator_persistence COMMAND calculator_persistence_tests)

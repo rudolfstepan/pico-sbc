@@ -1,6 +1,7 @@
 #ifndef CALCULATOR_PERSISTENCE_H
 #define CALCULATOR_PERSISTENCE_H
 
+#include "basic_engine.h"
 #include "calculator_symbols.h"
 #include "calculator_ui_types.h"
 #include "expression_editor.h"
@@ -12,7 +13,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define CALCULATOR_PERSISTENCE_VERSION 2u
+#define CALCULATOR_PERSISTENCE_VERSION 3u
 #define CALCULATOR_PERSISTENCE_RECORD_CAPACITY 4096u
 #define CALCULATOR_PERSISTENCE_HISTORY_CAPACITY 8u
 #define CALCULATOR_PERSISTENCE_RESULT_CAPACITY 32u
@@ -41,6 +42,7 @@ typedef struct {
     size_t history_index;
     graph_model_t graph;
     statistics_dataset_t statistics;
+    basic_program_t basic_program;
 } calculator_persisted_state_t;
 
 typedef enum {

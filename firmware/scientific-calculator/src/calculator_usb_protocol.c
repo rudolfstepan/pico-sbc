@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CALCULATOR_FIRMWARE_VERSION "1.1.0"
+#define CALCULATOR_FIRMWARE_VERSION "1.2.0"
 
 static void respond(char *response, size_t size, const char *format, ...) {
     if (!response || !size) return;

@@ -14,6 +14,9 @@
 
 #define STATISTICS_PAYLOAD_SIZE \
     (8u + STATISTICS_CAPACITY * 2u * sizeof(double))
+#define BASIC_PAYLOAD_SIZE \
+    (8u + BASIC_PROGRAM_MAX_LINES * \
+     (sizeof(uint16_t) + BASIC_LINE_TEXT_CAPACITY))
 
 static void put_u32(uint8_t *destination, uint32_t value) {
     destination[0] = (uint8_t)value;
@@ -84,6 +87,16 @@ static void fill_state(calculator_persisted_state_t *state) {
     state->statistics.y[1] = 5.0;
     state->statistics.x[2] = 3.0;
     state->statistics.y[2] = 7.0;
+    state->basic_program.count = 3;
+    state->basic_program.lines[0].number = 10;
+    snprintf(state->basic_program.lines[0].text,
+             sizeof state->basic_program.lines[0].text, "FOR I=1 TO 3");
+    state->basic_program.lines[1].number = 20;
+    snprintf(state->basic_program.lines[1].text,
+             sizeof state->basic_program.lines[1].text, "PRINT I");
+    state->basic_program.lines[2].number = 30;
+    snprintf(state->basic_program.lines[2].text,
+             sizeof state->basic_program.lines[2].text, "NEXT I");
 }
 
 int main(void) {
@@ -118,6 +131,9 @@ int main(void) {
     CHECK(decoded.statistics.two_variable && decoded.statistics.count == 3);
     CHECK(decoded.statistics.x[1] == 2.0 &&
           decoded.statistics.y[2] == 7.0);
+    CHECK(decoded.basic_program.count == 3);
+    CHECK(decoded.basic_program.lines[1].number == 20);
+    CHECK(strcmp(decoded.basic_program.lines[2].text, "NEXT I") == 0);
 
     uint8_t canonical[CALCULATOR_PERSISTENCE_RECORD_CAPACITY];
     size_t canonical_size = 0;
@@ -126,9 +142,24 @@ int main(void) {
     CHECK(canonical_size == first_size &&
           memcmp(canonical, first, first_size) == 0);
 
+    uint8_t version2[CALCULATOR_PERSISTENCE_RECORD_CAPACITY];
+    memcpy(version2, first, first_size);
+    size_t version2_payload_size = first_size - 20u - BASIC_PAYLOAD_SIZE;
+    version2[4] = 2u;
+    version2[5] = 0u;
+    put_u32(version2 + 8, (uint32_t)version2_payload_size);
+    put_u32(version2 + 16,
+            test_record_crc(version2, version2_payload_size));
+    CHECK(calculator_persistence_decode(
+              version2, 20u + version2_payload_size, &decoded, &sequence) ==
+          CALCULATOR_PERSISTENCE_VALID);
+    CHECK(decoded.page == PAGE_STATISTICS &&
+          decoded.statistics.count == 3 && decoded.basic_program.count == 0);
+
     uint8_t legacy[CALCULATOR_PERSISTENCE_RECORD_CAPACITY];
     memcpy(legacy, first, first_size);
-    size_t legacy_payload_size = first_size - 20u - STATISTICS_PAYLOAD_SIZE;
+    size_t legacy_payload_size = first_size - 20u -
+        STATISTICS_PAYLOAD_SIZE - BASIC_PAYLOAD_SIZE;
     legacy[4] = 1u;
     legacy[5] = 0u;
     legacy[21] = (uint8_t)PAGE_COMPLEX;
@@ -138,7 +169,7 @@ int main(void) {
               legacy, 20u + legacy_payload_size, &decoded, &sequence) ==
           CALCULATOR_PERSISTENCE_VALID);
     CHECK(decoded.page == PAGE_COMPLEX && decoded.statistics.count == 0 &&
-          !decoded.statistics.two_variable);
+          !decoded.statistics.two_variable && decoded.basic_program.count == 0);
 
     size_t second_size = 0;
     original.memory_value = 99.0;

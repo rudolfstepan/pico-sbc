@@ -56,7 +56,7 @@ bisherigen Zustand nicht.
 Typische Antworten:
 
 ```text
-OK INFO<TAB>protocol=1<TAB>firmware=1.1.0<TAB>model=scientific-calculator
+OK INFO<TAB>protocol=1<TAB>firmware=1.2.0<TAB>model=scientific-calculator
 OK DIAG<TAB>page=0<TAB>angle=DEG<TAB>history=2<TAB>stats=3<TAB>mode=1
 OK VAR<TAB>A<TAB>3.5
 OK HISTORY<TAB>0<TAB>42<TAB>6*7<TAB>42

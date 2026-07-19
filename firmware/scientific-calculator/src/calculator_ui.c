@@ -9,6 +9,7 @@
 #include "calculator_navigation.h"
 #include "calculator_pages.h"
 #include "calculator_persistence.h"
+#include "calculator_program.h"
 #include "calculator_storage.h"
 #include "calculator_symbols.h"
 #include "calculator_statistics.h"
@@ -56,9 +57,11 @@ static calculator_logic_t logic;
 static calculator_units_t units;
 static calculator_complex_t complex;
 static calculator_statistics_t statistics;
+static calculator_program_t basic_program_ui;
 static bool persistence_dirty;
 static absolute_time_t persistence_deadline;
 static calculator_persisted_state_t usb_state;
+static calculator_persisted_state_t persistence_io_state;
 
 static void render_display(void);
 static void render_graph(void);
@@ -81,6 +84,7 @@ static void capture_persisted_state(calculator_persisted_state_t *state) {
     state->history_index = history_list.index;
     state->graph = graph;
     state->statistics = statistics.dataset;
+    state->basic_program = *calculator_program_source(&basic_program_ui);
 }
 
 static void apply_persisted_state(
@@ -105,6 +109,7 @@ static void apply_persisted_state(
     graph = state->graph;
     statistics.dataset = state->statistics;
     statistics.selected = 0;
+    calculator_program_set_source(&basic_program_ui, &state->basic_program);
     snprintf(result_text, sizeof result_text, "%.12g", ans);
 }
 
@@ -116,9 +121,9 @@ static void mark_persistence_dirty(void) {
 static void save_persistence_if_due(void) {
     if (!persistence_dirty || !time_reached(persistence_deadline)) return;
 
-    calculator_persisted_state_t state;
-    capture_persisted_state(&state);
-    calculator_storage_save_status_t status = calculator_storage_save(&state);
+    capture_persisted_state(&persistence_io_state);
+    calculator_storage_save_status_t status =
+        calculator_storage_save(&persistence_io_state);
     if (status == CALCULATOR_STORAGE_ERROR) {
         persistence_deadline = make_timeout_time_ms(PERSISTENCE_RETRY_MS);
         snprintf(message, sizeof message, "SAVE ERROR");
@@ -172,6 +177,10 @@ static void draw_key(const calc_key_t *key, bool pressed) {
 }
 
 static void render_display(void) {
+    if (page == PAGE_BASIC_PROGRAM) {
+        calculator_program_render(&basic_program_ui);
+        return;
+    }
     if (page == PAGE_PROGRAMMER) {
         calculator_page_render_programmer(&programmer, message);
         return;
@@ -219,6 +228,7 @@ static void render_display(void) {
 }
 
 static void render_keypad(void) {
+    if (page == PAGE_BASIC_PROGRAM) return;
     calculator_widget_state_t state = current_widget_state();
     calculator_widget_render_keypad(page, &state);
 }
@@ -227,6 +237,19 @@ static void render_graph(void) {
     calculator_widget_state_t state = current_widget_state();
     calculator_graph_render(&graph, ans, &symbols, &state, message,
                             sizeof message);
+}
+
+static void apply_program_effects(unsigned int effects) {
+    if (effects & CALCULATOR_PROGRAM_EXIT) {
+        page = PAGE_BASIC;
+        snprintf(message, sizeof message, "%s", calculator_page_message(page));
+        render_display();
+        render_keypad();
+    } else if (effects & CALCULATOR_PROGRAM_RENDER) {
+        calculator_program_render(&basic_program_ui);
+    }
+    if (effects & CALCULATOR_PROGRAM_DIRTY) mark_persistence_dirty();
+    if (effects & CALCULATOR_PROGRAM_BEEP) board_beep(1500, 10);
 }
 
 static bool token_is_operator(const char *token) {
@@ -1029,20 +1052,20 @@ void calculator_ui_init(void) {
     calculator_units_init(&units);
     calculator_complex_init(&complex);
     calculator_statistics_init(&statistics);
+    calculator_program_init(&basic_program_ui);
     calculator_widget_set_data_focus(false);
 
-    calculator_persisted_state_t persisted;
     calculator_storage_load_status_t load_status =
-        calculator_storage_load(&persisted);
+        calculator_storage_load(&persistence_io_state);
     bool factory_reset = board_button1_pressed() && board_button2_pressed();
     if (factory_reset) {
-        calculator_persistence_defaults(&persisted);
-        (void)calculator_storage_save(&persisted);
+        calculator_persistence_defaults(&persistence_io_state);
+        (void)calculator_storage_save(&persistence_io_state);
         while (board_button1_pressed() || board_button2_pressed()) {
             sleep_ms(10);
         }
     }
-    apply_persisted_state(&persisted);
+    apply_persisted_state(&persistence_io_state);
     if (!touch_is_ready()) {
         snprintf(message, sizeof message, "TOUCH ERROR");
     } else if (factory_reset) {
@@ -1070,13 +1093,18 @@ void calculator_ui_task(void) {
             touch_locked = false;
         } else if (!touch_locked) {
             touch_locked = true;
-            const calc_key_t *key = hit_key(point.x, point.y);
-            if (key) {
-                draw_key(key, true);
-                sleep_ms(25);
-                draw_key(key, false);
-                activate_key(key);
-                if (key->action != ACT_EVALUATE) board_beep(1500, 10);
+            if (page == PAGE_BASIC_PROGRAM) {
+                apply_program_effects(calculator_program_touch(
+                    &basic_program_ui, point.x, point.y));
+            } else {
+                const calc_key_t *key = hit_key(point.x, point.y);
+                if (key) {
+                    draw_key(key, true);
+                    sleep_ms(25);
+                    draw_key(key, false);
+                    activate_key(key);
+                    if (key->action != ACT_EVALUATE) board_beep(1500, 10);
+                }
             }
         }
     }
@@ -1088,7 +1116,9 @@ void calculator_ui_task(void) {
     bool button1 = board_button1_pressed();
     bool button2 = board_button2_pressed();
     if (button1 && !old_button1) {
-        if (page == PAGE_PROGRAMMER) {
+        if (page == PAGE_BASIC_PROGRAM) {
+            apply_program_effects(calculator_program_enter(&basic_program_ui));
+        } else if (page == PAGE_PROGRAMMER) {
             bool calculated = programmer_engine_equals(&programmer);
             snprintf(message, sizeof message, "%s",
                      calculated ? "OK" : "NO OPERATION");
@@ -1104,20 +1134,27 @@ void calculator_ui_task(void) {
         } else if (calculator_page_accepts_evaluate(page)) {
             evaluate_expression();
         }
-        render_display();
-        mark_persistence_dirty();
+        if (page != PAGE_BASIC_PROGRAM) {
+            render_display();
+            mark_persistence_dirty();
+        }
     }
     if (button2 && !old_button2 && time_reached(button2_debounce_until)) {
-        bool data_focus = !calculator_widget_data_focus();
-        calculator_widget_set_data_focus(data_focus);
         button2_debounce_until = make_timeout_time_ms(250);
-        snprintf(message, sizeof message,
-                 data_focus ? "DATA DISPLAY LARGE" : "KEYPAD LARGE");
-        if (page == PAGE_GRAPH) {
-            render_graph();
+        if (page == PAGE_BASIC_PROGRAM) {
+            apply_program_effects(
+                calculator_program_toggle_view(&basic_program_ui));
         } else {
-            render_display();
-            render_keypad();
+            bool data_focus = !calculator_widget_data_focus();
+            calculator_widget_set_data_focus(data_focus);
+            snprintf(message, sizeof message,
+                     data_focus ? "DATA DISPLAY LARGE" : "KEYPAD LARGE");
+            if (page == PAGE_GRAPH) {
+                render_graph();
+            } else {
+                render_display();
+                render_keypad();
+            }
         }
     }
     old_button1 = button1;
@@ -1146,6 +1183,11 @@ void calculator_ui_task(void) {
             }
             render_graph();
             mark_persistence_dirty();
+        } else if (page == PAGE_BASIC_PROGRAM) {
+            apply_program_effects(calculator_program_move(
+                &basic_program_ui,
+                joystick.left ? -1 : (joystick.right ? 1 : 0),
+                joystick.up ? -1 : (joystick.down ? 1 : 0)));
         } else if (page == PAGE_STATISTICS) {
             if (joystick.left || joystick.right) {
                 calculator_statistics_activate(
@@ -1191,5 +1233,6 @@ void calculator_ui_task(void) {
             render_display();
         }
     }
+    apply_program_effects(calculator_program_task(&basic_program_ui, 16));
     save_persistence_if_due();
 }

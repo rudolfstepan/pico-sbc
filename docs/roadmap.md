@@ -20,6 +20,7 @@ ein Test auf dem echten LCD erfolgreich sind.
 | 8 | Komplexe Zahlen | Phase 3 | abgeschlossen |
 | 9 | Statistikmodus | Phasen 2 und 3 | Hardwaretest offen |
 | 10 | USB-Datenaustausch | Phasen 4 und 9 | Hardwaretest offen |
+| 11 | BASIC-Programmiermodus | Phasen 0 und 4 | Hardwaretest offen |
 
 ## Phase 0: Technische Grundlage
 
@@ -223,6 +224,28 @@ werden hoechstens 32 USB-Zeichen und ein Befehl bearbeitet; die Ausgabe wartet
 maximal 2 ms. Alle 26 Host-Tests, der RP2040-Release-Build, ein realer
 JSON-Export/-Import und die GUI-Synchronisation ueber COM3 laufen erfolgreich.
 Die Reaktionszeit bei gleichzeitiger Touchbedienung steht noch als
+Hardwaretest aus.
+
+## Phase 11: BASIC-Programmiermodus
+
+- [x] Einen zeilennummernbasierten BASIC-Interpreter bereitstellen.
+- [x] `PRINT`, `LET`, `INPUT`, `IF/THEN`, `GOTO`, `FOR/TO/STEP`, `NEXT`,
+  `CLS`, `REM` und `END` implementieren.
+- [x] Eine QWERTZ-Tastatur fuer freie Zeicheneingabe integrieren.
+- [x] Eine eigene Token-Ebene fuer BASIC-Woerter und Operatoren anbieten.
+- [x] Programmliste, Eingabe und Programmausgabe auf dem LCD darstellen.
+- [x] Laufende Programme in begrenzten Paketen ausfuehren und Endlosschleifen
+  sicher abbrechen.
+- [x] Programme im versionierten Flashformat persistent speichern.
+
+**Fertig, wenn:** Programme vollstaendig per Touch eingegeben, bearbeitet,
+ausgefuehrt und nach einem Neustart wieder geladen werden koennen.
+
+Softwarestand: 20 Programmzeilen, 26 Variablen, sechs sichtbare Ausgabezeilen,
+eine QWERTZ- und eine dedizierte `TOK`-Tastatur sind implementiert. Das
+Flashformat Version 3 migriert bestehende Version-1- und Version-2-Daten. Alle
+28 Host-Tests und der RP2040-Release-Build laufen erfolgreich. Touchpositionen,
+Lesbarkeit, `INPUT` und Wiederherstellung nach einem Neustart stehen noch als
 Hardwaretest aus.
 
 ## Arbeitsweise pro Phase

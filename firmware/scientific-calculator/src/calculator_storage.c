@@ -19,6 +19,7 @@ static int active_slot = -1;
 static uint32_t active_sequence;
 _Alignas(4) static uint8_t
     record_buffer[CALCULATOR_PERSISTENCE_RECORD_CAPACITY];
+static calculator_persisted_state_t verified_state;
 
 static const uint8_t *slot_data(size_t slot) {
     uintptr_t address = XIP_BASE + STORAGE_BASE_OFFSET +
@@ -73,10 +74,9 @@ calculator_storage_save_status_t calculator_storage_save(
                         CALCULATOR_PERSISTENCE_RECORD_CAPACITY);
     restore_interrupts(interrupts);
 
-    calculator_persisted_state_t verified;
     uint32_t verified_sequence = 0;
     if (calculator_persistence_decode(slot_data(target_slot), FLASH_SECTOR_SIZE,
-                                      &verified, &verified_sequence) !=
+                                      &verified_state, &verified_sequence) !=
             CALCULATOR_PERSISTENCE_VALID ||
         verified_sequence != next_sequence) {
         return CALCULATOR_STORAGE_ERROR;

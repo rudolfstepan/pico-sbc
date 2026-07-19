@@ -445,7 +445,7 @@ static const calc_key_t complex_history_keys[] = {
 };
 
 static const calc_key_t statistics_keys[] = {
-    {"BASIC", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"CODE", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
     {"1VAR", "1VAR", 1, 0, ACT_STATISTICS, STYLE_COMMAND},
     {"2VAR", "2VAR", 2, 0, ACT_STATISTICS, STYLE_COMMAND},
     {"DATA", "DATA", 3, 0, ACT_STATISTICS, STYLE_COMMAND},
@@ -612,6 +612,7 @@ const calc_key_t *calculator_keymap(calc_page_t page, size_t *count) {
         case PAGE_STATISTICS:
             *count = sizeof statistics_keys / sizeof statistics_keys[0];
             return statistics_keys;
+        case PAGE_BASIC_PROGRAM:
         case PAGE_BASIC:
         default:
             *count = sizeof basic_keys / sizeof basic_keys[0];

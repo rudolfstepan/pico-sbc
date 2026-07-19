@@ -48,7 +48,8 @@ typedef enum {
     PAGE_LOGIC,
     PAGE_UNITS,
     PAGE_COMPLEX,
-    PAGE_STATISTICS
+    PAGE_STATISTICS,
+    PAGE_BASIC_PROGRAM
 } calc_page_t;
 
 typedef enum {
