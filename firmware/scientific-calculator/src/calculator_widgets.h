@@ -20,6 +20,8 @@ typedef struct {
     calc_page_t page;
     unsigned int programmer_base;
     unsigned int format_bits;
+    calculator_format_view_t format_view;
+    bool programmer_signed;
     bool degrees;
     graph_view_t graph_view;
     unsigned int graph_active_mask;

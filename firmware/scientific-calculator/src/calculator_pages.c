@@ -49,25 +49,34 @@ void calculator_page_render_expression(calc_page_t page, bool degrees,
 
 void calculator_page_render_programmer(const programmer_engine_t *programmer,
                                        const char *message) {
-    char status[48];
+    char status[64];
     char decimal[21];
     char hexadecimal[17];
     char binary[65];
-    char conversions[48];
+    char conversions[56];
     char binary_line[72];
 
-    programmer_engine_format(programmer->value, PROGRAMMER_DEC,
+    uint64_t raw = number_format_apply_width(programmer->value,
+                                             programmer->word_bits);
+    programmer_engine_format(raw, PROGRAMMER_DEC,
                              decimal, sizeof decimal);
-    programmer_engine_format(programmer->value, PROGRAMMER_HEX,
+    programmer_engine_format(raw, PROGRAMMER_HEX,
                              hexadecimal, sizeof hexadecimal);
-    programmer_engine_format(programmer->value, PROGRAMMER_BIN,
+    programmer_engine_format(raw, PROGRAMMER_BIN,
                              binary, sizeof binary);
-    snprintf(status, sizeof status, "PROGRAMMER  %s  %s%s%s",
+    if (programmer->signed_mode) {
+        number_format_signed_text(raw, programmer->word_bits,
+                                  decimal, sizeof decimal);
+    }
+    snprintf(status, sizeof status, "PROGRAMMER %s%u C%u V%u %s %s%s%s",
+             programmer->signed_mode ? "S" : "U", programmer->word_bits,
+             programmer->carry ? 1u : 0u, programmer->overflow ? 1u : 0u,
              programmer_engine_base_name(programmer->base),
              programmer_engine_op_name(programmer->pending_op),
              programmer->pending_op == PROGRAMMER_OP_NONE ? "" : "  ",
              message);
-    snprintf(conversions, sizeof conversions, "DEC %s  HEX %s",
+    snprintf(conversions, sizeof conversions, "%s %s  HEX %s",
+             programmer->signed_mode ? "SIGNED" : "UNSIGNED",
              decimal, hexadecimal);
     snprintf(binary_line, sizeof binary_line, "BIN %s", binary);
 
@@ -81,25 +90,89 @@ void calculator_page_render_programmer(const programmer_engine_t *programmer,
 }
 
 void calculator_page_render_format(const programmer_engine_t *programmer,
-                                   unsigned int format_bits,
                                    unsigned int fixed_fraction_bits,
+                                   calculator_format_view_t view,
                                    const char *message) {
+    unsigned int format_bits = programmer->word_bits;
     uint64_t raw = number_format_apply_width(programmer->value, format_bits);
+    char decimal[21];
     char hexadecimal[17];
+    char binary[65];
     char signed_text[24];
     char status[48];
     char raw_line[24];
     char fixed_line[52];
-    char float_line[64];
+    char float_line[72];
 
+    programmer_engine_format(raw, PROGRAMMER_DEC,
+                             decimal, sizeof decimal);
     programmer_engine_format(raw, PROGRAMMER_HEX,
                              hexadecimal, sizeof hexadecimal);
+    programmer_engine_format(raw, PROGRAMMER_BIN,
+                             binary, sizeof binary);
     number_format_signed_text(raw, format_bits,
                               signed_text, sizeof signed_text);
     double fixed = number_format_fixed_value(raw, format_bits,
                                              fixed_fraction_bits);
     double float32 = number_format_bits_float32((uint32_t)raw);
     double float64 = number_format_bits_float64(raw);
+
+    if (view == FORMAT_VIEW_BITS) {
+        char bit_line[32];
+        snprintf(status, sizeof status, "BITS %s%u BIT%u=%u C%u V%u %s",
+                 programmer->signed_mode ? "S" : "U", format_bits,
+                 programmer->selected_bit,
+                 programmer_engine_selected_bit(programmer) ? 1u : 0u,
+                 programmer->carry ? 1u : 0u,
+                 programmer->overflow ? 1u : 0u, message);
+        snprintf(bit_line, sizeof bit_line, "BIT %u = %u",
+                 programmer->selected_bit,
+                 programmer_engine_selected_bit(programmer) ? 1u : 0u);
+        snprintf(fixed_line, sizeof fixed_line, "U %s  S %s",
+                 decimal, signed_text);
+        snprintf(float_line, sizeof float_line, "BIN %s", binary);
+
+        clear_display();
+        lcd_draw_text(6, 4, status, COL_MUTED, COL_BG, 1);
+        lcd_draw_text(6, 18, bit_line, COL_TEXT, COL_BG, 2);
+        lcd_draw_text(6, 47, fixed_line, COL_TEXT, COL_BG, 1);
+        lcd_draw_text(6, 64, float_line, COL_MUTED, COL_BG, 1);
+        finish_display();
+        return;
+    }
+
+    if (view == FORMAT_VIEW_IEEE32 || view == FORMAT_VIEW_IEEE64) {
+        bool use_float32 = view == FORMAT_VIEW_IEEE32;
+        number_format_ieee_t ieee = use_float32
+            ? number_format_inspect_float32((uint32_t)raw)
+            : number_format_inspect_float64(raw);
+        double value = use_float32
+            ? number_format_bits_float32((uint32_t)raw)
+            : number_format_bits_float64(raw);
+        char fields[40];
+        char ieee_hex[17];
+        unsigned int mantissa_digits = use_float32 ? 6u : 13u;
+        programmer_engine_format(use_float32 ? (uint32_t)raw : raw,
+                                 PROGRAMMER_HEX, ieee_hex, sizeof ieee_hex);
+        snprintf(status, sizeof status, "IEEE F%u %s %s",
+                 use_float32 ? 32u : 64u,
+                 number_format_ieee_class_name(ieee.classification), message);
+        snprintf(fields, sizeof fields, "S%u E%u X%d",
+                 ieee.sign ? 1u : 0u, ieee.raw_exponent,
+                 ieee.unbiased_exponent);
+        snprintf(fixed_line, sizeof fixed_line, "M 0x%0*llX",
+                 (int)mantissa_digits, (unsigned long long)ieee.mantissa);
+        snprintf(float_line, sizeof float_line, "RAW %s  VAL %.10g",
+                 ieee_hex, value);
+
+        clear_display();
+        lcd_draw_text(6, 4, status, COL_MUTED, COL_BG, 1);
+        lcd_draw_text(6, 18, fields, COL_TEXT, COL_BG, 2);
+        lcd_draw_text(6, 47, fixed_line, COL_TEXT, COL_BG, 1);
+        lcd_draw_text(6, 64, float_line, COL_MUTED, COL_BG, 1);
+        finish_display();
+        return;
+    }
 
     snprintf(status, sizeof status, "FORMAT  %uBIT  Q%u  %s",
              format_bits, fixed_fraction_bits, message);

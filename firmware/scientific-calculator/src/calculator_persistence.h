@@ -31,6 +31,8 @@ typedef struct {
     double memory_value;
     programmer_base_t programmer_base;
     uint64_t programmer_value;
+    bool programmer_signed;
+    unsigned int programmer_selected_bit;
     calculator_symbols_t symbols;
     calculator_persisted_history_entry_t
         history[CALCULATOR_PERSISTENCE_HISTORY_CAPACITY];

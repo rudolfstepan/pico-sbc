@@ -22,6 +22,8 @@ static void fill_state(calculator_persisted_state_t *state) {
     state->memory_value = -7.25;
     state->programmer_base = PROGRAMMER_HEX;
     state->programmer_value = UINT64_C(0x123456789abcdef0);
+    state->programmer_signed = true;
+    state->programmer_selected_bit = 17;
     calculator_symbols_set_variable(&state->symbols, 0, 42.0);
     calculator_symbols_set_function(&state->symbols, 0, "sin(x)+A");
     calculator_symbols_set_favorite(&state->symbols, 0, "f1(");
@@ -71,6 +73,7 @@ int main(void) {
     CHECK(decoded.format_bits == 64 && decoded.fixed_fraction_bits == 24);
     CHECK(fabs(decoded.memory_value + 7.25) < 1e-12);
     CHECK(decoded.programmer_value == UINT64_C(0x123456789abcdef0));
+    CHECK(decoded.programmer_signed && decoded.programmer_selected_bit == 17);
     CHECK(strcmp(decoded.symbols.functions[0], "sin(x)+A") == 0);
     CHECK(decoded.history_count == 2 && decoded.history_index == 1);
     CHECK(strcmp(decoded.history[1].formula, "f1(30)") == 0);

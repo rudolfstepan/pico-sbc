@@ -154,6 +154,7 @@ static bool state_is_valid(const calculator_persisted_state_t *state) {
         state->fixed_fraction_bits >= state->format_bits ||
         !isfinite(state->ans) || !isfinite(state->memory_value) ||
         !base_valid(state->programmer_base) ||
+        state->programmer_selected_bit >= state->format_bits ||
         state->history_count > CALCULATOR_PERSISTENCE_HISTORY_CAPACITY ||
         (state->history_count && state->history_index >= state->history_count) ||
         calculator_symbols_have_cycle(&state->symbols)) {
@@ -205,8 +206,8 @@ static void write_payload(writer_t *writer,
     write_u8(writer, (uint8_t)state->format_bits);
     write_u8(writer, (uint8_t)state->fixed_fraction_bits);
     write_u8(writer, (uint8_t)state->programmer_base);
-    write_u8(writer, 0);
-    write_u8(writer, 0);
+    write_u8(writer, state->programmer_signed ? 1u : 0u);
+    write_u8(writer, (uint8_t)state->programmer_selected_bit);
     write_u8(writer, 0);
     write_double(writer, state->ans);
     write_double(writer, state->memory_value);
@@ -325,7 +326,9 @@ static void read_payload(reader_t *reader,
     state->format_bits = read_u8(reader);
     state->fixed_fraction_bits = read_u8(reader);
     state->programmer_base = (programmer_base_t)read_u8(reader);
-    for (unsigned int i = 0; i < 3; ++i) (void)read_u8(reader);
+    state->programmer_signed = read_u8(reader) != 0;
+    state->programmer_selected_bit = read_u8(reader);
+    (void)read_u8(reader);
     state->ans = read_double(reader);
     state->memory_value = read_double(reader);
     state->programmer_value = read_u64(reader);

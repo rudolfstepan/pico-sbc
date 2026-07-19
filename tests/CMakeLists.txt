@@ -36,6 +36,7 @@ add_test(NAME calculator_engine COMMAND calculator_engine_tests)
 
 add_executable(programmer_engine_tests
     calculator/test_programmer.c
+    ${CALCULATOR_SRC}/number_formats.c
     ${CALCULATOR_SRC}/programmer_engine.c
 )
 target_include_directories(programmer_engine_tests PRIVATE ${CALCULATOR_SRC})

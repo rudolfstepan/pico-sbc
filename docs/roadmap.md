@@ -14,11 +14,12 @@ ein Test auf dem echten LCD erfolgreich sind.
 | 2 | Numerische Analyse | Phase 1 | abgeschlossen |
 | 3 | Variablen und Benutzerfunktionen | Phase 2 | abgeschlossen |
 | 4 | Permanente Speicherung | Phase 3 | Hardwaretest offen |
-| 5 | Programmer-Erweiterungen | Phase 0 | geplant |
-| 6 | Einheiten und Konstanten | Phase 3 | geplant |
-| 7 | Komplexe Zahlen | Phase 3 | geplant |
-| 8 | Statistikmodus | Phasen 2 und 3 | geplant |
-| 9 | USB-Datenaustausch | Phasen 4 und 8 | geplant |
+| 5 | Programmer-Erweiterungen | Phase 0 | Hardwaretest offen |
+| 6 | Schaltalgebra und Gatter | Phase 5 | geplant |
+| 7 | Einheiten und Konstanten | Phase 3 | geplant |
+| 8 | Komplexe Zahlen | Phase 3 | geplant |
+| 9 | Statistikmodus | Phasen 2 und 3 | geplant |
+| 10 | USB-Datenaustausch | Phasen 4 und 9 | geplant |
 
 ## Phase 0: Technische Grundlage
 
@@ -104,17 +105,37 @@ Werksreset-Test auf dem Pico steht noch aus.
 
 ## Phase 5: Programmer-Erweiterungen
 
-- [ ] Zwischen Signed- und Unsigned-Darstellung umschalten.
-- [ ] Einzelne Bits anzeigen, setzen, loeschen und umschalten.
-- [ ] Rotate Left und Rotate Right fuer alle Wortbreiten implementieren.
-- [ ] Little-Endian- und Big-Endian-Umwandlung anbieten.
-- [ ] Einen IEEE-754-Inspector fuer Vorzeichen, Exponent und Mantisse bauen.
-- [ ] Ueberlauf- und Carry-Informationen sichtbar ausgeben.
+- [x] Zwischen Signed- und Unsigned-Darstellung umschalten.
+- [x] Einzelne Bits anzeigen, setzen, loeschen und umschalten.
+- [x] Rotate Left und Rotate Right fuer alle Wortbreiten implementieren.
+- [x] Little-Endian- und Big-Endian-Umwandlung anbieten.
+- [x] Einen IEEE-754-Inspector fuer Vorzeichen, Exponent und Mantisse bauen.
+- [x] Ueberlauf- und Carry-Informationen sichtbar ausgeben.
 
 **Fertig, wenn:** Alle Operationen fuer 8, 16, 32 und 64 Bit getestet sind und
 die Bitansicht auf dem LCD ohne horizontales Abschneiden funktioniert.
 
-## Phase 6: Einheiten und Konstanten
+Softwarestand: Wortbreiten, Rotationen, Schieben, Einzelbitoperationen,
+Byte-Reihenfolge, Signed-Overflow, Carry und IEEE-754-Klassen werden durch
+Host-Tests abgedeckt. Die Programmer-, Bit- und IEEE-LCD-Ansichten werden auf
+Zeichenbereichsfehler geprueft. Der abschliessende Touch- und Lesbarkeitstest
+auf dem Pico steht noch aus.
+
+## Phase 6: Schaltalgebra und Gatter
+
+- [ ] Boolesche Ausdruecke mit Variablen und Klammern parsen.
+- [ ] `NOT`, `AND`, `OR`, `XOR`, `NAND`, `NOR` und `XNOR` unterstuetzen.
+- [ ] Wahrheitstabellen fuer bis zu sechs Eingangsvariablen erzeugen.
+- [ ] Kanonische KNF und DNF berechnen und lesbar anzeigen.
+- [ ] Boolesche Ausdruecke zu vereinfachten KNF-/DNF-Formen reduzieren.
+- [ ] Eine touchbedienbare Gatter-Simulation mit schaltbaren Eingaengen bauen.
+- [ ] Syntaxfehler, unverbundene Signale und zyklische Netze sicher ablehnen.
+
+**Fertig, wenn:** Ausdruck, Wahrheitstabelle, KNF/DNF und Gattersimulation fuer
+dieselben Eingangswerte identische Ergebnisse liefern und die wichtigsten
+Gatterkombinationen durch Host-Tests abgesichert sind.
+
+## Phase 7: Einheiten und Konstanten
 
 - [ ] Kategorien fuer Laenge, Flaeche, Volumen, Masse und Zeit anlegen.
 - [ ] Temperatur, Winkel, Druck, Energie und Leistung ergaenzen.
@@ -125,7 +146,7 @@ die Bitansicht auf dem LCD ohne horizontales Abschneiden funktioniert.
 **Fertig, wenn:** Hin- und Rueckumwandlungen innerhalb definierter Toleranzen
 getestet sind und inkompatible Einheiten nicht kombiniert werden.
 
-## Phase 7: Komplexe Zahlen
+## Phase 8: Komplexe Zahlen
 
 - [ ] Einen komplexen Zahlentyp fuer den Rechenkern einfuehren.
 - [ ] Eingaben wie `3+4i` sowie Polarform unterstuetzen.
@@ -136,7 +157,7 @@ getestet sind und inkompatible Einheiten nicht kombiniert werden.
 **Fertig, wenn:** Parser, Anzeige und Verlauf komplexe Zahlen verlustfrei
 verarbeiten und die wichtigsten Operationen durch Host-Tests abgesichert sind.
 
-## Phase 8: Statistikmodus
+## Phase 9: Statistikmodus
 
 - [ ] Einen touchfreundlichen Editor fuer Zahlenlisten erstellen.
 - [ ] Mittelwert, Median, Minimum, Maximum und Standardabweichung berechnen.
@@ -148,7 +169,7 @@ verarbeiten und die wichtigsten Operationen durch Host-Tests abgesichert sind.
 **Fertig, wenn:** Listen bearbeitet, ausgewertet und grafisch dargestellt
 werden koennen und Ergebnisse gegen bekannte Datensaetze getestet sind.
 
-## Phase 9: USB-Datenaustausch
+## Phase 10: USB-Datenaustausch
 
 - [ ] Ein einfaches, dokumentiertes USB-CDC-Befehlsformat definieren.
 - [ ] Ausdruecke, Variablen, Funktionen und Wertelisten importieren.

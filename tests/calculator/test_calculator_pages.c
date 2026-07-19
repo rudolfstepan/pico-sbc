@@ -20,6 +20,26 @@ int main(void) {
         return 1;
     }
 
+    programmer_engine_t programmer;
+    programmer_engine_init(&programmer);
+    programmer_engine_set_word_bits(&programmer, 64);
+    programmer_engine_set_value(&programmer, UINT64_MAX);
+    programmer.signed_mode = true;
+    programmer.selected_bit = 63;
+
+    mock_lcd_reset();
+    calculator_page_render_programmer(&programmer, "64-BIT READY");
+    calculator_page_render_format(&programmer, 24, FORMAT_VIEW_BITS,
+                                  "BIT READY");
+    calculator_page_render_format(&programmer, 24, FORMAT_VIEW_IEEE32,
+                                  "IEEE32 READY");
+    calculator_page_render_format(&programmer, 24, FORMAT_VIEW_IEEE64,
+                                  "IEEE64 READY");
+    if (mock_lcd_had_out_of_bounds_draw()) {
+        puts("FAIL: out-of-bounds drawing on programmer format pages");
+        return 1;
+    }
+
     puts("calculator page tests passed");
     return 0;
 }

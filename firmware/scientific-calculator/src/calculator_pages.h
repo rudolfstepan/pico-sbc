@@ -16,8 +16,8 @@ void calculator_page_render_expression(calc_page_t page, bool degrees,
 void calculator_page_render_programmer(const programmer_engine_t *programmer,
                                        const char *message);
 void calculator_page_render_format(const programmer_engine_t *programmer,
-                                   unsigned int format_bits,
                                    unsigned int fixed_fraction_bits,
+                                   calculator_format_view_t view,
                                    const char *message);
 void calculator_page_render_tools(double memory_value, const char *message,
                                   const expression_editor_t *editor,

@@ -44,8 +44,10 @@ Der Rechner trennt Darstellung und Rechenlogik:
 - `calculation_status`: gemeinsame Fehlercodes und lesbare Meldungen
 - `calculator_engine`: mathematische Ausdruecke, Symbolauflosung und
   TinyExpr-Anbindung mit geschuetzten Benutzerfunktionsaufrufen
-- `programmer_engine`: 64-Bit-Zahlenbasen und Bitoperationen
-- `number_formats`: Zweierkomplement, Festkomma und IEEE-754
+- `programmer_engine`: wortbreitenabhaengige Zahlenbasen, Einzelbitoperationen,
+  Rotationen sowie Carry- und Overflowstatus
+- `number_formats`: Zweierkomplement, Festkomma, Byte-Reihenfolge und
+  IEEE-754-Zerlegung
 
 Alle Module ohne LCD-, Touch- oder Boardabhaengigkeit werden unter `tests/`
 direkt auf dem Host mit aktivierten Compilerwarnungen getestet. Dadurch kann

@@ -62,6 +62,50 @@ int main(void) {
         failures++;
     }
 
+    programmer_engine_clear(&engine);
+    programmer_engine_set_word_bits(&engine, 8);
+    programmer_engine_set_base(&engine, PROGRAMMER_HEX);
+    append_text(&engine, "FF");
+    if (programmer_engine_append(&engine, 'F') != PROGRAMMER_INPUT_OVERFLOW ||
+        !engine.overflow) failures++;
+
+    programmer_engine_clear(&engine);
+    append_text(&engine, "81");
+    programmer_engine_rotate_left(&engine);
+    expect_value("8-bit rotate left", engine.value, 0x03);
+    if (!engine.carry || engine.overflow) failures++;
+    programmer_engine_rotate_right(&engine);
+    expect_value("8-bit rotate right", engine.value, 0x81);
+    if (!engine.carry) failures++;
+
+    programmer_engine_set_value(&engine, 0x80);
+    programmer_engine_shift_left(&engine);
+    expect_value("8-bit shift mask", engine.value, 0);
+    if (!engine.carry) failures++;
+
+    programmer_engine_set_value(&engine, 0x7f);
+    programmer_engine_increment(&engine);
+    expect_value("8-bit increment", engine.value, 0x80);
+    if (!engine.overflow || engine.carry) failures++;
+    programmer_engine_decrement(&engine);
+    expect_value("8-bit decrement", engine.value, 0x7f);
+    if (!engine.overflow || !engine.carry) failures++;
+
+    programmer_engine_set_value(&engine, 0);
+    programmer_engine_select_bit(&engine, 3);
+    programmer_engine_set_selected_bit(&engine);
+    expect_value("set selected bit", engine.value, 8);
+    if (!programmer_engine_selected_bit(&engine)) failures++;
+    programmer_engine_toggle_selected_bit(&engine);
+    expect_value("toggle selected bit", engine.value, 0);
+
+    programmer_engine_set_word_bits(&engine, 32);
+    programmer_engine_set_value(&engine, UINT64_C(0x12345678));
+    programmer_engine_swap_endian(&engine);
+    expect_value("32-bit endian swap", engine.value, UINT64_C(0x78563412));
+    programmer_engine_toggle_signed(&engine);
+    if (!engine.signed_mode) failures++;
+
     if (failures) {
         printf("%d programmer engine test(s) failed\n", failures);
         return 1;

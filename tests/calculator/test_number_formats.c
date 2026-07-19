@@ -41,6 +41,36 @@ int main(void) {
     expect_double("float64 decode",
                   number_format_bits_float64(UINT64_C(0x3ff0000000000000)), 1.0);
 
+    expect_u64("8-bit rotate left",
+               number_format_rotate_left(0x81, 8, 1), 0x03);
+    expect_u64("8-bit rotate right",
+               number_format_rotate_right(0x03, 8, 1), 0x81);
+    expect_u64("32-bit endian swap",
+               number_format_swap_endian(0x12345678, 32), 0x78563412);
+    expect_u64("16-bit endian swap",
+               number_format_swap_endian(0x1234, 16), 0x3412);
+    expect_u64("64-bit endian swap",
+               number_format_swap_endian(UINT64_C(0x0123456789abcdef), 64),
+               UINT64_C(0xefcdab8967452301));
+    expect_u64("set bit", number_format_set_bit(0, 16, 12), 0x1000);
+    expect_u64("clear bit", number_format_clear_bit(0xffff, 16, 12), 0xefff);
+    expect_u64("toggle bit", number_format_toggle_bit(0, 8, 7), 0x80);
+    if (!number_format_test_bit(0x80, 8, 7) ||
+        number_format_test_bit(0x80, 8, 8)) failures++;
+
+    number_format_ieee_t ieee32 = number_format_inspect_float32(0x3f800000u);
+    if (ieee32.sign || ieee32.raw_exponent != 127 ||
+        ieee32.unbiased_exponent != 0 || ieee32.mantissa != 0 ||
+        ieee32.classification != NUMBER_FORMAT_IEEE_NORMAL) failures++;
+    number_format_ieee_t ieee64 = number_format_inspect_float64(
+        UINT64_C(0xfff0000000000000));
+    if (!ieee64.sign || ieee64.raw_exponent != 2047 ||
+        ieee64.classification != NUMBER_FORMAT_IEEE_INFINITY) failures++;
+    if (number_format_inspect_float32(1).classification !=
+            NUMBER_FORMAT_IEEE_SUBNORMAL ||
+        number_format_inspect_float32(0x7fc00000u).classification !=
+            NUMBER_FORMAT_IEEE_NAN) failures++;
+
     if (failures) {
         printf("%d number format test(s) failed\n", failures);
         return 1;

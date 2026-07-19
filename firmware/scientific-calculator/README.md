@@ -16,9 +16,13 @@ Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 - `PROGRAMMER`-Ebene fuer exakte 64-Bit-Werte
 - Direkte Umwandlung zwischen Dezimal, Hexadezimal und Binaer
 - Bitoperationen `AND`, `OR`, `XOR`, `NOT`, Schieben und Zweierkomplement
+- Signed-/Unsigned-Anzeige, Einzelbitbearbeitung, Rotate Left/Right,
+  Byte-Reihenfolge sowie sichtbare Carry- und Overflowflags
 - Zweierkomplement-Auswertung fuer 8, 16, 32 und 64 Bit
 - Q-Festkommaformate mit frei waehlbaren Nachkommabits
 - IEEE-754-Umwandlung fuer Float32 und Float64, auch von und zu `ANS`
+- IEEE-754-Inspector fuer Vorzeichen, Roh- und Arbeitsexponent, Mantisse und
+  Klassifikation als Normal, Subnormal, Null, Unendlich oder NaN
 - Automatisch maximal skalierte Tastenbeschriftungen
 - Ausdruckseditor mit sichtbarem Cursor und Joystick-Navigation
 - Acht Eintraege Rechenverlauf mit erneutem Laden
@@ -97,6 +101,24 @@ Ergebnisse enthalten die benoetigte Iterationszahl. Fehler wie ungueltige
 Wertebereiche oder fehlende Konvergenz werden direkt im Graphkopf angezeigt.
 Mit `RANGE` und dem Joystick lassen sich Intervall und Startwert vor der
 Berechnung anpassen.
+
+## Erweiterte Programmer-Werkzeuge
+
+Auf `FORMAT` oeffnet `BITS` die wortbreitenabhaengigen Programmer-Werkzeuge.
+Die gewaehlte Breite 8, 16, 32 oder 64 Bit gilt fuer Eingabe und Operationen.
+
+- `SIGNED/UNSIGNED` schaltet die Dezimalinterpretation um.
+- `BIT-8`, `BIT-1`, `BIT+1`, `BIT+8` waehlen eine Bitposition aus.
+- `SET`, `CLR` und `TOGGLE` bearbeiten das ausgewaehlte Bit.
+- `ROL`, `ROR`, `<<`, `>>`, `+1`, `-1` und `NEG` aktualisieren die sichtbaren
+  Flags `C` fuer Carry und `V` fuer Signed-Overflow.
+- `SWAP` kehrt die Byte-Reihenfolge innerhalb der aktuellen Wortbreite um.
+- `IEEE32` und `IEEE64` oeffnen den Inspector. `S`, `E`, `X` und `M` zeigen
+  Vorzeichen, Roh-Exponent, Arbeitsexponent und Mantisse.
+
+Die Ansichten `CONV`, `BITS`, `F32` und `F64` koennen direkt ueber ihre
+Modustasten gewechselt werden. Wortbreite, Signed-Modus und Bitposition werden
+mit dem restlichen Rechnerzustand gespeichert.
 
 ## Variablen, Funktionen und Favoriten
 

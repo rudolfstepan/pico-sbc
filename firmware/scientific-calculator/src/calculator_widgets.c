@@ -50,6 +50,17 @@ static uint16_t key_fill(const calc_key_t *key, bool pressed,
              (key->token[0] == '3' ? 32u : 64u));
         if (key_bits == state->format_bits) return COL_TEXT;
     }
+    if (state->page == PAGE_FORMAT && key->action == ACT_FMT_VIEW) {
+        bool selected = (strcmp(key->token, "CONV") == 0 &&
+                         state->format_view == FORMAT_VIEW_CONVERSIONS) ||
+            (strcmp(key->token, "BITS") == 0 &&
+             state->format_view == FORMAT_VIEW_BITS) ||
+            (strcmp(key->token, "IEEE32") == 0 &&
+             state->format_view == FORMAT_VIEW_IEEE32) ||
+            (strcmp(key->token, "IEEE64") == 0 &&
+             state->format_view == FORMAT_VIEW_IEEE64);
+        if (selected) return COL_TEXT;
+    }
     switch (key->style) {
         case STYLE_NUMBER: return COL_KEY;
         case STYLE_FUNCTION: return COL_FUNCTION;
@@ -74,6 +85,10 @@ void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
                      state->favorites[index]);
             label = favorite_label;
         }
+    }
+    if (key->action == ACT_FMT_ACTION &&
+        strcmp(key->token, "SIGN") == 0) {
+        label = state->programmer_signed ? "SIGNED" : "UNSIGNED";
     }
     uint16_t fill = key_fill(key, pressed, state);
     bool disabled = false;
@@ -114,7 +129,9 @@ void calculator_widget_render_keypad(calc_page_t page,
     size_t count;
     const calc_key_t *keys = page == PAGE_GRAPH
         ? calculator_graph_keymap(state->graph_view, &count)
-        : calculator_keymap(page, &count);
+        : (page == PAGE_FORMAT
+           ? calculator_format_keymap(state->format_view, &count)
+           : calculator_keymap(page, &count));
     lcd_fill_rect(0, CALCULATOR_DISPLAY_HEIGHT, LCD_WIDTH,
                   LCD_HEIGHT - CALCULATOR_DISPLAY_HEIGHT, COL_BG);
     for (size_t i = 0; i < count; ++i) {
@@ -128,7 +145,9 @@ const calc_key_t *calculator_widget_hit_key(calc_page_t page,
     size_t count;
     const calc_key_t *keys = page == PAGE_GRAPH
         ? calculator_graph_keymap(state->graph_view, &count)
-        : calculator_keymap(page, &count);
+        : (page == PAGE_FORMAT
+           ? calculator_format_keymap(state->format_view, &count)
+           : calculator_keymap(page, &count));
     for (size_t i = 0; i < count; ++i) {
         int left = key_x(&keys[i]);
         int top = key_y(&keys[i]);

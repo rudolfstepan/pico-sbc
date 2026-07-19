@@ -113,7 +113,7 @@ static const calc_key_t programmer_keys[] = {
 
 static const calc_key_t format_keys[] = {
     {"TOOLS", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
-    {"PROG", "", 1, 0, ACT_GOTO_PROGRAMMER, STYLE_COMMAND},
+    {"BITS", "BITS", 1, 0, ACT_FMT_VIEW, STYLE_COMMAND},
     {"8BIT", "8", 2, 0, ACT_FMT_WIDTH, STYLE_COMMAND},
     {"16BIT", "16", 3, 0, ACT_FMT_WIDTH, STYLE_COMMAND},
     {"32BIT", "32", 4, 0, ACT_FMT_WIDTH, STYLE_COMMAND},
@@ -146,6 +146,80 @@ static const calc_key_t format_keys[] = {
     {"BIN", "BIN", 3, 4, ACT_FMT_GOTO_BASE, STYLE_COMMAND},
     {"<<", "SHL", 4, 4, ACT_FMT_ACTION, STYLE_FUNCTION},
     {">>", "SHR", 5, 4, ACT_FMT_ACTION, STYLE_FUNCTION},
+};
+
+static const calc_key_t format_bits_keys[] = {
+    {"TOOLS", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"CONV", "CONV", 1, 0, ACT_FMT_VIEW, STYLE_COMMAND},
+    {"8BIT", "8", 2, 0, ACT_FMT_WIDTH, STYLE_COMMAND},
+    {"16BIT", "16", 3, 0, ACT_FMT_WIDTH, STYLE_COMMAND},
+    {"32BIT", "32", 4, 0, ACT_FMT_WIDTH, STYLE_COMMAND},
+    {"64BIT", "64", 5, 0, ACT_FMT_WIDTH, STYLE_COMMAND},
+
+    {"UNSIGNED", "SIGN", 0, 1, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"ROL", "ROL", 1, 1, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"ROR", "ROR", 2, 1, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"SWAP", "SWAP", 3, 1, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"IEEE32", "IEEE32", 4, 1, ACT_FMT_VIEW, STYLE_FUNCTION},
+    {"IEEE64", "IEEE64", 5, 1, ACT_FMT_VIEW, STYLE_FUNCTION},
+
+    {"BIT-8", "BIT-8", 0, 2, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"BIT-1", "BIT-1", 1, 2, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"BIT+1", "BIT+1", 2, 2, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"BIT+8", "BIT+8", 3, 2, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"SET", "BSET", 4, 2, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"CLR", "BCLR", 5, 2, ACT_FMT_ACTION, STYLE_FUNCTION},
+
+    {"TOGGLE", "BTOGGLE", 0, 3, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"ZERO", "ZERO", 1, 3, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"ONES", "ONES", 2, 3, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"MIN", "MIN", 3, 3, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"MAX", "MAX", 4, 3, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"NEG", "NEG", 5, 3, ACT_FMT_ACTION, STYLE_FUNCTION},
+
+    {"+1", "INC", 0, 4, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"-1", "DEC", 1, 4, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"<<", "SHL", 2, 4, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {">>", "SHR", 3, 4, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"C/V CLR", "FLAGS", 4, 4, ACT_FMT_ACTION, STYLE_COMMAND},
+    {"PROG", "", 5, 4, ACT_GOTO_PROGRAMMER, STYLE_EQUALS},
+};
+
+static const calc_key_t format_ieee_keys[] = {
+    {"TOOLS", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"CONV", "CONV", 1, 0, ACT_FMT_VIEW, STYLE_COMMAND},
+    {"BITS", "BITS", 2, 0, ACT_FMT_VIEW, STYLE_COMMAND},
+    {"F32", "IEEE32", 3, 0, ACT_FMT_VIEW, STYLE_COMMAND},
+    {"F64", "IEEE64", 4, 0, ACT_FMT_VIEW, STYLE_COMMAND},
+    {"PROG", "", 5, 0, ACT_GOTO_PROGRAMMER, STYLE_COMMAND},
+
+    {"ANS>F32", "A32", 0, 1, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"ANS>F64", "A64", 1, 1, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"F32>ANS", "32A", 2, 1, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"F64>ANS", "64A", 3, 1, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"ZERO", "ZERO", 4, 1, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"ONES", "ONES", 5, 1, ACT_FMT_ACTION, STYLE_FUNCTION},
+
+    {"8BIT", "8", 0, 2, ACT_FMT_WIDTH, STYLE_COMMAND},
+    {"16BIT", "16", 1, 2, ACT_FMT_WIDTH, STYLE_COMMAND},
+    {"32BIT", "32", 2, 2, ACT_FMT_WIDTH, STYLE_COMMAND},
+    {"64BIT", "64", 3, 2, ACT_FMT_WIDTH, STYLE_COMMAND},
+    {"SWAP", "SWAP", 4, 2, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"UNSIGNED", "SIGN", 5, 2, ACT_FMT_ACTION, STYLE_FUNCTION},
+
+    {"ROL", "ROL", 0, 3, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"ROR", "ROR", 1, 3, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"<<", "SHL", 2, 3, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {">>", "SHR", 3, 3, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"+1", "INC", 4, 3, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"-1", "DEC", 5, 3, ACT_FMT_ACTION, STYLE_FUNCTION},
+
+    {"DEC", "DEC", 0, 4, ACT_FMT_GOTO_BASE, STYLE_COMMAND},
+    {"HEX", "HEX", 1, 4, ACT_FMT_GOTO_BASE, STYLE_COMMAND},
+    {"BIN", "BIN", 2, 4, ACT_FMT_GOTO_BASE, STYLE_COMMAND},
+    {"C/V CLR", "FLAGS", 3, 4, ACT_FMT_ACTION, STYLE_COMMAND},
+    {"MIN", "MIN", 4, 4, ACT_FMT_ACTION, STYLE_FUNCTION},
+    {"MAX", "MAX", 5, 4, ACT_FMT_ACTION, STYLE_FUNCTION},
 };
 
 static const calc_key_t tools_keys[] = {
@@ -301,6 +375,20 @@ const calc_key_t *calculator_graph_keymap(graph_view_t view, size_t *count) {
     }
 }
 
+const calc_key_t *calculator_format_keymap(calculator_format_view_t view,
+                                           size_t *count) {
+    if (view == FORMAT_VIEW_BITS) {
+        *count = sizeof format_bits_keys / sizeof format_bits_keys[0];
+        return format_bits_keys;
+    }
+    if (view == FORMAT_VIEW_IEEE32 || view == FORMAT_VIEW_IEEE64) {
+        *count = sizeof format_ieee_keys / sizeof format_ieee_keys[0];
+        return format_ieee_keys;
+    }
+    *count = sizeof format_keys / sizeof format_keys[0];
+    return format_keys;
+}
+
 const calc_key_t *calculator_keymap(calc_page_t page, size_t *count) {
     switch (page) {
         case PAGE_SCIENTIFIC:
@@ -310,8 +398,7 @@ const calc_key_t *calculator_keymap(calc_page_t page, size_t *count) {
             *count = sizeof programmer_keys / sizeof programmer_keys[0];
             return programmer_keys;
         case PAGE_FORMAT:
-            *count = sizeof format_keys / sizeof format_keys[0];
-            return format_keys;
+            return calculator_format_keymap(FORMAT_VIEW_CONVERSIONS, count);
         case PAGE_TOOLS:
             *count = sizeof tools_keys / sizeof tools_keys[0];
             return tools_keys;

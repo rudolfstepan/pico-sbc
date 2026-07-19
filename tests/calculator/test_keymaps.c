@@ -36,6 +36,14 @@ int main(void) {
     CHECK(check_page(PAGE_TOOLS, 30) == 0);
     CHECK(check_page(PAGE_SYMBOLS, 30) == 0);
     CHECK(check_page(PAGE_GRAPH, 6) == 0);
+    for (calculator_format_view_t view = FORMAT_VIEW_CONVERSIONS;
+         view <= FORMAT_VIEW_IEEE64;
+         view = (calculator_format_view_t)(view + 1)) {
+        size_t count = 0;
+        const calc_key_t *keys = calculator_format_keymap(view, &count);
+        CHECK(keys != NULL);
+        CHECK(count == 30);
+    }
     for (graph_view_t view = GRAPH_VIEW_PLOT; view <= GRAPH_VIEW_RANGE;
          view = (graph_view_t)(view + 1)) {
         size_t count = 0;

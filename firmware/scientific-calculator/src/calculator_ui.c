@@ -33,8 +33,8 @@ static char message[24] = "READY";
 static double ans;
 static calc_page_t page;
 static programmer_engine_t programmer;
-static unsigned int format_bits = 32;
 static unsigned int fixed_fraction_bits = 16;
+static calculator_format_view_t format_view;
 static bool just_evaluated;
 static bool touch_locked;
 
@@ -56,12 +56,14 @@ static void capture_persisted_state(calculator_persisted_state_t *state) {
     calculator_persistence_defaults(state);
     state->degrees = calc_engine_uses_degrees();
     state->page = page;
-    state->format_bits = format_bits;
+    state->format_bits = programmer.word_bits;
     state->fixed_fraction_bits = fixed_fraction_bits;
     state->ans = ans;
     state->memory_value = memory_value;
     state->programmer_base = programmer.base;
     state->programmer_value = programmer.value;
+    state->programmer_signed = programmer.signed_mode;
+    state->programmer_selected_bit = programmer.selected_bit;
     state->symbols = symbols;
     memcpy(state->history, history, sizeof history);
     state->history_count = history_list.count;
@@ -73,7 +75,6 @@ static void apply_persisted_state(
     const calculator_persisted_state_t *state) {
     calc_engine_set_degrees(state->degrees);
     page = state->page;
-    format_bits = state->format_bits;
     fixed_fraction_bits = state->fixed_fraction_bits;
     ans = state->ans;
     memory_value = state->memory_value;
@@ -85,6 +86,9 @@ static void apply_persisted_state(
     }
     programmer.value = state->programmer_value;
     programmer.replace_input = true;
+    programmer_engine_set_word_bits(&programmer, state->format_bits);
+    programmer.signed_mode = state->programmer_signed;
+    programmer.selected_bit = state->programmer_selected_bit;
     programmer_engine_set_base(&programmer, state->programmer_base);
     graph = state->graph;
     snprintf(result_text, sizeof result_text, "%.12g", ans);
@@ -124,7 +128,9 @@ static calculator_widget_state_t current_widget_state(void) {
     calculator_widget_state_t state = {
         .page = page,
         .programmer_base = (unsigned int)programmer.base,
-        .format_bits = format_bits,
+        .format_bits = programmer.word_bits,
+        .format_view = format_view,
+        .programmer_signed = programmer.signed_mode,
         .degrees = calc_engine_uses_degrees(),
         .graph_view = graph.view,
         .graph_active_mask = active_mask,
@@ -147,8 +153,8 @@ static void render_display(void) {
         return;
     }
     if (page == PAGE_FORMAT) {
-        calculator_page_render_format(&programmer, format_bits,
-                                      fixed_fraction_bits, message);
+        calculator_page_render_format(&programmer, fixed_fraction_bits,
+                                      format_view, message);
         return;
     }
     if (page == PAGE_TOOLS) {
@@ -259,7 +265,8 @@ static void activate_programmer_key(const calc_key_t *key) {
                 snprintf(message, sizeof message, "INVALID IN %s",
                          programmer_engine_base_name(programmer.base));
             } else if (status == PROGRAMMER_INPUT_OVERFLOW) {
-                snprintf(message, sizeof message, "64-BIT OVERFLOW");
+                snprintf(message, sizeof message, "%u-BIT OVERFLOW",
+                         programmer.word_bits);
             } else {
                 snprintf(message, sizeof message, "READY");
             }
@@ -305,19 +312,38 @@ static void activate_programmer_key(const calc_key_t *key) {
 }
 
 static void set_programmer_value(uint64_t value) {
-    programmer.value = value;
-    programmer.replace_input = true;
-    programmer_engine_set_base(&programmer, programmer.base);
+    programmer_engine_set_value(&programmer, value);
 }
 
 static void activate_format_key(const calc_key_t *key) {
+    unsigned int format_bits = programmer.word_bits;
     uint64_t mask = number_format_mask(format_bits);
 
+    if (key->action == ACT_FMT_VIEW) {
+        if (strcmp(key->token, "BITS") == 0) {
+            format_view = FORMAT_VIEW_BITS;
+        } else if (strcmp(key->token, "IEEE32") == 0) {
+            format_view = FORMAT_VIEW_IEEE32;
+        } else if (strcmp(key->token, "IEEE64") == 0) {
+            format_view = FORMAT_VIEW_IEEE64;
+        } else {
+            format_view = FORMAT_VIEW_CONVERSIONS;
+        }
+        snprintf(message, sizeof message, "%s VIEW",
+                 format_view == FORMAT_VIEW_BITS ? "BIT" :
+                 (format_view == FORMAT_VIEW_IEEE32 ? "IEEE32" :
+                  (format_view == FORMAT_VIEW_IEEE64 ? "IEEE64" :
+                   "FORMAT")));
+        render_keypad();
+        return;
+    }
+
     if (key->action == ACT_FMT_WIDTH) {
-        format_bits = key->token[0] == '8' ? 8u :
+        unsigned int bits = key->token[0] == '8' ? 8u :
             (key->token[0] == '1' ? 16u : (key->token[0] == '3' ? 32u : 64u));
-        if (fixed_fraction_bits >= format_bits) fixed_fraction_bits = format_bits - 1u;
-        snprintf(message, sizeof message, "%u-BIT WORD", format_bits);
+        programmer_engine_set_word_bits(&programmer, bits);
+        if (fixed_fraction_bits >= bits) fixed_fraction_bits = bits - 1u;
+        snprintf(message, sizeof message, "%u-BIT WORD", bits);
         render_keypad();
         return;
     }
@@ -335,23 +361,23 @@ static void activate_format_key(const calc_key_t *key) {
     }
 
     if (strcmp(key->token, "NEG") == 0) {
-        set_programmer_value(number_format_twos_negate(programmer.value,
-                                                       format_bits));
+        programmer_engine_negate(&programmer);
         snprintf(message, sizeof message, "TWOS COMPLEMENT");
     } else if (strcmp(key->token, "MASK") == 0) {
         set_programmer_value(programmer.value & mask);
         snprintf(message, sizeof message, "MASK APPLIED");
     } else if (strcmp(key->token, "SEXT") == 0) {
-        set_programmer_value(number_format_sign_extend(programmer.value,
-                                                       format_bits));
-        format_bits = 64;
+        uint64_t extended = number_format_sign_extend(programmer.value,
+                                                       format_bits);
+        programmer_engine_set_word_bits(&programmer, 64);
+        set_programmer_value(extended);
         snprintf(message, sizeof message, "SIGN EXTENDED");
         render_keypad();
     } else if (strcmp(key->token, "Q-") == 0) {
         if (fixed_fraction_bits > 0) fixed_fraction_bits--;
         snprintf(message, sizeof message, "Q FRACTION -1");
     } else if (strcmp(key->token, "Q+") == 0) {
-        if (fixed_fraction_bits + 1u < format_bits) fixed_fraction_bits++;
+        if (fixed_fraction_bits + 1u < programmer.word_bits) fixed_fraction_bits++;
         snprintf(message, sizeof message, "Q FRACTION +1");
     } else if (strcmp(key->token, "Q0") == 0) {
         fixed_fraction_bits = 0;
@@ -361,17 +387,18 @@ static void activate_format_key(const calc_key_t *key) {
                strcmp(key->token, "Q24") == 0) {
         unsigned int requested = key->token[1] == '8' ? 8u :
             (key->token[1] == '1' ? 16u : 24u);
-        fixed_fraction_bits = requested < format_bits ? requested : format_bits - 1u;
+        fixed_fraction_bits = requested < programmer.word_bits
+            ? requested : programmer.word_bits - 1u;
         snprintf(message, sizeof message, "Q%u FORMAT", fixed_fraction_bits);
     } else if (strcmp(key->token, "A32") == 0) {
+        programmer_engine_set_word_bits(&programmer, 32);
         set_programmer_value(number_format_float32_bits(ans));
-        format_bits = 32;
         programmer_engine_set_base(&programmer, PROGRAMMER_HEX);
         snprintf(message, sizeof message, "ANS TO FLOAT32");
         render_keypad();
     } else if (strcmp(key->token, "A64") == 0) {
+        programmer_engine_set_word_bits(&programmer, 64);
         set_programmer_value(number_format_float64_bits(ans));
-        format_bits = 64;
         programmer_engine_set_base(&programmer, PROGRAMMER_HEX);
         snprintf(message, sizeof message, "ANS TO FLOAT64");
         render_keypad();
@@ -390,23 +417,62 @@ static void activate_format_key(const calc_key_t *key) {
         set_programmer_value(mask);
         snprintf(message, sizeof message, "ALL ONES");
     } else if (strcmp(key->token, "MIN") == 0) {
-        set_programmer_value(UINT64_C(1) << (format_bits - 1u));
+        set_programmer_value(UINT64_C(1) << (programmer.word_bits - 1u));
         snprintf(message, sizeof message, "SIGNED MIN");
     } else if (strcmp(key->token, "MAX") == 0) {
-        set_programmer_value((UINT64_C(1) << (format_bits - 1u)) - 1u);
+        set_programmer_value(
+            (UINT64_C(1) << (programmer.word_bits - 1u)) - 1u);
         snprintf(message, sizeof message, "SIGNED MAX");
     } else if (strcmp(key->token, "INC") == 0) {
-        set_programmer_value((programmer.value + 1u) & mask);
+        programmer_engine_increment(&programmer);
         snprintf(message, sizeof message, "+1");
     } else if (strcmp(key->token, "DEC") == 0) {
-        set_programmer_value((programmer.value - 1u) & mask);
+        programmer_engine_decrement(&programmer);
         snprintf(message, sizeof message, "-1");
     } else if (strcmp(key->token, "SHL") == 0) {
-        set_programmer_value((programmer.value << 1u) & mask);
+        programmer_engine_shift_left(&programmer);
         snprintf(message, sizeof message, "SHIFT LEFT");
     } else if (strcmp(key->token, "SHR") == 0) {
-        set_programmer_value((programmer.value & mask) >> 1u);
+        programmer_engine_shift_right(&programmer);
         snprintf(message, sizeof message, "SHIFT RIGHT");
+    } else if (strcmp(key->token, "ROL") == 0) {
+        programmer_engine_rotate_left(&programmer);
+        snprintf(message, sizeof message, "ROTATE LEFT");
+    } else if (strcmp(key->token, "ROR") == 0) {
+        programmer_engine_rotate_right(&programmer);
+        snprintf(message, sizeof message, "ROTATE RIGHT");
+    } else if (strcmp(key->token, "SWAP") == 0) {
+        programmer_engine_swap_endian(&programmer);
+        snprintf(message, sizeof message, "BYTE ORDER SWAPPED");
+    } else if (strcmp(key->token, "SIGN") == 0) {
+        programmer_engine_toggle_signed(&programmer);
+        snprintf(message, sizeof message, "%s MODE",
+                 programmer.signed_mode ? "SIGNED" : "UNSIGNED");
+        render_keypad();
+    } else if (strcmp(key->token, "BIT-8") == 0) {
+        programmer_engine_select_bit(&programmer, -8);
+        snprintf(message, sizeof message, "BIT %u", programmer.selected_bit);
+    } else if (strcmp(key->token, "BIT-1") == 0) {
+        programmer_engine_select_bit(&programmer, -1);
+        snprintf(message, sizeof message, "BIT %u", programmer.selected_bit);
+    } else if (strcmp(key->token, "BIT+1") == 0) {
+        programmer_engine_select_bit(&programmer, 1);
+        snprintf(message, sizeof message, "BIT %u", programmer.selected_bit);
+    } else if (strcmp(key->token, "BIT+8") == 0) {
+        programmer_engine_select_bit(&programmer, 8);
+        snprintf(message, sizeof message, "BIT %u", programmer.selected_bit);
+    } else if (strcmp(key->token, "BSET") == 0) {
+        programmer_engine_set_selected_bit(&programmer);
+        snprintf(message, sizeof message, "BIT SET");
+    } else if (strcmp(key->token, "BCLR") == 0) {
+        programmer_engine_clear_selected_bit(&programmer);
+        snprintf(message, sizeof message, "BIT CLEARED");
+    } else if (strcmp(key->token, "BTOGGLE") == 0) {
+        programmer_engine_toggle_selected_bit(&programmer);
+        snprintf(message, sizeof message, "BIT TOGGLED");
+    } else if (strcmp(key->token, "FLAGS") == 0) {
+        programmer_engine_clear_flags(&programmer);
+        snprintf(message, sizeof message, "FLAGS CLEARED");
     }
 }
 
@@ -752,6 +818,7 @@ static void activate_key(const calc_key_t *key) {
             break;
         case ACT_FMT_WIDTH:
         case ACT_FMT_ACTION:
+        case ACT_FMT_VIEW:
         case ACT_FMT_GOTO_BASE:
             activate_format_key(key);
             break;

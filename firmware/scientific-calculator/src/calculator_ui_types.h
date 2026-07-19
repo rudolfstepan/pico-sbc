@@ -17,6 +17,7 @@ typedef enum {
     ACT_GOTO_PROGRAMMER,
     ACT_FMT_WIDTH,
     ACT_FMT_ACTION,
+    ACT_FMT_VIEW,
     ACT_FMT_GOTO_BASE,
     ACT_GOTO_GRAPH,
     ACT_GOTO_TOOLS,
@@ -41,6 +42,13 @@ typedef enum {
     PAGE_SYMBOLS,
     PAGE_GRAPH
 } calc_page_t;
+
+typedef enum {
+    FORMAT_VIEW_CONVERSIONS,
+    FORMAT_VIEW_BITS,
+    FORMAT_VIEW_IEEE32,
+    FORMAT_VIEW_IEEE64
+} calculator_format_view_t;
 
 typedef enum {
     STYLE_NUMBER,
