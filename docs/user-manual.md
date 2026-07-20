@@ -4,6 +4,12 @@ Gueltig fuer Firmware `2.3.0`, USB-Protokoll `6`, Pico Calculator Link `2.3`
 und das LAFVIN Pico Development Kit mit RP2040, ST7796U-LCD und
 GT911-Touchscreen.
 
+> **Zu den Abbildungen:** Alle Modul-Screenshots in diesem Handbuch wurden mit
+> einem real angeschlossenen Pico, Firmware `2.3.0` und USB-Protokoll `6`
+> aufgenommen. Ausdruecke, Tabellen, Graphpunkte und Analysewerte stammen vom
+> Rechenkern des Pico; die Desktop-Anwendung stellt sie nur dar. `COM3` ist der
+> Port des Aufnahmesystems und kann auf einem anderen Computer abweichen.
+
 ## Inhalt
 
 1. [Schnellstart](#1-schnellstart)
@@ -248,6 +254,16 @@ Beispiele:
 | `sin(pi/6)` | Multipraezisions-Naeherung im aktiven Modus |
 | `A+0.1` | Hochpraezise Rechnung mit dem vollstaendigen A-F-Wert |
 
+Das folgende Beispiel zeigt eine Ganzzahl oberhalb der exakten
+`binary64`-Grenze. Der Pico berechnet `9007199254740993+1` dennoch exakt als
+`9007199254740994`; die zwei vorherigen Beispiele stehen gleichzeitig im
+Verlauf.
+
+![Hochpraezise Rechnung im Rechner-Modul](images/manual/01-calculator.png)
+
+*Abbildung 1: BASIC/SCIENTIFIC mit exaktem Ergebnis, aktiver HIGH-Praezision
+und den vom Pico gelesenen Sitzungswerten.*
+
 Wird die Kapazitaet eines exakten Zwischenergebnisses ueberschritten, erscheint
 `RANGE ERROR`. In diesem Fall kann eine wissenschaftliche Schreibweise oder
 eine umgestellte Rechnung helfen.
@@ -336,6 +352,11 @@ Der normale Rechner speichert die letzten acht erfolgreichen Berechnungen.
 
 Exakte Dezimalergebnisse werden im Verlauf nicht auf `double` gekuerzt.
 
+![Rechenverlauf mit exakten Ergebnissen](images/manual/14-history.png)
+
+*Abbildung 2: Der PC liest Ausdruck und vollstaendigen Ergebnistext aus dem
+Pico-Verlauf; ein Eintrag kann wieder in den Rechner uebernommen werden.*
+
 ### Cursorwerkzeuge
 
 `<`, `>` und `END` bewegen den Eingabecursor. An der frueheren `HOME`-Position
@@ -385,6 +406,12 @@ Editor ein. So wird eine Taste belegt:
 
 Die Belegung bleibt nach einem Neustart erhalten.
 
+![Variablen, Funktionen, Speicher und Favoriten](images/manual/12-memory-symbols.png)
+
+*Abbildung 3: Gemeinsame Synchronisation von A-F, F1-F3, Speicher M und den
+sechs Favoritentasten. Die gezeigten Werte sind Beispiele und frei
+aenderbar.*
+
 ## 6. Graphen und numerische Analyse
 
 ### Funktion zeichnen
@@ -409,6 +436,12 @@ Die drei Farben sind:
 Das feine Koordinatengitter, die Achsenbeschriftung und farbige Kurven werden
 dynamisch an den sichtbaren Bereich angepasst. Farbige Kreuze markieren
 Nullstellen, weisse Kreuze Schnittpunkte.
+
+![Graph von Sinus, Cosinus und Parabel](images/manual/06-graph.png)
+
+*Abbildung 4: F1=`sin(x)`, F2=`cos(x)` und F3=`0.1*x^2-1`, ueber den Pico im
+RAD-Modus abgetastet. Die Integral-Analyse von F1 zwischen 0 und pi ergibt
+`2.0000000000000000`.*
 
 ### Graph bedienen
 
@@ -471,6 +504,15 @@ Beispiel:
 2. `HEX` druecken: Anzeige `FF`.
 3. `BIN` druecken: Anzeige `11111111`.
 
+Ein zweites Beispiel kombiniert Basiswahl und Wortbreite: Im 8-Bit-Modus
+ergibt `A5 XOR 0F` den Hexwert `AA`. Derselbe Bitvektor entspricht unsigned
+`170`, signed `-86` und binaer `10101010`.
+
+![Programmer mit 8-Bit-XOR](images/manual/02-programmer.png)
+
+*Abbildung 5: Alle Darstellungen stammen aus einer einzigen 8-Bit-Operation
+auf dem Pico.*
+
 ### Logische Operationen
 
 Fuer eine binaere Operation:
@@ -528,6 +570,11 @@ Der Programmerwert kann als Q-Festkommazahl interpretiert werden:
 Bei einem Q16-Wert bedeutet der rohe Wert `98304` beispielsweise `1.5`, weil
 `98304 / 2^16 = 1.5`.
 
+![Festkomma- und Bitdarstellung](images/manual/03-fixed-point.png)
+
+*Abbildung 6: Der Rohwert `98304` als unsigned, Zweierkomplement, Q15.16 sowie
+als Float32- und Float64-Bitmuster.*
+
 ### IEEE-754
 
 | Taste | Funktion |
@@ -541,6 +588,11 @@ Bei einem Q16-Wert bedeutet der rohe Wert `98304` beispielsweise `1.5`, weil
 Der Inspector zeigt Vorzeichen, Roh-Exponent, Arbeitsexponent, Mantisse und
 Klassifikation als Normal, Subnormal, Null, Unendlich oder NaN. Unendliche und
 NaN-Werte koennen nicht nach `ANS` uebernommen werden.
+
+![IEEE-754-Analyse von Pi](images/manual/04-ieee754.png)
+
+*Abbildung 7: Das Float32-Bitmuster `0x40490FDB` wird als normalisierte Zahl
+mit dem Wert `3.141592741...` zerlegt.*
 
 ## 9. Zahlentheorie und Primzahlen
 
@@ -564,6 +616,14 @@ ganzzahliges Rechnerergebnis ein, `MAX64` den groessten 64-Bit-Wert.
 uebernimmt es in den normalen Rechner, `SWAP` vertauscht A und B. Ein kgV-
 Ueberlauf, Division durch null und nicht vorhandene benachbarte Primzahlen
 werden als Fehler gemeldet.
+
+Beispiel: `A=360`, danach `FACT`, liefert
+`360 = 2 * 2 * 2 * 3 * 3 * 5`.
+
+![Primfaktorzerlegung im Zahlentheorie-Modul](images/manual/05-number-theory.png)
+
+*Abbildung 8: Zahlentheorie mit Eingabefeldern A, B und M sowie allen neun
+Werkzeugen.*
 
 ## 10. Schaltalgebra
 
@@ -607,6 +667,14 @@ Mit Klammern wird die Reihenfolge explizit festgelegt.
 5. Dieselbe Taste erneut druecken, um die kanonische Form anzuzeigen.
 6. `USE` uebernimmt die angezeigte Form in den Editor, sofern sie hineinpasst.
 
+Der Ausdruck `(A ↑ B) ↔ (¬A ∨ ¬B)` ist fuer jede Belegung wahr und zeigt
+gleichzeitig die NAND-Definition nach De Morgan.
+
+![Logikausdruck und Wahrheitstabelle](images/manual/07-logic.png)
+
+*Abbildung 9: Symbolische Eingabe mit allen acht Konnektortasten und die vom
+Pico berechnete Wahrheitstabelle.*
+
 ### Gatter-Simulation
 
 `SIM` oeffnet die Live-Simulation. Die Tasten A bis F schalten die im
@@ -628,6 +696,11 @@ Mit `PLAN` im Logikeditor wird der aktuelle Ausdruck geprueft, automatisch
 angeordnet und als Schaltplan geoeffnet. Wiederholte Variablen verwenden
 denselben INPUT-Knoten; die aktuelle Belegung wird als Eingangspegel
 uebernommen.
+
+![Automatisch erzeugter grafischer Schaltplan](images/manual/08-circuit.png)
+
+*Abbildung 10: Der Pico hat `(A ∧ B) ∨ (¬C ⊕ D)` in neun Knoten und acht
+Leitungen uebersetzt. Aktive Leitungen und Ausgaenge sind farblich markiert.*
 
 Direkte Bedienung auf der Zeichenflaeche:
 
@@ -702,6 +775,12 @@ abgelehnt. `AC` loescht die direkte Eingabe.
 `C>ANS` uebernimmt den Wert als Ergebnis, `C>EDIT` setzt ihn in den Editor.
 `INFO` zeigt die Quellenangabe.
 
+![Einheitenumrechnung und Konstantenkatalog](images/manual/09-units-constants.png)
+
+*Abbildung 11: Beispiel `5 km = 3.106855961 mi`; darunter stehen die
+Firmwarewerte mit Einheit und Quellenangabe, etwa BIPM SI exact oder CODATA
+2022.*
+
 ## 12. Komplexe Zahlen
 
 COMPLEX besitzt einen eigenen Editor, Ergebniszustand und Verlauf.
@@ -722,6 +801,11 @@ Darstellung des Ergebnisses. `DEG/RAD` gilt fuer Phase und Polardarstellung.
 
 Nach `=` kann mit `+`, `-`, `*` oder `/` direkt am gesamten Ergebnis
 weitergerechnet werden.
+
+![Komplexe Rechnung in kartesischer und polarer Form](images/manual/10-complex.png)
+
+*Abbildung 12: `(1+2i)*(3-i)` ergibt `5+5i` beziehungsweise Betrag
+`7.071067812` bei einem Winkel von 45 Grad.*
 
 ### Komplexer Verlauf
 
@@ -773,6 +857,11 @@ Stichproben-Standardabweichung. In `2VAR` waehlt `X/Y` die Spalte.
 
 `PLOT` zeichnet in `1VAR` ein Histogramm und in `2VAR` ein Streudiagramm mit
 gestrichelter Regressionsgerade.
+
+![Lineare Regression mit fuenf Wertepaaren](images/manual/11-statistics.png)
+
+*Abbildung 13: Fuer `(1,3)` bis `(5,11)` liefert der Pico die Gerade `y=2x+1`
+mit Korrelationskoeffizient `1`.*
 
 ## 14. BASIC-Programmierung
 
@@ -854,12 +943,16 @@ verhindert, dass eine Endlosschleife die Bedienung blockiert.
 Weitere ladbare Programme liegen unter `examples/basic/`, darunter Schleifen,
 Verzweigungen, Fakultaet, Trigonometrie und ein Mandelbrot-Textbild.
 
+![Mandelbrot-Textprogramm im BASIC-Modul](images/manual/13-basic.png)
+
+*Abbildung 14: `09_mandelbrot_text.bas` wurde zum Pico uebertragen und dort in
+1623 Schritten ausgefuehrt. Editor, Ausgabe und Laufstatus werden gemeinsam
+angezeigt.*
+
 ## 15. Pico Calculator Link
 
 Die Desktop-Anwendung Pico Calculator Link `2.3` steuert und synchronisiert
 den Rechner ueber dessen normalen USB-Anschluss.
-
-![Pico Calculator Link](images/pico-calculator-link.png)
 
 ### Voraussetzungen und Start
 
@@ -886,21 +979,21 @@ Seite und Datenzaehler.
 
 ### Bereiche der Anwendung
 
-| Bereich | Verwendung |
-|---|---|
-| `Rechner` | Wissenschaftlichen Ausdruck senden, Ergebnis anzeigen sowie DEG/RAD und NORMAL/HIGH/ULTRA schalten |
-| `Code` | BIN/DEC/HEX, Bitoperationen, 2er-Komplement, Q-Fixpunkt und IEEE-754 untersuchen |
-| `Zahlen` | GGT/KGV, Primzahltest, benachbarte Primzahlen, Faktorisierung, Phi, Modulo und modulare Potenz berechnen |
-| `Graph` | F1-F3 plotten sowie Nullstelle, Schnittpunkt, Ableitung, Integral und Extrema berechnen |
-| `Logik` | Symbolischen Ausdruck eingeben, auswerten, als Wahrheitstabelle/DNF/KNF oder Schaltplan darstellen |
-| `Gatter` | Grafischen Schaltplan laden, bearbeiten, simulieren, in einen Ausdruck wandeln und zum Pico schreiben |
-| `Einheit` | Alle Einheitenkategorien umrechnen und physikalische Konstanten lesen |
-| `Komplex` | Komplexe Ausdruecke in kartesischer und polarer Form berechnen |
-| `Stats` | Werte oder Wertepaare verwalten, Summary, Regression und Histogramm berechnen |
-| `Speicher` | A-F, F1-F3, M und FAV1-FAV6 bearbeiten und synchronisieren |
-| `BASIC` | `.bas` laden, speichern, uebertragen und ausfuehren |
-| `Verlauf` | Acht Recheneintraege lesen und wiederverwenden |
-| `USB` | Einzelne USB-Befehle senden und Antworten ansehen |
+| Bereich | Verwendung | Beispielbild |
+|---|---|---|
+| `Rechner` | Wissenschaftlichen Ausdruck senden, Ergebnis anzeigen sowie DEG/RAD und NORMAL/HIGH/ULTRA schalten | [Abb. 1](images/manual/01-calculator.png) |
+| `Code` | BIN/DEC/HEX, Bitoperationen, 2er-Komplement, Q-Fixpunkt und IEEE-754 untersuchen | [Abb. 5-7](images/manual/02-programmer.png) |
+| `Zahlen` | GGT/KGV, Primzahltest, benachbarte Primzahlen, Faktorisierung, Phi, Modulo und modulare Potenz berechnen | [Abb. 8](images/manual/05-number-theory.png) |
+| `Graph` | F1-F3 plotten sowie Nullstelle, Schnittpunkt, Ableitung, Integral und Extrema berechnen | [Abb. 4](images/manual/06-graph.png) |
+| `Logik` | Symbolischen Ausdruck eingeben, auswerten, als Wahrheitstabelle/DNF/KNF oder Schaltplan darstellen | [Abb. 9](images/manual/07-logic.png) |
+| `Gatter` | Grafischen Schaltplan laden, bearbeiten, simulieren, in einen Ausdruck wandeln und zum Pico schreiben | [Abb. 10](images/manual/08-circuit.png) |
+| `Einheit` | Alle Einheitenkategorien umrechnen und physikalische Konstanten lesen | [Abb. 11](images/manual/09-units-constants.png) |
+| `Komplex` | Komplexe Ausdruecke in kartesischer und polarer Form berechnen | [Abb. 12](images/manual/10-complex.png) |
+| `Stats` | Werte oder Wertepaare verwalten, Summary, Regression und Histogramm berechnen | [Abb. 13](images/manual/11-statistics.png) |
+| `Speicher` | A-F, F1-F3, M und FAV1-FAV6 bearbeiten und synchronisieren | [Abb. 3](images/manual/12-memory-symbols.png) |
+| `BASIC` | `.bas` laden, speichern, uebertragen und ausfuehren | [Abb. 14](images/manual/13-basic.png) |
+| `Verlauf` | Acht Recheneintraege lesen und wiederverwenden | [Abb. 2](images/manual/14-history.png) |
+| `USB` | Einzelne USB-Befehle senden und Antworten ansehen | [Abb. 15](images/manual/15-usb-console.png) |
 
 Fuer Berechnungen und die Anzeige verwendet die Anwendung den vom Pico
 gelieferten Dezimaltext. Im JSON-Export sind `result_text`, A-F und M die
@@ -966,6 +1059,33 @@ python tools/pico_calc_cli.py --port COM5 eval "sqrt(2)"
 python tools/pico_calc_cli.py --port COM5 export calculator-state.json
 python tools/pico_calc_cli.py --port COM5 import calculator-state.json
 ```
+
+Die USB-Konsole eignet sich fuer Diagnose und Entwicklung. `INFO` bestaetigt
+Firmware und Protokoll, `DIAG` zeigt den Laufzustand und Modulbefehle koennen
+direkt getestet werden.
+
+![USB-Konsole mit Antworten des Pico](images/manual/15-usb-console.png)
+
+*Abbildung 15: Direkte Antworten auf `INFO`, `DIAG` und
+`MODULE NUMBER GCD 84 30`; der ggT wird als `6` geliefert.*
+
+### Handbuch-Screenshots aktualisieren
+
+Die Abbildungen lassen sich mit demselben Ablauf neu erzeugen:
+
+```sh
+python -m pip install -r tools/requirements-docs.txt
+python tools/capture_manual_screenshots.py --port COM3
+```
+
+Ohne `--port` wird bei genau einem erkannten seriellen Port automatisch dieser
+verwendet. Das Werkzeug sichert den Rechnerzustand vor der Aufnahme, fuehrt
+alle Beispiele ueber das USB-Protokoll aus, schreibt 15 PNG-Dateien nach
+`docs/images/manual/` und stellt alle rueckschreibbaren Einstellungen,
+Programme und Datensaetze anschliessend wieder her. `ANS`, Rechenverlauf und
+aktuelle LCD-Seite sind im Protokoll absichtlich nur lesbar; sie enthalten nach
+der Aufnahme deshalb die Dokumentationsbeispiele. Fuer die Aufnahme muss ein
+grafischer Desktop verfuegbar und das Fenster sichtbar sein.
 
 ## 16. Speicherung und Werksreset
 
@@ -1092,7 +1212,7 @@ USB-Protokoll `6` mit der bidirektionalen Logik-Schaltplan-Bruecke.
 | Programmer | 8, 16, 32 oder 64 Bit |
 | USB-Befehlszeile | 255 druckbare ASCII-Zeichen |
 | USB-Antworttext | 511 ASCII-Zeichen zuzueglich `CRLF` |
-| Persistenz | 2 wechselnde Flashslots mit je 8 KiB, nur Format 8 |
+| Persistenz | 2 wechselnde Flashslots mit je 8 KiB, nur Format 9 |
 
 Der RP2040 ist ein Mikrocontroller ohne Betriebssystem und besitzt 264 KiB
 SRAM. Die Firmware zeichnet deshalb direkt auf das LCD und verwendet keinen
