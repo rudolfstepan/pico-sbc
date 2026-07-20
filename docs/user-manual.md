@@ -1,7 +1,8 @@
 # Benutzerhandbuch: Pico Scientific Calculator
 
-Gueltig fuer Firmware `1.8.0`, USB-Protokoll `4` und das LAFVIN Pico
-Development Kit mit RP2040, ST7796U-LCD und GT911-Touchscreen.
+Gueltig fuer Firmware `1.8.0`, USB-Protokoll `4`, Pico Calculator Link `2.1`
+und das LAFVIN Pico Development Kit mit RP2040, ST7796U-LCD und
+GT911-Touchscreen.
 
 ## Inhalt
 
@@ -76,9 +77,9 @@ liefert exakt:
 Dieser Wert bleibt auch bei einer folgenden Rechnung mit `ANS`, im Verlauf,
 ueber USB und nach einem Neustart erhalten.
 
-Bei sehr langen Ergebnissen zeigt das LCD den in die Zeile passenden rechten
-Teil. Der vollstaendige Wert bleibt intern erhalten und ist ueber
-`Pico Calculator Link` sichtbar.
+Sehr lange Ausdruecke und Ergebnisse werden passend zur Displayausrichtung
+automatisch auf mehrere Zeilen verteilt. Reicht der Platz nicht aus, wird die
+Schrift stufenweise verkleinert. Der vollstaendige Wert bleibt dabei erhalten.
 
 ## 2. Bedienung
 
@@ -111,8 +112,9 @@ werden.
 | `K2` kurz | Drei Displaylayouts | Drei Displaylayouts | Drei Displaylayouts |
 | `K2` 0,8 s halten | Portrait/Landscape | Portrait/Landscape | Portrait/Landscape |
 
-Werden `K1` und `K2` beim Einschalten gleichzeitig gehalten, wird nach etwa
-zwei Sekunden ein Werksreset ausgefuehrt.
+Werden `K1` und `K2` beim Einschalten gleichzeitig gehalten, setzt die
+Firmware den gespeicherten Zustand bei der Initialisierung zurueck. Die Tasten
+erst loslassen, wenn die Anzeige startet.
 
 ### Joystick
 
@@ -280,15 +282,24 @@ immer mit `x` im Bogenmass ausgewertet.
 | `sinh(x)`, `cosh(x)`, `tanh(x)` | Hyperbelfunktionen | `sinh(1)` |
 | `ln(x)` | Natuerlicher Logarithmus | `ln(e)` |
 | `log(x)` | Zehnerlogarithmus | `log(100)` |
+| `log10(x)` | Alias fuer den Zehnerlogarithmus | `log10(100)` |
 | `exp(x)` | Exponentialfunktion | `exp(1)` |
 | `sqrt(x)` | Quadratwurzel | `sqrt(2)` |
 | `abs(x)` | Betrag | `abs(-4)` |
 | `floor(x)` | Abrunden | `floor(2.9)` |
+| `ceil(x)` | Aufrunden | `ceil(2.1)` |
+| `pow(x,y)` | Allgemeine Potenz | `pow(2,0.5)` |
+| `atan2(y,x)` | Quadrantenrichtiger Arkustangens | `atan2(1,-1)` |
 | `fac(n)` | Fakultaet | `fac(5)` |
 | `ncr(n,r)` | Kombinationen | `ncr(6,2)` |
 | `npr(n,r)` | Permutationen | `npr(6,2)` |
 | `pi`, `e` | Mathematische Konstanten | `2*pi` |
 | `tau`, `phi` | Kreiszahl `2*pi` und goldener Schnitt | Eingabe ueber USB/PC |
+
+`log10`, `ceil`, `pow`, `atan2`, `tau` und `phi` besitzen keine eigenen
+LCD-Tasten. Sie koennen ueber Pico Calculator Link, einen USB-Befehl oder eine
+entsprechend synchronisierte Favoritentaste in den Editor gelangen. Fuer
+`pow(x,y)` steht am LCD alternativ der Operator `x^y` bereit.
 
 Bei `ncr` und `npr` trennt das Komma die beiden Argumente. Fakultaet,
 Kombinationen und Permutationen erwarten nichtnegative ganze Zahlen;
@@ -423,7 +434,7 @@ Joystick bewegt ihn links oder rechts; x- und y-Wert stehen im Datenbereich.
 | `INTEGR` | Bestimmtes Integral ueber das Analyseintervall |
 | `EXTREM` | Lokale Minima und Maxima im Intervall |
 
-Standardmaessig wird der sichtbare x-Bereich verwendet. Exakte Grenzen werden
+Standardmaessig wird der sichtbare x-Bereich verwendet. Explizite Grenzen werden
 so gesetzt:
 
 1. Unter `BASIC` oder `SCIENTIFIC` den ersten Grenzwert berechnen.
@@ -679,11 +690,12 @@ Nur die Zeilennummer mit `ENTER` loescht die betreffende Zeile:
 Der Joystick bewegt den Cursor und scrollt die Programmliste. Ein Tippen auf
 den oberen Bildschirmbereich wechselt zwischen Liste und Ausgabe. `K2`
 durchlaeuft die grosse, kompakte und vollstaendig ausgeblendete Tastatur.
-Im Vollbild zeigt CODE bis zu 16 Ausgabezeilen, in der Standardansicht bis zu
-sechs. Lange Ausgaben werden an der verfuegbaren LCD-Breite automatisch auf
-weitere Bildschirmzeilen umgebrochen. Landscape zeigt bei der grossen
-Ausgabeschrift bis zu 39 Zeichen pro Zeile, Portrait bis zu 25 Zeichen; Text
-wird dabei nicht mehr am rechten Rand abgeschnitten.
+Im Vollbild zeigt CODE bis zu 16 Ausgabezeilen. Die Standardansicht zeigt in
+Landscape bis zu sechs und in Portrait bis zu zehn Zeilen. Lange Ausgaben
+werden an der verfuegbaren LCD-Breite automatisch auf weitere Bildschirmzeilen
+umgebrochen. Landscape zeigt bei der grossen Ausgabeschrift bis zu 39 Zeichen
+pro Zeile, Portrait bis zu 25 Zeichen; Text wird dabei nicht mehr am rechten
+Rand abgeschnitten.
 
 ### Tastaturebenen
 
@@ -737,8 +749,8 @@ Verzweigungen, Fakultaet, Trigonometrie und ein Mandelbrot-Textbild.
 
 ## 14. Pico Calculator Link
 
-Die Desktop-Anwendung steuert und synchronisiert den Rechner ueber dessen
-normalen USB-Anschluss.
+Die Desktop-Anwendung Pico Calculator Link `2.1` steuert und synchronisiert
+den Rechner ueber dessen normalen USB-Anschluss.
 
 ![Pico Calculator Link](images/pico-calculator-link.png)
 
@@ -781,8 +793,10 @@ Seite und Datenzaehler.
 | `Verlauf` | Acht Recheneintraege lesen und wiederverwenden |
 | `Protokoll` | Einzelne USB-Befehle senden und Antworten ansehen |
 
-Lange exakte Dezimalergebnisse bleiben Text und werden von der Anwendung nicht
-in Python-Gleitkomma umgewandelt.
+Fuer Berechnungen und die Anzeige verwendet die Anwendung den vom Pico
+gelieferten Dezimaltext. Im JSON-Export sind `result_text`, A-F und M die
+autoritativen Textfelder. Das zusaetzliche Feld `result` ist nur eine
+angenaherte Gleitkomma-Kopie fuer einfache externe Werkzeuge.
 
 Alle Modulberechnungen laufen auf dem Pico. Die PC-App zeichnet Ergebnisse wie
 Graphen und Tabellen nur auf; Rechenkern, Winkelmodus, Bereichspruefung und
@@ -799,10 +813,12 @@ Eingabefeld. Die Programmausgabe wird fortlaufend vom Rechner gelesen.
 ### JSON-Sicherung
 
 Der Export im JSON-Format 5 erfasst Ausdruck, exaktes Ergebnis, Winkel- und
-Praezisionsmodus, A-F, F1-F3, Speicher M, Favoriten, Programmer- und Zahlenformatzustand, Graphbereich,
-Verlauf, Statistik und BASIC-Programm. Beim Import werden alle persistenten
-Einstellungen ausser `ANS` und Verlauf zurueckgeschrieben; diese beiden dienen
-im JSON als Sicherungs- und Protokolldaten. Abhaengige Benutzerfunktionen
+Praezisionsmodus, A-F, F1-F3, Speicher M, Favoriten, Programmer- und
+Zahlenformatzustand, Graphbereich, Verlauf, Statistik und BASIC-Programm.
+Beim Import werden Ausdruck, Winkel- und Praezisionsmodus, A-F, F1-F3, M,
+Favoriten, Programmer- und Zahlenformatzustand, Graphbereich, Statistik und
+BASIC-Programm zurueckgeschrieben. `ANS` und Verlauf sind Export- und
+Protokolldaten und werden nicht importiert. Abhaengige Benutzerfunktionen
 werden in einer gueltigen Reihenfolge uebertragen.
 
 ### Kommandozeile
@@ -832,7 +848,7 @@ Aenderungen werden etwa drei Sekunden gesammelt. Vor dem Trennen der
 Stromversorgung sollte deshalb kurz gewartet werden, wenn gerade Daten
 geaendert wurden.
 
-Zwei CRC-geschuetzte Flashkopien werden abwechselnd beschrieben. Ein
+Zwei je 8 KiB grosse, CRC-geschuetzte Flashslots werden abwechselnd beschrieben. Ein
 Stromausfall waehrend des Speicherns zerstoert dadurch nicht den vorherigen
 gueltigen Zustand. Firmware 1.8 akzeptiert ausschliesslich Flashformat 6.
 Aeltere Formate werden bewusst nicht migriert; nach einem Update startet der
@@ -840,10 +856,10 @@ Rechner mit Werkseinstellungen.
 
 ### Werksreset
 
-1. Pico ausschalten oder Reset ausloesen.
+1. Pico ausschalten.
 2. `K1` und `K2` gleichzeitig gedrueckt halten.
-3. Pico einschalten.
-4. Tasten nach etwa zwei Sekunden loslassen.
+3. Pico einschalten und beide Tasten halten, bis die Anzeige startet.
+4. Tasten loslassen.
 5. Die Meldung `FACTORY RESET` bestaetigt das Loeschen.
 
 Der Werksreset entfernt alle benutzerdefinierten Funktionen, Favoriten, den
@@ -937,6 +953,8 @@ USB-Protokoll `4` sowie die Praezisionsbefehle der Firmware 1.8.
 | BASIC-Laufgrenze | 5000 Anweisungen |
 | Programmer | 8, 16, 32 oder 64 Bit |
 | USB-Befehlszeile | 255 druckbare ASCII-Zeichen |
+| USB-Antworttext | 511 ASCII-Zeichen zuzueglich `CRLF` |
+| Persistenz | 2 wechselnde Flashslots mit je 8 KiB, nur Format 6 |
 
 Der RP2040 ist ein Mikrocontroller ohne Betriebssystem und besitzt 264 KiB
 SRAM. Die Firmware zeichnet deshalb direkt auf das LCD und verwendet keinen

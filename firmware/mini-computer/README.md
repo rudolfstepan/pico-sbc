@@ -1,13 +1,16 @@
 # Mini Computer Firmware
 
-Firmware-Basis fuer das im Markdown beschriebene LAFVIN Pico Development Kit.
+Eigenstaendige Mini-Computer-Firmware `1.0.0` fuer das LAFVIN Pico Development
+Kit.
 
 ## Funktionen
 
 - ST7796U Display ueber SPI0, 480 x 320 Landscape
 - GT911 Touch ueber I2C0
 - Touch-Tastatur auf dem Display
-- Kleine Kommandozeile mit `HELP`, `INFO`, `CLS`, `BEEP`, `LED1 ON/OFF`, `LED2 ON/OFF`
+- Kleine Kommandozeile mit bis zu 31 Zeichen und fuenf sichtbaren
+  Terminalzeilen
+- Befehle `HELP`, `INFO`, `CLS`, `BEEP`, `LED1 ON/OFF` und `LED2 ON/OFF`
 - K1 sendet Enter, K2 loescht die Eingabe
 - Buzzer-Feedback und Status-LEDs
 - Kein Vollbild-Framebuffer, damit die Firmware in den RP2040-SRAM passt

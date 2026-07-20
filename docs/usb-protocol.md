@@ -4,6 +4,10 @@ Der Scientific Calculator stellt ueber seinen normalen USB-Anschluss eine
 serielle CDC-Schnittstelle bereit. Pro Zeile wird genau ein ASCII-Befehl
 gesendet und genau eine Antwort empfangen. Das Protokoll ist ab
 Firmware `1.1.0` verfuegbar.
+
+Aktueller Stand ist Firmware `1.8.0` mit Protokollversion `4`,
+Pico Calculator Link `2.1` und JSON-Format `5`.
+
 Seit Firmware `1.3.0` erweitert Protokollversion 2 die Schnittstelle um
 BASIC-Programme, nicht blockierende Ausfuehrung, Ausgabe und `INPUT`.
 Seit Firmware `1.4.0` liefert Protokollversion 3 Dezimalergebnisse und `ANS`
@@ -26,7 +30,8 @@ Werte bleiben bei Export und Import als Dezimaltext erhalten.
 - Nutzdaten wie Ausdruecke bleiben unveraendert.
 - Erfolgreiche Antworten beginnen mit `OK`, Fehler mit `ERR`.
 - Antwortfelder sind durch Tabulatoren getrennt.
-- Antworten sind einschliesslich Abschlusszeichen auf 512 Byte begrenzt.
+- Der Antworttext umfasst maximal 511 ASCII-Zeichen; `CRLF` wird danach
+  separat gesendet.
 - Verlauf und Statistikdaten werden einzeln per Index gelesen.
 
 Beispiel, wobei `<TAB>` jeweils ein Tabulatorzeichen bezeichnet:
@@ -48,7 +53,7 @@ Beispiel, wobei `<TAB>` jeweils ein Tabulatorzeichen bezeichnet:
 | `GET VAR A` ... `GET VAR F` | Variable lesen |
 | `GET FUNC F1` ... `GET FUNC F3` | Benutzerfunktion lesen |
 | `GET ANGLE` / `SET ANGLE DEG|RAD` | Winkelmodus lesen oder setzen |
-| `GET PRECISION` / `SET PRECISION NORMAL|HIGH|ULTRA` | 40, 80 oder 128 signifikante Stellen waehlen |
+| `GET PRECISION` / `SET PRECISION modus` | `NORMAL`/`40`/`P40`, `HIGH`/`80`/`P80` oder `ULTRA`/`128`/`P128` waehlen |
 | `GET MEMORY` / `SET MEMORY wert` | Speicher M lesen oder setzen |
 | `GET FAVORITE 1` ... `GET FAVORITE 6` | Favoritentaste lesen |
 | `SET FAVORITE 1 token` ... `SET FAVORITE 6 token` | Favoritentaste setzen |
@@ -104,13 +109,13 @@ Lange KNF-/DNF-Ausgaben werden in maximal 112 Zeichen grossen Teilen gelesen.
 Verlust zusammenzusetzen.
 
 `EVAL` verwendet den am Rechner aktiven Winkel- und Praezisionsmodus und
-aktualisiert `ANS`, den sichtbaren Editor und den Verlauf. Reine Dezimalarithmetik wird
-verlustfrei als Dezimaltext uebertragen; die PC-Werkzeuge wandeln diesen Wert
-nicht in binaeres Gleitkomma um. Variablen, Funktionen,
-Ergebnisse, Verlauf und Statistikdaten werden wie bei einer Touch-Eingabe
-persistent gespeichert. BASIC-Programme werden ebenfalls persistent
-gespeichert. Eine ungueltige Funktionsdefinition veraendert den bisherigen
-Zustand nicht.
+aktualisiert `ANS`, den sichtbaren Editor und den Verlauf. Reine
+Dezimalarithmetik wird verlustfrei als Dezimaltext uebertragen. GUI und CLI
+verwenden diesen Text fuer Anzeige und weitere Geraeteoperationen. Variablen,
+Funktionen, Ergebnisse, Verlauf und Statistikdaten werden wie bei einer
+Touch-Eingabe persistent gespeichert. BASIC-Programme werden ebenfalls
+persistent gespeichert. Eine ungueltige Funktionsdefinition veraendert den
+bisherigen Zustand nicht.
 
 Typische Antworten:
 
@@ -153,16 +158,20 @@ python tools/pico_calc_cli.py --port COM5 import calculator-state.json
 ```
 
 Der JSON-Export im aktuellen Format 5 enthaelt Ausdruck, Ergebnis, A-F,
-F1-F3, M, Favoriten, Winkel- und Praezisionsmodus, Programmer- und Zahlenformatzustand, Graphbereich, Verlauf,
-BASIC-Programm und Statistikliste. Beim Import werden diese persistenten
-Daten wieder uebertragen. Abhaengige
-Benutzerfunktionen werden automatisch
-in einer gueltigen Reihenfolge wiederholt; Rekursionen werden abgelehnt.
+F1-F3, M, Favoriten, Winkel- und Praezisionsmodus, Programmer- und
+Zahlenformatzustand, Graphbereich, Verlauf, BASIC-Programm und Statistikliste.
+`result_text`, A-F und M enthalten die autoritativen Dezimaltexte; `result`
+ist zusaetzlich als angenaherte Gleitkommazahl fuer einfache externe Werkzeuge
+vorhanden. Beim Import werden Ausdruck, Einstellungen, Symbole, M,
+Programmer-, Zahlenformat- und Graphzustand, Statistik sowie BASIC-Programm
+wieder uebertragen. `ANS` und Verlauf werden nicht importiert. Abhaengige
+Benutzerfunktionen werden automatisch in einer gueltigen Reihenfolge
+wiederholt; Rekursionen werden abgelehnt.
 
 ## Desktop-Anwendung
 
-`Pico Calculator Link` stellt das gleiche Protokoll als grafischen
-Geraetemanager bereit:
+`Pico Calculator Link` `2.1` stellt das gleiche Protokoll als grafischen
+Geraetemanager bereit und erwartet Firmware `1.8.0`:
 
 ```sh
 python -m pip install -r tools/requirements.txt

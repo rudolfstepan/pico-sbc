@@ -10,6 +10,8 @@ Danke fuer dein Interesse an diesem Projekt.
 3. Fuege fuer Aenderungen am Rechenkern passende Tests hinzu.
 4. Baue beide Firmware-Ziele und fuehre alle Host-Tests aus.
 5. Beschreibe im Pull Request getestete Hardware und sichtbare UI-Aenderungen.
+6. Aktualisiere bei geaenderten Befehlen, Grenzen oder Datenformaten README,
+   Benutzerhandbuch, USB-Protokoll und Roadmap gemeinsam.
 
 ## Vor einem Pull Request
 
@@ -22,3 +24,9 @@ ctest --test-dir out/tests --output-on-failure
 Firmware-Aenderungen muessen ausserdem mit dem Pico SDK konfiguriert und gebaut
 werden. Hardwaretests lassen sich nicht vollstaendig durch CI ersetzen; bitte
 nenne deshalb das verwendete Board und Display.
+
+```sh
+cmake -S . -B out/firmware -G Ninja
+cmake --build out/firmware --target lafvin_minicomputer
+cmake --build out/firmware --target lafvin_scientific_calculator
+```

@@ -50,12 +50,12 @@ Das Board enthält ein **3,5-Zoll-TFT-LCD mit kapazitiver Touchschicht**.
 | Display-Schnittstelle | SPI0 |
 | Touchcontroller | GT911 |
 | Touch-Technik | kapazitiv |
+| Touch-Schnittstelle | I²C0 |
+| Touch-Unterstützung | Multi-Touch laut Hersteller |
 
 Die Rechnerfirmware kann den ST7796U zur Laufzeit zwischen Landscape
 (`480 x 320`) und Portrait (`320 x 480`) umschalten. Der GT911-Treiber bildet
 die Rohkoordinaten passend auf die jeweils aktive Orientierung ab.
-| Touch-Schnittstelle | I²C0 |
-| Touch-Unterstützung | Multi-Touch laut Hersteller |
 
 Wichtig ist die begriffliche Trennung:
 
@@ -79,6 +79,14 @@ Damit ist ein vollständiger 16-Bit-Framebuffer größer als der gesamte SRAM de
 - Dirty-Rectangle-Updates
 - kleine DMA-Übertragungspuffer
 - Zeichenpuffer für Terminaldarstellung
+
+### Umsetzung in diesem Repository
+
+Die gemeinsame Bibliothek `lib/board` rendert ohne Vollbild-Framebuffer direkt
+auf das LCD. Der aktuelle ST7796U-Treiber verwendet SPI0 mit 62,5 MHz und
+blockierende Übertragungen. Der GT911 läuft an I²C0 mit 100 kHz, probiert beim
+Start die Adressen `0x5d` und `0x14` und liefert derzeit den ersten Touchpunkt.
+Landscape und Portrait werden von LCD- und Touch-Treiber gemeinsam abgebildet.
 
 ---
 
@@ -119,7 +127,9 @@ Das Board besitzt einen zweiachsigen Mini-Joystick im PSP-Stil.
 | GP26 / ADC0 | X-Achse |
 | GP27 / ADC1 | Y-Achse |
 
-Die beiden Achsen liefern analoge Spannungswerte. Für eine zuverlässige Auswertung sollten Mittelpunkt, Totzone und Maximalwerte beim Start kalibriert werden.
+Die beiden Achsen liefern analoge Spannungswerte. Die aktuelle Boardbibliothek
+verwendet feste Schaltschwellen unter 1400 und über 2700 ADC-Schritten; eine
+automatische Kalibrierung beim Start ist derzeit nicht implementiert.
 
 ### Tasten
 
@@ -252,15 +262,15 @@ Daraus ergibt sich eine sinnvolle Zielarchitektur mit:
 
 ---
 
-## 11. Empfohlene Firmware-Basis
+## 11. Firmware-Basis und Ausbauoptionen
 
-Für eine robuste Mini-Computer-Firmware bietet sich folgende Grundlage an:
+Die aktuelle Firmware verwendet das Raspberry Pi Pico C/C++ SDK, C11,
+direktes LCD-Rendering sowie eigene ST7796U- und GT911-Treiber. Für weitere
+Ausbaustufen bieten sich an:
 
-- Raspberry Pi Pico C/C++ SDK
-- C oder C++
-- ST7796U-Treiber mit SPI und DMA
-- GT911-Treiber über I²C und Interrupt
-- eigener Terminalrenderer oder LVGL für grafische Oberflächen
+- DMA für größere SPI-Übertragungen
+- Interruptauswertung des GT911 statt zyklischer Abfrage
+- eigener Terminalrenderer oder LVGL für komplexere grafische Oberflächen
 - optional FreeRTOS für Tasks und Ereignisverarbeitung
 - optional LittleFS im Flash oder FatFS auf SD-Karte
 
@@ -272,7 +282,7 @@ Für eine robuste Mini-Computer-Firmware bietet sich folgende Grundlage an:
 
 2. LAFVIN, [*LAFVIN-PICO-Development-Kit GitHub Repository*](https://github.com/lafvintech/LAFVIN-PICO-Development-Kit)
 
-3. Raspberry Pi, [*Pico microcontroller boards – Documentation*](https://www.raspberrypi.com/documentation/microcontrollers/raspberry-pi-pico.html)
+3. Raspberry Pi, [*Pico microcontroller boards – Documentation*](https://www.raspberrypi.com/documentation/microcontrollers/pico-series.html)
 
 4. Raspberry Pi, [*Raspberry Pi Pico – Technical specifications*](https://www.raspberrypi.com/products/raspberry-pi-pico/)
 

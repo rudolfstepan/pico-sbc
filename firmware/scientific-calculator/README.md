@@ -2,6 +2,9 @@
 
 Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 
+Aktueller Stand: Firmware `1.8.0`, USB-Protokoll `4`, Flashformat `6` und
+waehlbare Praezision bis 128 signifikante Stellen.
+
 Das schrittweise [Benutzerhandbuch](../../docs/user-manual.md) beschreibt
 Installation, Bedienung, alle Rechnermodi und die PC-Anwendung.
 
@@ -11,8 +14,9 @@ Installation, Bedienung, alle Rechnermodi und die PC-Anwendung.
 - Klammern, Potenzen, Prozent/Modulo und `ANS`
 - Grad- und Radiant-Modus
 - `sin`, `cos`, `tan`, `asin`, `acos`, `atan`
-- `sinh`, `cosh`, `tanh`, `ln`, `log`, `exp`, `sqrt`
-- Betrag, Abrunden, Fakultaet, Kombinationen und Permutationen
+- `sinh`, `cosh`, `tanh`, `ln`, `log`, `log10`, `exp`, `sqrt`
+- Betrag, Auf- und Abrunden, allgemeine Potenzen, `atan2`, Fakultaet,
+  Kombinationen und Permutationen
 - Waehlbare 40-, 80- oder 128-stellige wissenschaftliche Funktionen und
   Konstanten Pi, e, Tau und Phi
 - Elf Touch-Ebenen: `BASIC`, `SCIENTIFIC`, `PROGRAMMER`, `FORMAT`, `TOOLS`,
@@ -54,8 +58,8 @@ Installation, Bedienung, alle Rechnermodi und die PC-Anwendung.
 - K1 berechnet, fuegt Statistikdaten hinzu oder bestaetigt eine CODE-Zeile;
   K2 schaltet kurz gedrueckt das Displaylayout in drei Stufen um und wechselt
   lange gedrueckt zwischen Landscape und Portrait
-- USB-CDC-Protokoll und Python-CLI fuer Berechnung, Diagnose sowie
-  JSON-Import und -Export
+- USB-CDC-Protokoll, Python-CLI und Desktop-App fuer alle Rechnermodule,
+  Diagnose sowie JSON-Import und -Export
 
 Die Seitentaste wechselt
 `BASIC -> SCIENTIFIC -> PROGRAMMER -> FORMAT -> TOOLS -> SYMBOLS -> LOGIC -> UNITS -> COMPLEX -> STATS -> CODE -> BASIC`.
@@ -140,7 +144,7 @@ aktuelle Intervall.
 - `VIEW` verwendet wieder den aktuell sichtbaren x-Bereich als Intervall.
 - `TOL` schaltet zyklisch zwischen `1e-6`, `1e-9` und `1e-12` um.
 
-Zum Setzen einer exakten Grenze wird der gewuenschte Wert zuerst im normalen
+Zum Setzen einer expliziten Grenze wird der gewuenschte Wert zuerst im normalen
 Rechner berechnet. Danach wird im Graph unter `ANALYZE -> MORE` die passende
 `A=ANS`- oder `B=ANS`-Taste gedrueckt. Der Graphkopf kennzeichnet ein solches
 Intervall mit `A/B`, andernfalls mit `VIEW`.
@@ -287,10 +291,10 @@ Damit lassen sich Ausdruecke berechnen, Variablen und Funktionen setzen sowie
 Verlauf und Statistikdaten lesen oder schreiben. `INFO` zeigt die Firmware- und
 Protokollversion, `DIAG` den kompakten Laufzeitzustand.
 
-Ab Firmware `1.3.0` kann `Pico Calculator Link` auch BASIC-Programme als
-`.bas`-Datei laden und speichern, mit dem Rechner synchronisieren, starten und
-stoppen. Ausgabe und angeforderte `INPUT`-Werte werden direkt im BASIC-Tab der
-Desktop-Anwendung angezeigt beziehungsweise eingegeben.
+Pico Calculator Link `2.1` bildet alle Rechnermodule der Firmware ab. Die App
+kann unter anderem BASIC-Programme als `.bas`-Datei laden und speichern, mit
+dem Rechner synchronisieren, starten und stoppen. Ausgabe und angeforderte
+`INPUT`-Werte werden direkt im BASIC-Tab angezeigt beziehungsweise eingegeben.
 
 ```sh
 python -m pip install -r tools/requirements.txt
@@ -300,10 +304,10 @@ python tools/pico_calc_cli.py --port COM5 export calculator-state.json
 python tools/pico_calc_gui.py
 ```
 
-Die grafische Anwendung `Pico Calculator Link` bietet Rechnersteuerung,
-Synchronisation von A-F, F1-F3 und Statistiklisten, Verlauf, Rohkonsole sowie
-JSON-Sicherungen. Die vollstaendige Befehlsreferenz, Linux-Beispiele, Grenzen
-und das JSON-Format stehen in
+Die grafische Anwendung bietet Rechner, Programmer und Zahlenformate, Graph,
+Logik, Einheiten, komplexe Zahlen, Statistik, Speicher, BASIC, Verlauf,
+Rohkonsole und JSON-Sicherungen. Die vollstaendige Befehlsreferenz,
+Linux-Beispiele, Grenzen und das JSON-Format stehen in
 [docs/usb-protocol.md](../../docs/usb-protocol.md).
 
 ## Erweiterte Programmer-Werkzeuge
@@ -347,13 +351,14 @@ aufgerufen oder in weiteren Graphfunktionen verwendet werden.
 ## Permanente Speicherung
 
 Der Rechner speichert Winkelmodus, `ANS`, Speicherregister, letzte Seite,
-Praezisionsmodus, Programmer-Zustand, Verlauf, Variablen, Benutzerfunktionen, Favoriten,
-Graphbereiche und Statistiklisten automatisch. Aenderungen werden drei
-Sekunden gesammelt; ein
-unveraenderter Zustand wird nicht erneut in den Flash geschrieben.
+Praezisionsmodus, Programmer-Zustand, Verlauf, Variablen, Benutzerfunktionen,
+Favoriten, Graphbereiche, Statistiklisten und das BASIC-Programm automatisch.
+Aenderungen werden drei Sekunden gesammelt; ein unveraenderter Zustand wird
+nicht erneut in den Flash geschrieben.
 
-Zwei wechselnde, jeweils mit CRC32 geschuetzte Flashkopien verhindern, dass
-ein Stromausfall waehrend des Speicherns den vorherigen Zustand zerstoert.
+Zwei wechselnde, je 8 KiB grosse und mit CRC32 geschuetzte Flashslots
+verhindern, dass ein Stromausfall waehrend des Speicherns den vorherigen
+Zustand zerstoert.
 Defekte oder unbekannte Speicherdaten werden beim Start verworfen und durch
 sichere Werkseinstellungen ersetzt.
 
@@ -362,8 +367,8 @@ Rueckwaertskompatibilitaet: Datensaetze aelterer Firmwareversionen werden nicht
 gelesen und der Rechner startet stattdessen mit Werkseinstellungen.
 
 Fuer einen Werksreset werden beide Hardwaretasten `K1` und `K2` beim
-Einschalten beziehungsweise Reset gleichzeitig gehalten und nach etwa zwei
-Sekunden losgelassen. Die Firmware bestaetigt dies mit `FACTORY RESET`.
+Einschalten gleichzeitig gehalten, bis die Anzeige startet, und dann
+losgelassen. Die Firmware bestaetigt dies mit `FACTORY RESET`.
 
 ## Build
 
@@ -397,9 +402,10 @@ Round-to-nearest-even gerundet.
 Alle wissenschaftlichen Funktionen, allgemeine Potenzen, Benutzerfunktionen
 und die mathematischen Konstanten `pi`, `e`, `tau` und `phi` laufen ueber
 LibBF. NORMAL rechnet mit 192 Bit und 40 Stellen, HIGH mit 320 Bit und 80
-Stellen, ULTRA mit 512 Bit und 128 Stellen. Es gibt keine `double`-Zwischenwerte bei
-Trigonometrie, Wurzeln, Logarithmen oder Konstanten. Ergebnisse bleiben als
-vollstaendiger Dezimaltext in `ANS`, Verlauf, USB und Flash erhalten.
+Stellen, ULTRA mit 512 Bit und 128 Stellen. Es gibt keine
+`double`-Zwischenwerte bei Trigonometrie, Wurzeln, Logarithmen oder
+Konstanten. Ergebnisse bleiben als vollstaendiger Dezimaltext in `ANS`,
+Verlauf, USB und Flash erhalten.
 
 A-F und das Speicherregister bewahren wie `ANS` ihren vollstaendigen
 Dezimaltext und werden im normalen Editor hochpraezise weiterverarbeitet.

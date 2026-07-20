@@ -5,6 +5,11 @@ Taschenrechners in ihrer empfohlenen Umsetzungsreihenfolge. Eine Phase gilt
 erst als abgeschlossen, wenn Implementierung, Host-Tests, Firmware-Build und
 ein Test auf dem echten LCD erfolgreich sind.
 
+Die Abschnitte 0 bis 13 dokumentieren den jeweiligen historischen
+Meilenstein. Dort genannte fruehere Versionsnummern und Kapazitaeten sind
+nicht mehr der aktuelle Kompatibilitaetsstand. Massgeblich ist Phase 14 mit
+Firmware 1.8.0, USB-Protokoll 4 und Flashformat 6.
+
 ## Uebersicht
 
 | Phase | Erweiterung | Abhaengigkeit | Status |
@@ -13,7 +18,7 @@ ein Test auf dem echten LCD erfolgreich sind.
 | 1 | Graph 2.0 | Phase 0 | abgeschlossen |
 | 2 | Numerische Analyse | Phase 1 | abgeschlossen |
 | 3 | Variablen und Benutzerfunktionen | Phase 2 | abgeschlossen |
-| 4 | Permanente Speicherung | Phase 3 | Hardwaretest offen |
+| 4 | Permanente Speicherung | Phase 3 | durch Phase 14 aktualisiert |
 | 5 | Programmer-Erweiterungen | Phase 0 | Hardwaretest offen |
 | 6 | Schaltalgebra und Gatter | Phase 5 | abgeschlossen |
 | 7 | Einheiten und Konstanten | Phase 3 | abgeschlossen |
@@ -23,6 +28,7 @@ ein Test auf dem echten LCD erfolgreich sind.
 | 11 | BASIC-Programmiermodus | Phasen 0 und 4 | Hardwaretest offen |
 | 12 | Exakte Dezimalarithmetik | Phase 0 | abgeschlossen |
 | 13 | Hochpraezise Wissenschaftsmathematik | Phase 12 | Hardwaretest offen |
+| 14 | Waehlbare Praezision | Phase 13 | Hardwaretest offen |
 
 ## Phase 0: Technische Grundlage
 
@@ -68,7 +74,7 @@ Touchbedienung wurden auf dem 480-x-320-LCD erfolgreich geprueft.
 **Fertig, wenn:** Solver, Ableitung und Integral reproduzierbare Ergebnisse
 liefern und Grenzfaelle durch automatisierte Tests abgedeckt sind.
 
-Abschlussstand: Referenzwerte, exakte A/B-Intervalle, fehlende
+Abschlussstand: Referenzwerte, explizite A/B-Intervalle, fehlende
 Nullstellenintervalle, Iterationsabbrueche, TinyExpr-Anbindung und
 LCD-Zeichenbereich werden durch Host-Tests abgedeckt. Ergebnisse, Touchwege,
 Lesbarkeit und Laufzeit wurden anschliessend erfolgreich auf dem Pico geprueft.
@@ -100,11 +106,11 @@ Fehlerbehandlung und Touchbedienung wurden auf dem Pico erfolgreich geprueft.
 **Fertig, wenn:** Einstellungen einen Neustart ueberstehen und eine
 unterbrochene Speicherung nicht zu einem unbenutzbaren System fuehrt.
 
-Softwarestand: Das versionierte Format, CRC32, Sequenzueberlauf sowie die
-Auswahl der neuesten gueltigen Kopie werden durch Host-Tests abgedeckt. Zwei
-wechselnde 4-KiB-Flashsektoren schuetzen den vorherigen Zustand bei einem
-unterbrochenen Schreibvorgang. Der abschliessende Neustart-, Touch- und
-Werksreset-Test auf dem Pico steht noch aus.
+Meilensteinstand: Das damalige versionierte Format, CRC32, Sequenzueberlauf
+sowie die Auswahl der neuesten gueltigen Kopie werden durch Host-Tests
+abgedeckt. Der aktuelle Stand verwendet zwei wechselnde 8-KiB-Slots und
+akzeptiert ausschliesslich Flashformat 6. Der abschliessende Neustart-, Touch-
+und Werksreset-Test auf dem Pico steht noch aus.
 
 ## Phase 5: Programmer-Erweiterungen
 
@@ -195,17 +201,18 @@ Lesbarkeit wurden anschliessend auf dem Pico erfolgreich geprueft.
 **Fertig, wenn:** Listen bearbeitet, ausgewertet und grafisch dargestellt
 werden koennen und Ergebnisse gegen bekannte Datensaetze getestet sind.
 
-Softwarestand: Ein Editor fuer bis zu 32 Werte oder Wertepaare, Kennwerte fuer
+Meilensteinstand: Ein Editor fuer bis zu 32 Werte oder Wertepaare, Kennwerte fuer
 X und Y, lineare Regression mit `r` und `r^2`, Histogramm und Streudiagramm
 sind implementiert. Datensaetze werden im CRC-gesicherten Flashformat
-gespeichert; Version 2 liest bestehende Version-1-Daten weiterhin. Alle 23
+gespeichert; das damalige Format 2 las bestehende Format-1-Daten. Alle 23
 Host-Tests und der RP2040-Release-Build laufen erfolgreich. Touchbedienung,
 Lesbarkeit der Diagramme und Wiederherstellung nach einem Neustart stehen noch
 als Hardwaretest aus. K2 durchlaeuft Standardlayout, Datenfokus und Vollbild;
 im Vollbild wird die Tastatur samt Touch-Hitboxen ausgeblendet. Doppelte
 Anzeigehoehe und vergroesserte Datenschrift wurden auf dem Pico erfolgreich
-bestaetigt. Firmware 1.5.0 ergaenzt eine per langem K2-Druck umschaltbare
+bestaetigt. Firmware 1.5.0 ergaenzte eine per langem K2-Druck umschaltbare
 Landscape-/Portrait-Darstellung mit gemeinsam gedrehten Touchkoordinaten.
+Der aktuelle Stand liest fruehere Flashformate bewusst nicht mehr ein.
 
 ## Phase 10: USB-Datenaustausch
 
@@ -222,7 +229,7 @@ Landscape-/Portrait-Darstellung mit gemeinsam gedrehten Touchkoordinaten.
 **Fertig, wenn:** Daten zwischen Rechner und PC in beide Richtungen uebertragen
 werden koennen, ohne Touchbedienung oder Berechnungen zu blockieren.
 
-Softwarestand: Protokollversion 4 und Firmware 1.6.0 stellen einen begrenzten
+Meilensteinstand: Protokollversion 4 und Firmware 1.6.0 stellten einen begrenzten
 ASCII-Zeilenparser, verlustfreie Dezimalergebnisse, transaktionale
 Funktionsimporte, Statistik- und BASIC-Programmlisten sowie Firmware- und
 Diagnoseinformationen bereit. Programmer, Zahlenformate, Graphanalyse, Logik,
@@ -252,12 +259,13 @@ gleichzeitiger Touchbedienung steht noch als Hardwaretest aus.
 **Fertig, wenn:** Programme vollstaendig per Touch eingegeben, bearbeitet,
 ausgefuehrt und nach einem Neustart wieder geladen werden koennen.
 
-Softwarestand: 20 Programmzeilen, 26 Variablen, 16 gepufferte Ausgabezeilen,
+Meilensteinstand: 20 Programmzeilen, 26 Variablen, 16 gepufferte Ausgabezeilen,
 eine QWERTZ- und eine dedizierte `TOK`-Tastatur sind implementiert. Die
 CODE-Tastatur folgt der dreistufigen K2-Umschaltung; im Vollbild stehen alle
 16 Ausgabezeilen zur Verfuegung. Die Python-GUI verwaltet `.bas`-Dateien,
-Geraetesynchronisation, Run/Stop, Ausgabe und `INPUT`. Das Flashformat Version
-4 migriert bestehende Version-1- bis Version-3-Daten. Alle 29 Host-Tests und
+Geraetesynchronisation, Run/Stop, Ausgabe und `INPUT`. Das damalige
+Flashformat 4 migrierte bestehende Format-1- bis Format-3-Daten. Der aktuelle
+Stand akzeptiert nur Flashformat 6. Alle 29 Host-Tests und
 der RP2040-Release-Build laufen erfolgreich. Touchpositionen, Lesbarkeit,
 `INPUT` und Wiederherstellung nach einem Neustart stehen noch als Hardwaretest
 aus.
@@ -279,7 +287,7 @@ aus.
 Genauigkeitsverlust funktionieren und exakte Ergebnisse ueber `ANS`, Verlauf,
 USB und Neustarts erhalten bleiben.
 
-Softwarestand: Der hybride Rechenkern verarbeitet Dezimalarithmetik mit bis zu
+Meilensteinstand: Der hybride Rechenkern verarbeitete Dezimalarithmetik mit bis zu
 80 Stellen. Endliche Divisionen sind exakt, periodische Ergebnisse werden nach
 80 Stellen gerundet und gekennzeichnet. Funktionen, Variablen, Statistik,
 Graphen und BASIC-Zahlen bleiben fuer Geschwindigkeit und Kompatibilitaet
@@ -305,7 +313,7 @@ Ergebnisstrings. Der Hardwaretest von Anzeige und Neustart steht noch aus.
 auf 80 signifikante Stellen reproduzierbar rechnen und `pi` sowie `e` nicht
 mehr auf binaere 64-Bit-Konstanten begrenzt sind.
 
-Softwarestand: Firmware 1.7.0 verwendet fuer wissenschaftliche Ausdruecke
+Meilensteinstand: Firmware 1.7.0 verwendete fuer wissenschaftliche Ausdruecke
 LibBF mit 320 Bit. 30 Host-Tests bestehen; der RP2040-Build belegt 312360 Byte
 Flashcode und 83480 Byte statischen RAM. Graph, Statistik, komplexe Zahlen
 und BASIC-Programme behalten vorerst ihre bestehenden `double`-Datenmodelle.

@@ -1,5 +1,8 @@
 # Firmware-Architektur
 
+Stand: Scientific-Calculator-Firmware `1.8.0`, USB-Protokoll `4` und
+Flashformat `6`.
+
 ## Anwendungen
 
 `firmware/mini-computer` und `firmware/scientific-calculator` sind getrennte
@@ -35,8 +38,10 @@ Der Rechner trennt Darstellung und Rechenlogik:
   Favoritenbelegung und Rekursionserkennung
 - `calculator_persistence`: versionierte, explizite Serialisierung des
   Rechnerzustands mit CRC32 und Auswahl redundanter Datensaetze
-- `calculator_storage`: RP2040-Flash-Backend mit zwei wechselnden Sektoren,
+- `calculator_storage`: RP2040-Flash-Backend mit zwei wechselnden 8-KiB-Slots,
   Schreibvermeidung fuer unveraenderte Daten und Ruecklesepruefung
+- `calculator_precision`: gemeinsame Definition der Modi NORMAL, HIGH und
+  ULTRA sowie ihrer Dezimalstellen und LibBF-Arbeitsgenauigkeit
 - `basic_engine`: hardwareunabhaengiger, schrittweise ausgefuehrter
   BASIC-Interpreter mit festen Speicher- und Laufzeitgrenzen
 - `calculator_program`: CODE-Seite mit Programmliste, Ausgabe sowie QWERTZ-
@@ -52,10 +57,34 @@ Der Rechner trennt Darstellung und Rechenlogik:
   128 Stellen, exaktes `ANS` und kompakte BCD-Serialisierung
 - `high_precision_engine`: rekursiver wissenschaftlicher Ausdrucksparser mit
   waehlbarer 192-, 320- oder 512-Bit-Arbeitsgenauigkeit und LibBF-Funktionen
+- `calculator_logic` und `logic_engine`: Logikeditor, Wahrheitstabelle,
+  KNF/DNF und Gatter-Simulation
+- `calculator_units` und `unit_engine`: Einheitenkatalog, Umrechnung und
+  physikalische Konstanten
+- `calculator_complex` und `complex_engine`: komplexer Editor, kartesische
+  und polare Auswertung sowie eigener Verlauf
+- `calculator_statistics` und `statistics_engine`: persistente Datensaetze,
+  Kennwerte, Regression, Histogramm und Streudiagramm
+- `calculator_usb_protocol` und `calculator_usb_cdc`: testbarer ASCII-Parser
+  sowie nicht blockierende USB-CDC-Anbindung
 - `programmer_engine`: wortbreitenabhaengige Zahlenbasen, Einzelbitoperationen,
   Rotationen sowie Carry- und Overflowstatus
 - `number_formats`: Zweierkomplement, Festkomma, Byte-Reihenfolge und
   IEEE-754-Zerlegung
+
+## PC-Werkzeuge
+
+- `pico_calc_cli`: serielle Verbindung, Rohbefehle sowie JSON-Import und
+  -Export im Format 5
+- `pico_calc_gui_model`: hardwareunabhaengige Ablaufe fuer alle
+  Rechnermodule und die Datensynchronisation
+- `pico_calc_gui`: Tkinter-Oberflaeche Pico Calculator Link 2.1 mit elf Tabs
+  fuer Rechner, Code, Graph, Logik, Einheiten, Komplex, Statistik, Speicher,
+  BASIC, Verlauf und Protokoll
+
+Die PC-Anwendung fuehrt Modulberechnungen nicht lokal nach, sondern nutzt die
+jeweiligen USB-Befehle der Firmware. Exakte Werte werden fuer Anzeige und
+Synchronisation als Dezimaltext behandelt.
 
 Alle Module ohne LCD-, Touch- oder Boardabhaengigkeit werden unter `tests/`
 direkt auf dem Host mit aktivierten Compilerwarnungen getestet. Dadurch kann
@@ -72,12 +101,12 @@ vollstaendigen Text. TinyExpr bleibt fuer schnelle Graphabtastung und die
 bestehenden `double`-Datenmodelle erhalten; dafuer wird parallel eine
 Double-Nachbildung gehalten.
 
-Die letzten vier 4-KiB-Sektoren des 2-MiB-Flashs sind linker-seitig von der
+Die letzten vier 4-KiB-Sektoren des 2-MiB-Flashs sind per Linkerskript von der
 Firmware getrennt und bilden zwei redundante 8-KiB-Slots. Ein neuer Zustand
 wird immer in den jeweils anderen Slot geschrieben und erst nach erfolgreicher
 CRC-Pruefung aktiviert. Bei defekten oder unbekannten Daten startet der Rechner
 mit sicheren Werkseinstellungen.
 Flashformat 6 speichert den Praezisionsmodus sowie `ANS`, M, A-F und die acht
-Verlaufsergebnisse BCD-komprimiert. Der Decoder akzeptiert ausschliesslich
-Format 6. Aeltere oder unbekannte Datensaetze werden nicht migriert, sondern
-durch Werkseinstellungen ersetzt.
+Verlaufsergebnisse mit bis zu 128 Stellen BCD-komprimiert. Der Decoder
+akzeptiert ausschliesslich Format 6. Aeltere oder unbekannte Datensaetze werden
+nicht migriert, sondern durch Werkseinstellungen ersetzt.
