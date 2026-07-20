@@ -52,7 +52,7 @@ int main(void) {
 
     CHECK(strcmp(run(&context, "PING", &effect), "OK PONG") == 0);
     CHECK(!effect.changed);
-    CHECK(strstr(run(&context, "INFO", &effect), "protocol=5") != NULL);
+    CHECK(strstr(run(&context, "INFO", &effect), "protocol=6") != NULL);
     CHECK(strstr(run(&context, "DIAG", &effect), "precision=HIGH") != NULL);
 
     CHECK(strcmp(run(&context, "SET EXPR 6*7", &effect),
@@ -194,10 +194,20 @@ int main(void) {
 
     CHECK(strstr(run(&context, "MODULE CIRCUIT INFO", &effect),
                  "nodes=4\twires=3") != NULL);
+    CHECK(strstr(run(&context,
+                     "MODULE CIRCUIT FROM A IMPLIES (B XNOR C)", &effect),
+                 "nodes=6\twires=5") != NULL);
+    CHECK(effect.changed && effect.persistent_changed);
+    CHECK(strstr(run(&context, "MODULE CIRCUIT NODE 4", &effect),
+                 "type=IMPLIES") != NULL);
+    CHECK(strstr(run(&context, "MODULE CIRCUIT EXPR", &effect),
+                 "expression=(A IMPLIES (B XNOR C))") != NULL);
+    CHECK(strstr(run(&context, "MODULE CIRCUIT EXPR 3", &effect),
+                 "expression=(B XNOR C)") != NULL);
     CHECK(strstr(run(&context, "MODULE CIRCUIT NODE 0", &effect),
                  "type=INPUT") != NULL);
     CHECK(strstr(run(&context, "MODULE CIRCUIT WIRE 0", &effect),
-                 "source=0\tdestination=2\tinput=0") != NULL);
+                 "used=1") != NULL);
     CHECK(strcmp(run(&context, "MODULE CIRCUIT CLEAR", &effect),
                  "OK CIRCUIT\tCLEAR") == 0);
     CHECK(effect.changed && effect.persistent_changed);

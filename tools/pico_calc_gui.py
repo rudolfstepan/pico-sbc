@@ -37,6 +37,8 @@ from pico_calc_gui_model import (
     add_circuit_node,
     analyze_graph,
     analyze_statistics,
+    circuit_from_logic,
+    circuit_to_logic,
     connect_circuit_nodes,
     continue_basic_program,
     convert_unit,
@@ -45,6 +47,7 @@ from pico_calc_gui_model import (
     evaluate_complex,
     evaluate_expression,
     evaluate_logic,
+    format_logic_expression,
     format_number,
     inspect_ieee,
     inspect_number_format,
@@ -71,7 +74,7 @@ from pico_calc_gui_model import (
 
 
 APP_NAME = "Pico Calculator Link"
-APP_VERSION = "2.2"
+APP_VERSION = "2.3"
 BG = "#eef1f4"
 PANEL = "#ffffff"
 INK = "#202428"
@@ -184,7 +187,7 @@ class CalculatorLinkApp:
         self.graph_left_var = tk.StringVar(value="-10")
         self.graph_right_var = tk.StringVar(value="10")
         self.graph_analysis_result_var = tk.StringVar(value="")
-        self.logic_expression_var = tk.StringVar(value="(A&B)|!C")
+        self.logic_expression_var = tk.StringVar(value="(A∧B)∨¬C")
         self.logic_assignment_var = tk.IntVar(value=0)
         self.logic_simplified_var = tk.BooleanVar(value=True)
         self.unit_category_var = tk.StringVar(value="LENGTH")
@@ -665,31 +668,49 @@ class CalculatorLinkApp:
         self.logic_tab = self._new_tab("Logik")
         tab = self.logic_tab
         tab.columnconfigure(0, weight=1)
-        tab.rowconfigure(2, weight=1)
+        tab.rowconfigure(4, weight=1)
         controls = ttk.Frame(tab, style="Panel.TFrame")
         controls.grid(row=0, column=0, sticky="ew", padx=18, pady=(18, 8))
-        ttk.Entry(controls, textvariable=self.logic_expression_var,
-                  font=("Consolas", 12)).pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.logic_expression_entry = ttk.Entry(
+            controls, textvariable=self.logic_expression_var,
+            font=("Consolas", 12))
+        self.logic_expression_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        operators = ttk.Frame(tab, style="Panel.TFrame")
+        operators.grid(row=1, column=0, sticky="ew", padx=18, pady=(0, 8))
+        ttk.Label(operators, text="Operatoren", style="Panel.TLabel").pack(
+            side=tk.LEFT, padx=(0, 6))
+        for symbol in ("¬", "∧", "∨", "⊕", "↑", "↓", "→", "↔"):
+            ttk.Button(
+                operators, text=symbol, width=3,
+                command=lambda value=symbol: self._insert_logic_symbol(value),
+            ).pack(side=tk.LEFT, padx=2)
+
         actions = ttk.Frame(tab, style="Panel.TFrame")
-        actions.grid(row=1, column=0, sticky="ew", padx=18, pady=(0, 8))
+        actions.grid(row=2, column=0, sticky="ew", padx=18, pady=(0, 8))
         ttk.Label(actions, text="Belegung", style="Panel.TLabel").pack(
             side=tk.LEFT, padx=(12, 4))
         ttk.Spinbox(actions, from_=0, to=63, width=5,
                     textvariable=self.logic_assignment_var).pack(side=tk.LEFT)
-        ttk.Button(actions, text="Gatter auswerten",
+        ttk.Button(actions, text="Auswerten",
                    command=self._evaluate_logic).pack(side=tk.LEFT, padx=4)
         ttk.Button(actions, text="Wahrheitstabelle", style="Teal.TButton",
                    command=self._truth_table).pack(side=tk.LEFT, padx=4)
-        ttk.Checkbutton(actions, text="vereinfacht",
+        ttk.Button(actions, text="Schaltplan", style="Accent.TButton",
+                   command=self._logic_to_circuit).pack(side=tk.LEFT, padx=4)
+
+        forms = ttk.Frame(tab, style="Panel.TFrame")
+        forms.grid(row=3, column=0, sticky="ew", padx=18, pady=(0, 8))
+        ttk.Checkbutton(forms, text="vereinfacht",
                         variable=self.logic_simplified_var).pack(side=tk.LEFT)
-        ttk.Button(actions, text="DNF",
+        ttk.Button(forms, text="DNF",
                    command=lambda: self._logic_form("DNF")).pack(side=tk.LEFT)
-        ttk.Button(actions, text="KNF",
+        ttk.Button(forms, text="KNF",
                    command=lambda: self._logic_form("KNF")).pack(side=tk.LEFT, padx=4)
         self.logic_output = tk.Text(
             tab, wrap=tk.NONE, bg=DISPLAY, fg="#f5f7fa",
             font=("Consolas", 11), relief=tk.FLAT, padx=12, pady=10)
-        self.logic_output.grid(row=2, column=0, sticky="nsew", padx=18, pady=(0, 18))
+        self.logic_output.grid(row=4, column=0, sticky="nsew", padx=18, pady=(0, 18))
         self.logic_output.configure(state=tk.DISABLED)
 
     def _build_circuit_tab(self) -> None:
@@ -712,6 +733,11 @@ class CalculatorLinkApp:
                    command=self._circuit_arm_link).pack(side=tk.LEFT, padx=4)
         ttk.Button(toolbar, text="Löschen",
                    command=self._circuit_delete_selected).pack(side=tk.LEFT)
+        self.circuit_to_logic_button = ttk.Button(
+            toolbar, text="Ausdruck", style="Accent.TButton",
+            command=self._circuit_to_logic)
+        self.circuit_to_logic_button.pack(side=tk.LEFT, padx=(4, 0))
+        self.circuit_connection_buttons.append(self.circuit_to_logic_button)
 
         ttk.Separator(toolbar, orient=tk.VERTICAL).pack(
             side=tk.LEFT, fill=tk.Y, padx=10)
@@ -1534,7 +1560,8 @@ class CalculatorLinkApp:
         def success(result: dict[str, str]) -> None:
             self._replace_text(
                 self.logic_output,
-                f"Ausdruck: {expression}\nBelegung: {result['assignment']:>2}\n"
+                f"Ausdruck: {format_logic_expression(expression)}\n"
+                f"Belegung: {result['assignment']:>2}\n"
                 f"Ausgang:  {result['value']}")
 
         self._submit("Simuliere Logikgatter",
@@ -1570,6 +1597,52 @@ class CalculatorLinkApp:
                 self.logic_output,
                 f"{kind} ({'vereinfacht' if simplified else 'kanonisch'})\n\n"
                 f"{result}"))
+
+    def _insert_logic_symbol(self, symbol: str) -> None:
+        entry = self.logic_expression_entry
+        entry.insert(entry.index(tk.INSERT), symbol)
+        entry.focus_set()
+
+    def _logic_to_circuit(self) -> None:
+        if not self._require_connection():
+            return
+        expression = self.logic_expression_var.get()
+
+        def success(circuit: dict[str, Any]) -> None:
+            self._load_circuit(circuit, "Aus Logikausdruck erzeugt")
+            self.notebook.select(self.circuit_tab)
+
+        self._submit(
+            "Erzeuge Schaltplan",
+            lambda: circuit_from_logic(self.client, expression),
+            success,
+        )
+
+    def _circuit_to_logic(self) -> None:
+        if not self._require_connection():
+            return
+        try:
+            circuit = normalize_circuit(self.circuit)
+        except ProtocolError as error:
+            messagebox.showerror(APP_NAME, str(error))
+            return
+        selected = self.circuit_selected
+
+        def success(result: dict[str, Any]) -> None:
+            expression = str(result["expression"])
+            self.logic_expression_var.set(expression)
+            self.logic_assignment_var.set(int(result["assignment"]))
+            self._replace_text(
+                self.logic_output,
+                f"Schaltplan als Logikausdruck\n\n{expression}",
+            )
+            self.notebook.select(self.logic_tab)
+
+        self._submit(
+            "Erzeuge Logikausdruck",
+            lambda: circuit_to_logic(self.client, circuit, selected),
+            success,
+        )
 
     def _circuit_node(self, node_id: int | None) -> dict[str, Any] | None:
         if node_id is None:
@@ -1650,9 +1723,10 @@ class CalculatorLinkApp:
             if wire["source"] in nodes
         }
         symbols = {
-            "INPUT": "IN", "OUTPUT": "OUT", "NOT": "1",
-            "AND": "&", "OR": ">=1", "XOR": "=1",
-            "NAND": "&", "NOR": ">=1", "XNOR": "=1",
+            "INPUT": "IN", "OUTPUT": "OUT", "NOT": "¬",
+            "AND": "∧", "OR": "∨", "XOR": "⊕",
+            "NAND": "↑", "NOR": "↓", "IMPLIES": "→",
+            "XNOR": "↔",
         }
         for node in self.circuit["nodes"]:
             x, y = self._circuit_screen_point(node["x"], node["y"])

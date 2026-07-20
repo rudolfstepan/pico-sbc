@@ -1,4 +1,5 @@
 #include "calculator_logic.h"
+#include "lcd_st7796.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -53,6 +54,17 @@ int main(void) {
     CHECK(logic.compiled);
     CHECK(logic_engine_evaluate(&logic.program, 0));
     CHECK(!logic_engine_evaluate(&logic.program, 3));
+
+    char display[64];
+    CHECK(calculator_logic_format_display(
+        "!A & B OR C XOR D NAND E NOR F IMPLIES A XNOR B",
+        display, sizeof display));
+    const char expected[] =
+        LCD_TEXT_LOGIC_NOT "A " LCD_TEXT_LOGIC_AND " B "
+        LCD_TEXT_LOGIC_OR " C " LCD_TEXT_LOGIC_XOR " D "
+        LCD_TEXT_LOGIC_NAND " E " LCD_TEXT_LOGIC_NOR " F "
+        LCD_TEXT_LOGIC_IMPLIES " A " LCD_TEXT_LOGIC_XNOR " B";
+    CHECK(strcmp(display, expected) == 0);
 
     puts("calculator logic tests passed");
     return 0;

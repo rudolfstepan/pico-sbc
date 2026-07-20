@@ -32,5 +32,7 @@ bool calculator_logic_compile(calculator_logic_t *logic,
                               char *message, size_t message_size);
 void calculator_logic_activate(calculator_logic_t *logic, const char *token,
                                char *message, size_t message_size);
+bool calculator_logic_format_display(const char *source,
+                                     char *output, size_t output_size);
 
 #endif

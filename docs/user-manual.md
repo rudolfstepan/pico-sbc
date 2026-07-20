@@ -1,6 +1,6 @@
 # Benutzerhandbuch: Pico Scientific Calculator
 
-Gueltig fuer Firmware `2.2.0`, USB-Protokoll `5`, Pico Calculator Link `2.2`
+Gueltig fuer Firmware `2.3.0`, USB-Protokoll `6`, Pico Calculator Link `2.3`
 und das LAFVIN Pico Development Kit mit RP2040, ST7796U-LCD und
 GT911-Touchscreen.
 
@@ -571,23 +571,37 @@ LOGIC verarbeitet Boolesche Ausdruecke mit A bis F.
 
 ### Operatoren und Rangfolge
 
-Unterstuetzt werden `NOT`, `AND`, `OR`, `XOR`, `NAND`, `NOR`, `XNOR`, die
-Konstanten `0` und `1` sowie Klammern.
+Die LCD-Tasten und Ausgaben verwenden fuer alle Konnektoren ihre
+mathematischen Symbole:
+
+| Symbol | Bedeutung | Zusaetzlich akzeptierte Schreibweise |
+|---|---|---|
+| `¬` | Negation | `!`, `~`, `NOT` |
+| `∧` | Konjunktion | `&`, `*`, `AND` |
+| `∨` | Disjunktion | Pipe-Zeichen, `+`, `OR` |
+| `⊕` | Exklusiv-Oder | `^`, `XOR` |
+| `↑` | NAND | `NAND` |
+| `↓` | NOR | `NOR` |
+| `→` | Implikation | `->`, `IMP`, `IMPLIES` |
+| `↔` | Aequivalenz | `XNOR`, `IFF` |
+
+Ausserdem werden die Konstanten `0` und `1` sowie Klammern unterstuetzt.
 
 Die Rangfolge ist:
 
-1. `NOT`
-2. `AND` und `NAND`
-3. `XOR` und `XNOR`
-4. `OR` und `NOR`
+1. `¬`
+2. `∧` und `↑`
+3. `⊕`
+4. `∨` und `↓`
+5. `→` (rechtsassoziativ)
+6. `↔`
 
 Mit Klammern wird die Reihenfolge explizit festgelegt.
 
 ### Wahrheitstabelle, KNF und DNF
 
-1. Ausdruck eingeben, zum Beispiel `A XOR B`.
-2. `CHECK` prueft Syntax und Gatterbaum und zeigt `OUT = 0/1` fuer die
-   aktuelle Eingangsbelegung.
+1. Ausdruck eingeben, zum Beispiel `A ⊕ B`.
+2. `SIM` prueft Syntax und Gatterbaum und oeffnet die Live-Simulation.
 3. `TABLE` zeigt die Wahrheitstabelle; `UP` und `DOWN` blaettern.
 4. `DNF` oder `KNF` zeigt die vereinfachte Form.
 5. Dieselbe Taste erneut druecken, um die kanonische Form anzuzeigen.
@@ -595,7 +609,7 @@ Mit Klammern wird die Reihenfolge explizit festgelegt.
 
 ### Gatter-Simulation
 
-`GATES` oeffnet die Live-Simulation. Die Tasten A bis F schalten die im
+`SIM` oeffnet die Live-Simulation. Die Tasten A bis F schalten die im
 Ausdruck verwendeten Eingaenge. Eine helle Taste bedeutet logisch `1`.
 Ausgang und Gatteranzahl werden unmittelbar aktualisiert.
 
@@ -604,10 +618,16 @@ Rueckkopplungen koennen daher nicht dargestellt werden.
 
 ### Graphischer Schaltplaneditor
 
-Die App `CIRCUIT` im Launcher ist ein davon unabhaengiger Vollbildeditor. Beim
+Die App `CIRCUIT` im Launcher ist mit dem Logikeditor verbunden. Beim
 ersten Start zeigt sie zwei Eingaenge `A` und `B`, ein AND-Gatter und den
-Ausgang `Y`. Unterstuetzt werden `INPUT`, `OUTPUT`, `NOT`, `AND`, `OR`, `XOR`,
-`NAND`, `NOR` und `XNOR`. Die Standardvergroesserung ist 150 Prozent.
+Ausgang `Y`. Unterstuetzt werden `INPUT`, `OUTPUT`, `¬`, `∧`, `∨`, `⊕`, `↑`,
+`↓`, `→` und `↔`. Die Standardvergroesserung ist 150 Prozent; ein aus
+LOGIC erzeugter Plan startet bei 100 Prozent.
+
+Mit `PLAN` im Logikeditor wird der aktuelle Ausdruck geprueft, automatisch
+angeordnet und als Schaltplan geoeffnet. Wiederholte Variablen verwenden
+denselben INPUT-Knoten; die aktuelle Belegung wird als Eingangspegel
+uebernommen.
 
 Direkte Bedienung auf der Zeichenflaeche:
 
@@ -626,11 +646,12 @@ Die obere Werkzeugleiste bleibt als schmale Einblendung ueber dem Schaltplan:
 | Werkzeug | Funktion |
 |---|---|
 | `HOME` | Zum App-Launcher zurueckkehren |
-| `+AND` usw. | Einfuegemodus fuer den angezeigten Gate-Typ aktivieren |
+| `+∧` usw. | Einfuegemodus fuer den angezeigten Gate-Typ aktivieren |
 | `TYPE` | Typ des ausgewaehlten Gates aendern; ohne Auswahl den Einfuegetyp wechseln |
 | `LINK` | Ausgang des ausgewaehlten Gates als Leitungsquelle verwenden oder abbrechen |
 | `DEL` | Ausgewaehltes Gate samt angeschlossenen Leitungen loeschen |
 | `Z-` / `Z+` | Schaltplan auf 100, 150 oder 200 Prozent verkleinern/vergroessern |
+| `LOGIC` | Ausgewaehlten Knoten oder ersten Ausgang als Logikausdruck uebernehmen |
 
 Im Einfuegemodus setzt ein Tipp auf eine freie Stelle ein Gate. Wird stattdessen
 ein Port angetippt, entsteht das neue Gate auf der passenden Seite und wird
@@ -638,6 +659,13 @@ sofort verbunden. Ein Tipp auf eine freie Stelle ohne Einfuegemodus hebt die
 Auswahl und einen begonnenen Link auf. Rueckkopplungen werden mit
 `LINK REJECTED` abgelehnt. Logische `1`-Leitungen erscheinen gelb, `0`-Leitungen
 grau; das ausgewaehlte Gate ist gelb markiert.
+
+Fuer `LOGIC` muessen INPUT-Knoten eindeutig `A` bis `F` heissen. Die
+Bezeichnungen `0` und `1` werden als Konstanten interpretiert. Bei mehreren
+Ausgaengen wird ohne Auswahl der erste Ausgang verwendet; mit einer Auswahl
+kann auch ein einzelner Zwischenknoten zurueck in den Logikeditor uebernommen
+werden. Zyklen, doppelte Variablennamen und andere Bezeichnungen werden mit
+einer klaren Statusmeldung abgelehnt.
 
 Schaltplan, Eingangspegel, Verbindungen, Scrollposition und Zoomstufe werden
 automatisch im Flash gespeichert.
@@ -828,7 +856,7 @@ Verzweigungen, Fakultaet, Trigonometrie und ein Mandelbrot-Textbild.
 
 ## 15. Pico Calculator Link
 
-Die Desktop-Anwendung Pico Calculator Link `2.2` steuert und synchronisiert
+Die Desktop-Anwendung Pico Calculator Link `2.3` steuert und synchronisiert
 den Rechner ueber dessen normalen USB-Anschluss.
 
 ![Pico Calculator Link](images/pico-calculator-link.png)
@@ -844,7 +872,7 @@ python tools/pico_calc_gui.py
 
 Unter Linux kann zusaetzlich `python3-tk` notwendig sein. Unter Windows und
 macOS muss Python mit Tk/Tcl installiert sein. Diese Version der Anwendung
-erwartet Firmware `2.2.0` mit USB-Protokoll `5`.
+erwartet Firmware `2.3.0` mit USB-Protokoll `6`.
 
 ### Verbindung
 
@@ -864,8 +892,8 @@ Seite und Datenzaehler.
 | `Code` | BIN/DEC/HEX, Bitoperationen, 2er-Komplement, Q-Fixpunkt und IEEE-754 untersuchen |
 | `Zahlen` | GGT/KGV, Primzahltest, benachbarte Primzahlen, Faktorisierung, Phi, Modulo und modulare Potenz berechnen |
 | `Graph` | F1-F3 plotten sowie Nullstelle, Schnittpunkt, Ableitung, Integral und Extrema berechnen |
-| `Logik` | Gatterbelegung auswerten, Wahrheitstabelle sowie vereinfachte oder kanonische DNF/KNF erzeugen |
-| `Gatter` | Grafischen Schaltplan laden, bearbeiten, simulieren und zum Pico schreiben |
+| `Logik` | Symbolischen Ausdruck eingeben, auswerten, als Wahrheitstabelle/DNF/KNF oder Schaltplan darstellen |
+| `Gatter` | Grafischen Schaltplan laden, bearbeiten, simulieren, in einen Ausdruck wandeln und zum Pico schreiben |
 | `Einheit` | Alle Einheitenkategorien umrechnen und physikalische Konstanten lesen |
 | `Komplex` | Komplexe Ausdruecke in kartesischer und polarer Form berechnen |
 | `Stats` | Werte oder Wertepaare verwalten, Summary, Regression und Histogramm berechnen |
@@ -903,6 +931,13 @@ wechseln zwischen 100, 150 und 200 Prozent. Das Menue `Plan` erstellt einen
 leeren Plan oder laedt die AND-Demo. `Pico -> Sichern` validiert den gesamten
 Plan auf Portfehler, Kapazitaet und Zyklen und speichert ihn danach persistent
 auf dem Geraet.
+
+Im Logik-Tab fuegen die acht Operator-Tasten die Symbole direkt an der
+Cursorposition ein. `Schaltplan` uebertraegt den Ausdruck zum Pico, laesst dort
+den Plan erzeugen und oeffnet ihn im Gatter-Tab. `Ausdruck` im Gatter-Tab
+synchronisiert zuerst den aktuellen Plan und uebernimmt dann den ausgewaehlten
+Knoten oder ersten Ausgang in den Logik-Tab. Die App zeigt Unicode-Symbole,
+uebertraegt auf der seriellen Leitung aber weiterhin ausschliesslich ASCII.
 
 ### BASIC ueber den PC
 
@@ -952,7 +987,7 @@ geaendert wurden.
 
 Zwei je 8 KiB grosse, CRC-geschuetzte Flashslots werden abwechselnd beschrieben. Ein
 Stromausfall waehrend des Speicherns zerstoert dadurch nicht den vorherigen
-gueltigen Zustand. Firmware 2.2 akzeptiert ausschliesslich Flashformat 8.
+gueltigen Zustand. Firmware 2.3 akzeptiert ausschliesslich Flashformat 9.
 Aeltere Formate werden bewusst nicht migriert; nach einem Update startet der
 Rechner mit Werkseinstellungen.
 
@@ -1013,7 +1048,7 @@ dort Tasten wirklich, aktuelle Firmware neu flashen.
 
 ### Ergebnis wirkt ungenau
 
-Fuer mathematische Funktionen Firmware `2.2.0` verwenden und auf `TOOLS` den
+Fuer mathematische Funktionen Firmware `2.3.0` verwenden und auf `TOOLS` den
 gewuenschten Modus P40, P80 oder P128 waehlen. ULTRA rechnet mit 512 Bit und
 zeigt bis zu 128 Stellen. Graph, Statistik, komplexe Zahlen und BASIC-Programme
 verwenden weiterhin `double`. Fuer exakt endliche Ergebnisse nur Literale,
@@ -1031,8 +1066,8 @@ transzendente Werte sind prinzipbedingt gerundete Naeherungen.
 
 ### PC meldet inkompatibles Protokoll
 
-Firmware `2.2.0` flashen. Die aktuelle Desktop-Anwendung erwartet
-USB-Protokoll `5` mit Schaltplan- und Zahlentheorie-Befehlen.
+Firmware `2.3.0` flashen. Die aktuelle Desktop-Anwendung erwartet
+USB-Protokoll `6` mit der bidirektionalen Logik-Schaltplan-Bruecke.
 
 ## 18. Grenzen und technische Hinweise
 

@@ -12,7 +12,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-LINE_CAPACITY = 192
+LINE_CAPACITY = 256
 BASIC_MAX_LINES = 20
 BASIC_LINE_TEXT_CAPACITY = 64
 CIRCUIT_NODE_CAPACITY = 24
@@ -21,7 +21,8 @@ CIRCUIT_WORLD_WIDTH = 1600
 CIRCUIT_WORLD_HEIGHT = 1200
 CIRCUIT_ZOOM_LEVELS = (100, 150, 200)
 CIRCUIT_GATE_TYPES = (
-    "INPUT", "OUTPUT", "NOT", "AND", "OR", "XOR", "NAND", "NOR", "XNOR",
+    "INPUT", "OUTPUT", "NOT", "AND", "OR", "XOR", "NAND", "NOR",
+    "IMPLIES", "XNOR",
 )
 CIRCUIT_GATE_INPUTS = {
     "INPUT": 0,
@@ -32,6 +33,7 @@ CIRCUIT_GATE_INPUTS = {
     "XOR": 2,
     "NAND": 2,
     "NOR": 2,
+    "IMPLIES": 2,
     "XNOR": 2,
 }
 
@@ -86,7 +88,7 @@ class SerialClient:
             raise ProtocolError("Befehl enthaelt ungueltige Zeichen")
         encoded = command.encode("ascii")
         if len(encoded) >= LINE_CAPACITY:
-            raise ProtocolError("Befehl ist laenger als 191 Zeichen")
+            raise ProtocolError("Befehl ist laenger als 255 Zeichen")
         assert self.serial is not None
         self.serial.write(encoded + b"\n")
         self.serial.flush()
@@ -264,6 +266,8 @@ def normalize_circuit(data: Any) -> dict[str, Any]:
             output = not (inputs[0] and inputs[1])
         elif gate_type == "NOR":
             output = not (inputs[0] or inputs[1])
+        elif gate_type == "IMPLIES":
+            output = not inputs[0] or inputs[1]
         else:
             output = inputs[0] == inputs[1]
         node["output"] = bool(output)

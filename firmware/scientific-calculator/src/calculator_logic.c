@@ -1,5 +1,8 @@
 #include "calculator_logic.h"
 
+#include "lcd_st7796.h"
+
+#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -102,6 +105,68 @@ static bool is_variable_token(const char *token) {
     return token && token[0] >= 'A' && token[0] <= 'F' && token[1] == '\0';
 }
 
+static bool display_word_is(const char *word, size_t length,
+                            const char *expected) {
+    if (strlen(expected) != length) return false;
+    for (size_t i = 0; i < length; ++i) {
+        if (toupper((unsigned char)word[i]) != expected[i]) return false;
+    }
+    return true;
+}
+
+bool calculator_logic_format_display(const char *source,
+                                     char *output, size_t output_size) {
+    if (!source || !output || output_size == 0u) return false;
+    size_t written = 0u;
+    while (*source) {
+        char display = '\0';
+        size_t consumed = 1u;
+        if (isalpha((unsigned char)*source)) {
+            while (isalpha((unsigned char)source[consumed])) consumed++;
+            if (display_word_is(source, consumed, "NOT")) {
+                display = LCD_CHAR_LOGIC_NOT;
+            } else if (display_word_is(source, consumed, "AND")) {
+                display = LCD_CHAR_LOGIC_AND;
+            } else if (display_word_is(source, consumed, "OR")) {
+                display = LCD_CHAR_LOGIC_OR;
+            } else if (display_word_is(source, consumed, "XOR")) {
+                display = LCD_CHAR_LOGIC_XOR;
+            } else if (display_word_is(source, consumed, "NAND")) {
+                display = LCD_CHAR_LOGIC_NAND;
+            } else if (display_word_is(source, consumed, "NOR")) {
+                display = LCD_CHAR_LOGIC_NOR;
+            } else if (display_word_is(source, consumed, "IMPLIES") ||
+                       display_word_is(source, consumed, "IMP")) {
+                display = LCD_CHAR_LOGIC_IMPLIES;
+            } else if (display_word_is(source, consumed, "XNOR")) {
+                display = LCD_CHAR_LOGIC_XNOR;
+            } else if (display_word_is(source, consumed, "IFF")) {
+                display = LCD_CHAR_LOGIC_XNOR;
+            }
+        } else {
+            switch (*source) {
+                case '!': case '~': display = LCD_CHAR_LOGIC_NOT; break;
+                case '&': case '*': display = LCD_CHAR_LOGIC_AND; break;
+                case '|': case '+': display = LCD_CHAR_LOGIC_OR; break;
+                case '^': display = LCD_CHAR_LOGIC_XOR; break;
+                default: break;
+            }
+        }
+        if (display) {
+            if (written + 1u >= output_size) return false;
+            output[written++] = display;
+            source += consumed;
+            continue;
+        }
+        if (written + consumed >= output_size) return false;
+        memcpy(output + written, source, consumed);
+        written += consumed;
+        source += consumed;
+    }
+    output[written] = '\0';
+    return true;
+}
+
 static void insert_logic_token(calculator_logic_t *logic, const char *token,
                                char *message, size_t message_size) {
     logic->view = LOGIC_VIEW_EDIT;
@@ -154,6 +219,15 @@ void calculator_logic_activate(calculator_logic_t *logic, const char *token,
     } else if (strcmp(token, "UP") == 0 || strcmp(token, "DOWN") == 0) {
         scroll_view(logic, strcmp(token, "DOWN") == 0);
         set_message(message, message_size, "SCROLLED");
+    } else if (strcmp(token, "SCROLL") == 0) {
+        size_t previous = logic->scroll;
+        scroll_view(logic, true);
+        if (logic->scroll == previous && logic->scroll > 0u) {
+            logic->scroll = 0u;
+            set_message(message, message_size, "SCROLL TOP");
+        } else {
+            set_message(message, message_size, "SCROLLED");
+        }
     } else if (strcmp(token, "USE") == 0) {
         if ((logic->view == LOGIC_VIEW_DNF || logic->view == LOGIC_VIEW_KNF) &&
             expression_editor_set(&logic->editor, logic->form)) {

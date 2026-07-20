@@ -5,10 +5,10 @@ Taschenrechners in ihrer empfohlenen Umsetzungsreihenfolge. Eine Phase gilt
 erst als abgeschlossen, wenn Implementierung, Host-Tests, Firmware-Build und
 ein Test auf dem echten LCD erfolgreich sind.
 
-Die Abschnitte 0 bis 15 dokumentieren den jeweiligen historischen
+Die Abschnitte 0 bis 16 dokumentieren den jeweiligen historischen
 Meilenstein. Dort genannte fruehere Versionsnummern und Kapazitaeten sind
-nicht mehr der aktuelle Kompatibilitaetsstand. Massgeblich ist Phase 16 mit
-Firmware 2.2.0, USB-Protokoll 5, JSON-Format 6 und Flashformat 8.
+nicht mehr der aktuelle Kompatibilitaetsstand. Massgeblich ist Phase 17 mit
+Firmware 2.3.0, USB-Protokoll 6, JSON-Format 6 und Flashformat 9.
 
 ## Uebersicht
 
@@ -31,6 +31,7 @@ Firmware 2.2.0, USB-Protokoll 5, JSON-Format 6 und Flashformat 8.
 | 14 | Waehlbare Praezision | Phase 13 | Hardwaretest offen |
 | 15 | Grafischer Schaltplaneditor | Phasen 4 und 6 | abgeschlossen |
 | 16 | Desktop-Schaltplan und Zahlentheorie | Phasen 10 und 15 | USB-Hardwaretest offen |
+| 17 | Logik-Schaltplan-Bruecke und Konnektoren | Phasen 6, 15 und 16 | Hardwaretest offen |
 
 ## Phase 0: Technische Grundlage
 
@@ -396,6 +397,31 @@ USB-Protokoll 5. Der PC-Editor spiegelt die boolesche Simulation lokal fuer
 sofortige Pegelanzeige; die Zahlentheorie wird weiterhin ausschliesslich vom
 Pico-Rechenkern berechnet. Alle 34 Host-Tests und der RP2040-Release-Build
 laufen erfolgreich; der Schaltplan-Roundtrip am echten USB-Geraet steht aus.
+
+## Phase 17: Logik-Schaltplan-Bruecke und Konnektoren
+
+- [x] Alle Standardkonnektoren `¬`, `∧`, `∨`, `⊕`, `↑`, `↓`, `→` und `↔` im
+  Parser, in der Auswertung und im Schaltplanmodell bereitstellen.
+- [x] Eigene LCD-Glyphen und symbolische Tastenbeschriftungen verwenden.
+- [x] Einen geprueften Logikbaum automatisch als angeordneten Schaltplan
+  erzeugen.
+- [x] Einen Schaltplanausgang oder ausgewaehlten Knoten wieder in einen
+  Logikausdruck umwandeln.
+- [x] Beide Richtungen auf dem Pico sowie ueber USB-Protokoll 6 und Pico
+  Calculator Link 2.3 erreichbar machen.
+- [x] Host-Tests und RP2040-Release-Build ausfuehren.
+- [ ] Symbollesbarkeit, Touchablauf und beide Umwandlungsrichtungen auf dem
+  echten LCD pruefen.
+
+**Fertig, wenn:** Ein Ausdruck und sein daraus erzeugter Schaltplan fuer alle
+Belegungen dasselbe Ergebnis liefern, am Pico in beide Richtungen bearbeitet
+werden koennen und alle Operatoren auf LCD und PC eindeutig dargestellt sind.
+
+Softwarestand: Firmware 2.3.0 verwendet USB-Protokoll 6 und Flashformat 9;
+Pico Calculator Link 2.3 akzeptiert symbolische Eingaben und uebersetzt sie
+verlustfrei in das ASCII-Leitungsprotokoll. Alle 35 Host-Tests und der
+RP2040-Release-Build laufen erfolgreich. Der abschliessende Hardwaretest ist
+offen.
 
 ## Arbeitsweise pro Phase
 

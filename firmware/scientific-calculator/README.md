@@ -2,7 +2,7 @@
 
 Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 
-Aktueller Stand: Firmware `2.2.0`, USB-Protokoll `5`, Flashformat `8` und
+Aktueller Stand: Firmware `2.3.0`, USB-Protokoll `6`, Flashformat `9` und
 waehlbare Praezision bis 128 signifikante Stellen.
 
 Das schrittweise [Benutzerhandbuch](../../docs/user-manual.md) beschreibt
@@ -35,9 +35,11 @@ Installation, Bedienung, alle Rechnermodi und die PC-Anwendung.
 - Zahlentheorie mit ggT, kgV, Primzahltest, benachbarten Primzahlen,
   Primfaktorzerlegung, Euler-Phi, Modulo und modularer Potenz fuer 64 Bit
 - Schaltalgebra mit Wahrheitstabelle, vereinfachter und kanonischer KNF/DNF
-  sowie Live-Simulation fuer bis zu sechs Eingaenge
-- Vollbild-Schaltplaneditor mit neun Gate-Typen, direkter Portverdrahtung,
-  Touch-Drag, Logiksimulation und Joystick-Scrolling
+  sowie Live-Simulation fuer bis zu sechs Eingaenge und den Konnektoren
+  `¬`, `∧`, `∨`, `⊕`, `↑`, `↓`, `→` und `↔`
+- Vollbild-Schaltplaneditor mit zehn Gate-Typen, direkter Portverdrahtung,
+  Touch-Drag, Logiksimulation, Joystick-Scrolling und bidirektionaler
+  Umwandlung zum Logikausdruck
 - 68 Einheiten in zehn Kategorien mit direktem Zahlenblock sowie zwoelf
   physikalische Konstanten mit Einheit und Quellenangabe
 - Komplexer Rechner mit kartesischer und polarer Anzeige, Betrag, Phase,
@@ -178,26 +180,31 @@ deterministisch; die Faktorzerlegung verwendet Pollard-Rho.
 ## Schaltalgebra und Gatter
 
 Auf `LOGIC` werden Boolesche Ausdruecke mit den Variablen `A` bis `F`
-eingegeben. Unterstuetzt werden `NOT`, `AND`, `OR`, `XOR`, `NAND`, `NOR`,
-`XNOR`, Konstanten `0` und `1` sowie Klammern. Ein schneller Test fuer ein
-Exklusiv-Oder ist `A -> XOR -> B -> CHECK`.
+eingegeben. Die Tasten verwenden die Symbole `¬` (NOT), `∧` (AND), `∨` (OR),
+`⊕` (XOR), `↑` (NAND), `↓` (NOR), `→` (Implikation) und `↔`
+(Aequivalenz/XNOR). Zusaetzlich stehen die Konstanten `0` und `1` sowie
+Klammern zur Verfuegung. Ein schneller Test fuer ein Exklusiv-Oder ist
+`A -> ⊕ -> B -> SIM`.
 
 - `TABLE` zeigt vier Zeilen der Wahrheitstabelle; `UP` und `DOWN` blaettern.
 - `DNF` und `KNF` zeigen zuerst die vereinfachte Form. Erneutes Antippen
   derselben Taste schaltet auf die kanonische Form um.
 - `USE` laedt eine angezeigte Form in den Editor, sofern sie hineinpasst.
-- `GATES` oeffnet die Live-Simulation. `A` bis `F` schalten die verwendeten
+- `SIM` oeffnet die Live-Simulation. `A` bis `F` schalten die verwendeten
   Eingaenge; helle Tasten bedeuten logisch `1`. Ausgang und Gatteranzahl werden
   sofort aktualisiert.
-- `CHECK` prueft Syntax und Gatterbaum. Die Rangfolge ist
-  `NOT`, `AND/NAND`, `XOR/XNOR`, `OR/NOR`.
+- `SIM` prueft Syntax und Gatterbaum. Die Rangfolge ist
+  `¬`, `∧/↑`, `⊕`, `∨/↓`, `→`, `↔`; die Implikation ist
+  rechtsassoziativ.
+- `PLAN` erzeugt aus dem geprueften Ausdruck einen automatisch angeordneten
+  Schaltplan und wechselt direkt in den grafischen Editor.
 
 Die Logik wird als Ausdrucksbaum aufgebaut. Dadurch sind offene Verbindungen
 und zyklische Netze nicht darstellbar; unvollstaendige Ausdruecke werden mit
 der Fehlerposition abgelehnt.
 
-Die separate Launcher-App `CIRCUIT` ist ein freier grafischer Netzeditor fuer
-`INPUT`, `OUTPUT`, `NOT`, `AND`, `OR`, `XOR`, `NAND`, `NOR` und `XNOR`.
+Die Launcher-App `CIRCUIT` ist ein freier grafischer Netzeditor fuer `INPUT`,
+`OUTPUT`, `¬`, `∧`, `∨`, `⊕`, `↑`, `↓`, `→` und `↔`.
 Gate-Koerper lassen sich per Touch auswaehlen und ziehen. Ein Ausgangsport und
 danach ein Eingangsport erzeugen eine Leitung; ein Tipp auf einen belegten
 Eingang trennt sie. `+GATE` fuegt auf der Flaeche oder direkt an einem Port ein
@@ -205,6 +212,10 @@ neues Symbol ein, `TYPE` bearbeitet den ausgewaehlten Typ, `DEL` entfernt ihn.
 `Z-` und `Z+` skalieren Gates und Trefferflaechen gemeinsam; voreingestellt
 sind 150 Prozent. Der Joystick scrollt die 1600 x 1200 Pixel grosse
 Arbeitsflaeche. Zyklen werden beim Verbinden abgelehnt.
+Mit `LOGIC` wird der ausgewaehlte Knoten, oder ohne Auswahl der erste Ausgang,
+wieder als Boolescher Ausdruck in den Logikeditor uebernommen. INPUT-Knoten
+muessen dafuer eindeutig mit `A` bis `F` oder als Konstanten `0`/`1`
+bezeichnet sein.
 
 ## Einheiten und Konstanten
 
@@ -324,7 +335,7 @@ Damit lassen sich Ausdruecke berechnen, Variablen und Funktionen setzen sowie
 Verlauf und Statistikdaten lesen oder schreiben. `INFO` zeigt die Firmware- und
 Protokollversion, `DIAG` den kompakten Laufzeitzustand.
 
-Pico Calculator Link `2.2` bildet alle Rechnermodule der Firmware ab. Die App
+Pico Calculator Link `2.3` bildet alle Rechnermodule der Firmware ab. Die App
 kann unter anderem BASIC-Programme als `.bas`-Datei laden und speichern, mit
 dem Rechner synchronisieren, starten und stoppen. Ausgabe und angeforderte
 `INPUT`-Werte werden direkt im BASIC-Tab angezeigt beziehungsweise eingegeben.
@@ -341,7 +352,8 @@ Die grafische Anwendung bietet Rechner, Programmer und Zahlenformate,
 Zahlentheorie, Graph, Logik, einen grafischen Gattereditor, Einheiten,
 komplexe Zahlen, Statistik, Speicher, BASIC, Verlauf, Rohkonsole und
 JSON-Sicherungen. Schaltplaene koennen vom Pico geladen, am PC bearbeitet und
-wieder auf das Geraet geschrieben werden. Die vollstaendige Befehlsreferenz,
+wieder auf das Geraet geschrieben werden. Logikausdruecke und Schaltplaene
+lassen sich in beiden Richtungen konvertieren. Die vollstaendige Befehlsreferenz,
 Linux-Beispiele, Grenzen und das JSON-Format stehen in
 [docs/usb-protocol.md](../../docs/usb-protocol.md).
 
@@ -398,7 +410,7 @@ Zustand zerstoert.
 Defekte oder unbekannte Speicherdaten werden beim Start verworfen und durch
 sichere Werkseinstellungen ersetzt.
 
-Firmware 2.2 verwendet ausschliesslich Flashformat 8. Es gibt bewusst keine
+Firmware 2.3 verwendet ausschliesslich Flashformat 9. Es gibt bewusst keine
 Rueckwaertskompatibilitaet: Datensaetze aelterer Firmwareversionen werden nicht
 gelesen und der Rechner startet stattdessen mit Werkseinstellungen.
 

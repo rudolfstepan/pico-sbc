@@ -5,8 +5,8 @@ serielle CDC-Schnittstelle bereit. Pro Zeile wird genau ein ASCII-Befehl
 gesendet und genau eine Antwort empfangen. Das Protokoll ist ab
 Firmware `1.1.0` verfuegbar.
 
-Aktueller Stand ist Firmware `2.2.0` mit Protokollversion `5`,
-Pico Calculator Link `2.2` und JSON-Format `6`.
+Aktueller Stand ist Firmware `2.3.0` mit Protokollversion `6`,
+Pico Calculator Link `2.3` und JSON-Format `6`.
 
 Seit Firmware `1.3.0` erweitert Protokollversion 2 die Schnittstelle um
 BASIC-Programme, nicht blockierende Ausfuehrung, Ausgabe und `INPUT`.
@@ -24,6 +24,11 @@ Seit Firmware `2.2.0` stellt Protokollversion 5 die Zahlentheorie und den
 vollstaendigen grafischen Schaltplan bereit. Knoten, Leitungen, Eingangspegel,
 Viewport und Zoom koennen gelesen, bearbeitet und persistent gespeichert
 werden. Protokollversion 5 ist fuer Pico Calculator Link 2.2 erforderlich.
+Seit Firmware `2.3.0` verbindet Protokollversion 6 Schaltalgebra und
+Schaltplaneditor. Logikausdruecke koennen als Plan erzeugt und ein Ausgang
+oder Zwischenknoten wieder als Ausdruck gelesen werden. `IMPLIES` ist als
+zusaetzlicher Gattertyp verfuegbar. Protokollversion 6 ist fuer Pico Calculator
+Link 2.3 erforderlich.
 
 ## Rahmenformat
 
@@ -112,6 +117,8 @@ die Desktop-App nimmt BIN-/HEX-Eingaben an und konvertiert sie verlustfrei.
 | `MODULE NUMBER MOD a b` | Rest von A modulo B berechnen |
 | `MODULE NUMBER POW a b modulus` | Modulare Potenz A^B modulo M berechnen |
 | `MODULE CIRCUIT INFO` | Schaltplangroesse, Kapazitaeten, Viewport, Zoom und Bezeichnungszaehler lesen |
+| `MODULE CIRCUIT FROM ausdruck` | Logikausdruck kompilieren und als automatisch angeordneten Schaltplan speichern |
+| `MODULE CIRCUIT EXPR [node]` | Ausgewaehlten Knoten oder ohne Index den ersten Ausgang als Logikausdruck lesen |
 | `MODULE CIRCUIT NODE index` / `WIRE index` | Einen der 24 Knoten beziehungsweise 48 Leitungsplaetze lesen |
 | `MODULE CIRCUIT CLEAR` / `RESET` | Leeren Plan beziehungsweise AND-Demo herstellen |
 | `MODULE CIRCUIT ADD type x y value label` | Gate mit Position, INPUT-Pegel und Bezeichnung anfuegen |
@@ -134,6 +141,18 @@ nicht belegte Plaetze antworten mit `used=0`. Belegte Knoten enthalten `type`,
 `x`, `y`, `input`, den berechneten `output` und `label`. Leitungen enthalten
 `source`, `destination` und `input`.
 
+Zulaessige Gate-Typen sind `INPUT`, `OUTPUT`, `NOT`, `AND`, `OR`, `XOR`,
+`NAND`, `NOR`, `IMPLIES` und `XNOR`. Logikbefehle verwenden auf der Leitung
+ASCII: `!`, `&`, `|`, `^`, `NAND`, `NOR`, `IMPLIES` und `XNOR`. Die LCD- und
+Desktop-Oberflaechen stellen dieselben Konnektoren als `¬`, `∧`, `∨`, `⊕`, `↑`,
+`↓`, `→` und `↔` dar.
+
+`CIRCUIT FROM` ersetzt den bisherigen Plan nur nach erfolgreichem Parsen und
+Konvertieren. `CIRCUIT EXPR` verwendet ohne `node` den ersten OUTPUT. Ein
+expliziter Index darf auch auf einen Zwischenknoten zeigen. INPUT-Bezeichnungen
+muessen eindeutig `A` bis `F` oder `0`/`1` sein; Zyklen, ungueltige Namen und
+zu lange Ausdruecke werden abgelehnt.
+
 Die Desktop-App validiert einen lokalen Plan vollstaendig, bevor sie ihn mit
 `CLEAR`, `ADD`, `CONNECT`, `COUNTERS` und `VIEW` ersetzt. Ungueltige Ports,
 doppelt belegte Eingaenge, Kapazitaetsueberschreitungen und Rueckkopplungen
@@ -152,13 +171,15 @@ bisherigen Zustand nicht.
 Typische Antworten:
 
 ```text
-OK INFO<TAB>protocol=5<TAB>firmware=2.2.0<TAB>model=scientific-calculator
+OK INFO<TAB>protocol=6<TAB>firmware=2.3.0<TAB>model=scientific-calculator
 OK DIAG<TAB>page=0<TAB>angle=DEG<TAB>precision=HIGH<TAB>history=2<TAB>stats=3<TAB>mode=1<TAB>basic=4<TAB>basic_state=STOPPED
 OK PRECISION<TAB>ULTRA<TAB>128
 OK VAR<TAB>A<TAB>3.5
 OK HISTORY<TAB>0<TAB>42<TAB>6*7<TAB>42
 OK STATS<TAB>0<TAB>1<TAB>3
 OK RESULT<TAB>2.000000000000000000000000000000000000000000002
+OK CIRCUIT_FROM<TAB>nodes=6<TAB>wires=5
+OK CIRCUIT_EXPR<TAB>assignment=0<TAB>expression=(A IMPLIES (B XNOR C))
 ERR PARSE 5
 ERR LINE_TOO_LONG
 ```
@@ -203,8 +224,8 @@ Reihenfolge wiederholt; Rekursionen werden abgelehnt.
 
 ## Desktop-Anwendung
 
-`Pico Calculator Link` `2.2` stellt das gleiche Protokoll als grafischen
-Geraetemanager bereit und erwartet Firmware `2.2.0` mit Protokoll 5:
+`Pico Calculator Link` `2.3` stellt das gleiche Protokoll als grafischen
+Geraetemanager bereit und erwartet Firmware `2.3.0` mit Protokoll 6:
 
 ```sh
 python -m pip install -r tools/requirements.txt
@@ -223,10 +244,11 @@ damit Fenster und Eingaben auch bei einem Timeout bedienbar bleiben.
   Primfaktorzerlegung, Euler-Phi, Modulo und modulare Potenz.
 - `Graph` plottet F1-F3 und fuehrt Nullstellen-, Schnittpunkt-, Ableitungs-,
   Integral- und Extremwertanalyse auf dem Pico aus.
-- `Logik` simuliert Gatter und erzeugt Wahrheitstabelle, DNF und KNF.
+- `Logik` verwendet alle acht Konnektorsymbole, simuliert Gatter, erzeugt
+  Wahrheitstabelle, DNF, KNF und daraus einen Schaltplan.
 - `Gatter` ist ein grafischer Schaltplaneditor mit Drag, direkter
   Portverdrahtung, INPUT-Schaltern, 100/150/200-Prozent-Zoom sowie getrennten
-  Aktionen zum Laden vom und Speichern auf den Pico.
+  Aktionen zum Laden, Speichern und Umwandeln in einen Logikausdruck.
 - `Einheit` verwendet den vollstaendigen Einheiten- und Konstantenkatalog.
 - `Komplex` wertet komplexe Ausdruecke kartesisch und polar aus.
 - `Stats` verwaltet Datensaetze und zeigt Summary, Regression und

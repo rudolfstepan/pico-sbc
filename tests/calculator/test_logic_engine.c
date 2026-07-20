@@ -59,6 +59,18 @@ int main(void) {
           LOGIC_STATUS_OK);
     CHECK(logic_engine_evaluate(&program, 0));
     CHECK(!logic_engine_evaluate(&program, 1));
+    CHECK(logic_engine_compile("A -> B", &program, &error) ==
+          LOGIC_STATUS_OK);
+    CHECK(logic_engine_evaluate(&program, 0));
+    CHECK(logic_engine_evaluate(&program, 2));
+    CHECK(!logic_engine_evaluate(&program, 1));
+    CHECK(logic_engine_evaluate(&program, 3));
+    CHECK(logic_engine_compile("A IMPLIES B IFF !A OR B", &program,
+                               &error) == LOGIC_STATUS_OK);
+    CHECK(logic_engine_evaluate(&program, 0));
+    CHECK(logic_engine_evaluate(&program, 1));
+    CHECK(logic_engine_evaluate(&program, 2));
+    CHECK(logic_engine_evaluate(&program, 3));
 
     CHECK(logic_engine_compile("A^B^C^D", &original, &error) ==
           LOGIC_STATUS_OK);

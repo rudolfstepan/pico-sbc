@@ -17,7 +17,8 @@ enum {
     CALCULATOR_CIRCUIT_RENDER = 1u << 0,
     CALCULATOR_CIRCUIT_EXIT = 1u << 1,
     CALCULATOR_CIRCUIT_BEEP = 1u << 2,
-    CALCULATOR_CIRCUIT_CHANGED = 1u << 3
+    CALCULATOR_CIRCUIT_CHANGED = 1u << 3,
+    CALCULATOR_CIRCUIT_TO_LOGIC = 1u << 4
 };
 
 typedef struct {
@@ -57,5 +58,8 @@ unsigned int calculator_circuit_zoom_percent(
     const calculator_circuit_t *circuit);
 unsigned int calculator_circuit_activate_selected(
     calculator_circuit_t *circuit);
+void calculator_circuit_set_model(calculator_circuit_t *circuit,
+                                  const circuit_model_t *model,
+                                  const char *status);
 
 #endif

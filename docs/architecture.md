@@ -1,7 +1,7 @@
 # Firmware-Architektur
 
-Stand: Scientific-Calculator-Firmware `2.2.0`, USB-Protokoll `5` und
-Flashformat `8`.
+Stand: Scientific-Calculator-Firmware `2.3.0`, USB-Protokoll `6` und
+Flashformat `9`.
 
 ## Anwendungen
 
@@ -58,7 +58,9 @@ Der Rechner trennt Darstellung und Rechenlogik:
 - `high_precision_engine`: rekursiver wissenschaftlicher Ausdrucksparser mit
   waehlbarer 192-, 320- oder 512-Bit-Arbeitsgenauigkeit und LibBF-Funktionen
 - `calculator_logic` und `logic_engine`: Logikeditor, Wahrheitstabelle,
-  KNF/DNF und Gatter-Simulation
+  KNF/DNF und Gatter-Simulation mit den acht Standardkonnektoren
+- `logic_circuit_bridge`: transaktionale Umwandlung zwischen Logikbaum und
+  Schaltplan mit automatischem Layout, Ausgangswahl und Zykluspruefung
 - `circuit_model`: hardwareunabhaengiges Netzmodell mit stabilen Gate-Slots,
   Portverbindungen, Zyklenerkennung und boolescher Simulation
 - `calculator_circuit`: Vollbildrenderer, Touch-Drag, Portverdrahtung,
@@ -84,8 +86,9 @@ Der Rechner trennt Darstellung und Rechenlogik:
 - `pico_calc_cli`: serielle Verbindung, Rohbefehle sowie JSON-Import und
   -Export im Format 6 einschliesslich Schaltplan
 - `pico_calc_gui_model`: hardwareunabhaengige Ablaufe fuer alle
-  Rechnermodule, Schaltplanvalidierung und Datensynchronisation
-- `pico_calc_gui`: Tkinter-Oberflaeche Pico Calculator Link 2.2 mit 13 Tabs
+  Rechnermodule, Schaltplanvalidierung, Symbolkonvertierung und
+  Datensynchronisation
+- `pico_calc_gui`: Tkinter-Oberflaeche Pico Calculator Link 2.3 mit 13 Tabs
   fuer Rechner, Code, Zahlentheorie, Graph, Logik, Gattereditor, Einheiten,
   Komplex, Statistik, Speicher, BASIC, Verlauf und USB-Konsole
 
@@ -115,8 +118,8 @@ Firmware getrennt und bilden zwei redundante 8-KiB-Slots. Ein neuer Zustand
 wird immer in den jeweils anderen Slot geschrieben und erst nach erfolgreicher
 CRC-Pruefung aktiviert. Bei defekten oder unbekannten Daten startet der Rechner
 mit sicheren Werkseinstellungen.
-Flashformat 8 speichert den Praezisionsmodus, `ANS`, M, A-F, die acht
+Flashformat 9 speichert den Praezisionsmodus, `ANS`, M, A-F, die acht
 Verlaufsergebnisse mit bis zu 128 Stellen BCD-komprimiert sowie Gates,
 Leitungen, Eingangspegel und Viewport des Schaltplaneditors. Der Decoder
-akzeptiert ausschliesslich Format 8. Aeltere oder unbekannte Datensaetze werden
+akzeptiert ausschliesslich Format 9. Aeltere oder unbekannte Datensaetze werden
 nicht migriert, sondern durch Werkseinstellungen ersetzt.

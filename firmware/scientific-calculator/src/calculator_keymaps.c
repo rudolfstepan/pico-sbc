@@ -1,5 +1,7 @@
 #include "calculator_keymaps.h"
 
+#include "lcd_st7796.h"
+
 static const calc_key_t basic_keys[] = {
     {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
     {"2nd", "", 1, 0, ACT_LAYER, STYLE_COMMAND},
@@ -290,11 +292,11 @@ static const calc_key_t symbol_keys[] = {
 
 static const calc_key_t logic_keys[] = {
     {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
-    {"CHECK", "CHECK", 1, 0, ACT_LOGIC, STYLE_COMMAND},
+    {"SIM", "GATES", 1, 0, ACT_LOGIC, STYLE_COMMAND},
     {"TABLE", "TABLE", 2, 0, ACT_LOGIC, STYLE_COMMAND},
     {"DNF", "DNF", 3, 0, ACT_LOGIC, STYLE_COMMAND},
     {"KNF", "KNF", 4, 0, ACT_LOGIC, STYLE_COMMAND},
-    {"GATES", "GATES", 5, 0, ACT_LOGIC, STYLE_EQUALS},
+    {"PLAN", "CIRCUIT", 5, 0, ACT_LOGIC, STYLE_EQUALS},
 
     {"A", "A", 0, 1, ACT_LOGIC, STYLE_NUMBER},
     {"B", "B", 1, 1, ACT_LOGIC, STYLE_NUMBER},
@@ -303,25 +305,27 @@ static const calc_key_t logic_keys[] = {
     {"E", "E", 4, 1, ACT_LOGIC, STYLE_NUMBER},
     {"F", "F", 5, 1, ACT_LOGIC, STYLE_NUMBER},
 
-    {"NOT", "!", 0, 2, ACT_LOGIC, STYLE_FUNCTION},
-    {"AND", "&", 1, 2, ACT_LOGIC, STYLE_FUNCTION},
-    {"OR", "|", 2, 2, ACT_LOGIC, STYLE_FUNCTION},
-    {"XOR", "^", 3, 2, ACT_LOGIC, STYLE_FUNCTION},
-    {"NAND", " NAND ", 4, 2, ACT_LOGIC, STYLE_FUNCTION},
-    {"NOR", " NOR ", 5, 2, ACT_LOGIC, STYLE_FUNCTION},
+    {LCD_TEXT_LOGIC_NOT, "!", 0, 2, ACT_LOGIC, STYLE_FUNCTION},
+    {LCD_TEXT_LOGIC_AND, "&", 1, 2, ACT_LOGIC, STYLE_FUNCTION},
+    {LCD_TEXT_LOGIC_OR, "|", 2, 2, ACT_LOGIC, STYLE_FUNCTION},
+    {LCD_TEXT_LOGIC_XOR, "^", 3, 2, ACT_LOGIC, STYLE_FUNCTION},
+    {LCD_TEXT_LOGIC_IMPLIES, " IMPLIES ", 4, 2,
+     ACT_LOGIC, STYLE_FUNCTION},
+    {LCD_TEXT_LOGIC_XNOR, " XNOR ", 5, 2,
+     ACT_LOGIC, STYLE_FUNCTION},
 
-    {"XNOR", " XNOR ", 0, 3, ACT_LOGIC, STYLE_FUNCTION},
-    {"(", "(", 1, 3, ACT_LOGIC, STYLE_FUNCTION},
-    {")", ")", 2, 3, ACT_LOGIC, STYLE_FUNCTION},
-    {"0", "0", 3, 3, ACT_LOGIC, STYLE_NUMBER},
-    {"1", "1", 4, 3, ACT_LOGIC, STYLE_NUMBER},
-    {"DEL", "DEL", 5, 3, ACT_LOGIC, STYLE_COMMAND},
+    {LCD_TEXT_LOGIC_NAND, " NAND ", 0, 3, ACT_LOGIC, STYLE_FUNCTION},
+    {LCD_TEXT_LOGIC_NOR, " NOR ", 1, 3, ACT_LOGIC, STYLE_FUNCTION},
+    {"(", "(", 2, 3, ACT_LOGIC, STYLE_FUNCTION},
+    {")", ")", 3, 3, ACT_LOGIC, STYLE_FUNCTION},
+    {"0", "0", 4, 3, ACT_LOGIC, STYLE_NUMBER},
+    {"1", "1", 5, 3, ACT_LOGIC, STYLE_NUMBER},
 
     {"AC", "AC", 0, 4, ACT_LOGIC, STYLE_COMMAND},
-    {"<", "LEFT", 1, 4, ACT_LOGIC, STYLE_FUNCTION},
-    {">", "RIGHT", 2, 4, ACT_LOGIC, STYLE_FUNCTION},
-    {"UP", "UP", 3, 4, ACT_LOGIC, STYLE_FUNCTION},
-    {"DOWN", "DOWN", 4, 4, ACT_LOGIC, STYLE_FUNCTION},
+    {"DEL", "DEL", 1, 4, ACT_LOGIC, STYLE_COMMAND},
+    {"<", "LEFT", 2, 4, ACT_LOGIC, STYLE_FUNCTION},
+    {">", "RIGHT", 3, 4, ACT_LOGIC, STYLE_FUNCTION},
+    {"SCROLL", "SCROLL", 4, 4, ACT_LOGIC, STYLE_FUNCTION},
     {"USE", "USE", 5, 4, ACT_LOGIC, STYLE_EQUALS},
 };
 

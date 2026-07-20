@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+import re
 import time
 from typing import Any, Callable
 
@@ -22,7 +23,9 @@ from pico_calc_cli import (
     normalize_circuit,
     normalize_basic_program,
     read_basic_output,
+    read_circuit,
     synchronize_basic_program,
+    synchronize_circuit,
 )
 
 
@@ -57,9 +60,9 @@ def read_device_snapshot(client: Any) -> DeviceSnapshot:
         protocol_version = int(info.get("protocol", "0"))
     except ValueError as error:
         raise ProtocolError("Ungueltige Protokollversion") from error
-    if protocol_version < 5:
+    if protocol_version < 6:
         raise ProtocolError(
-            "Firmware 2.2.0 mit USB-Protokoll 5 oder neuer erforderlich"
+            "Firmware 2.3.0 mit USB-Protokoll 6 oder neuer erforderlich"
         )
     diagnostics = parse_properties(client.command("DIAG"), "DIAG")
     return DeviceSnapshot(
@@ -157,6 +160,103 @@ def format_number(value: Any) -> str:
     if isinstance(value, str):
         return value
     return f"{float(value):.12g}"
+
+
+_LOGIC_SYMBOL_TO_TOKEN = {
+    "¬": "!",
+    "∧": "&",
+    "∨": "|",
+    "⊕": "^",
+    "↑": " NAND ",
+    "↓": " NOR ",
+    "→": " IMPLIES ",
+    "↔": " XNOR ",
+}
+_LOGIC_TOKEN_TO_SYMBOL = {
+    "NOT": "¬",
+    "AND": "∧",
+    "OR": "∨",
+    "XOR": "⊕",
+    "NAND": "↑",
+    "NOR": "↓",
+    "IMPLIES": "→",
+    "IMP": "→",
+    "XNOR": "↔",
+    "IFF": "↔",
+    "->": "→",
+    "!": "¬",
+    "~": "¬",
+    "&": "∧",
+    "*": "∧",
+    "|": "∨",
+    "+": "∨",
+    "^": "⊕",
+}
+_LOGIC_TOKEN_PATTERN = re.compile(
+    r"\b(?:IMPLIES|XNOR|NAND|NOR|XOR|NOT|AND|OR|IFF|IMP)\b|->|[!~&*|+^]",
+    re.IGNORECASE,
+)
+
+
+def normalize_logic_expression(expression: str) -> str:
+    """Translate display symbols to the ASCII calculator protocol syntax."""
+    normalized = str(expression)
+    for symbol, token in _LOGIC_SYMBOL_TO_TOKEN.items():
+        normalized = normalized.replace(symbol, token)
+    return normalized.strip()
+
+
+def format_logic_expression(expression: str) -> str:
+    """Render every supported logical connective with its standard symbol."""
+    return _LOGIC_TOKEN_PATTERN.sub(
+        lambda match: _LOGIC_TOKEN_TO_SYMBOL[match.group(0).upper()],
+        str(expression),
+    )
+
+
+def circuit_from_logic(client: Any, expression: str) -> dict[str, Any]:
+    normalized = normalize_logic_expression(expression)
+    if not normalized:
+        raise ProtocolError("Logikausdruck darf nicht leer sein")
+    result = parse_properties(
+        client.command(f"MODULE CIRCUIT FROM {normalized}"),
+        "CIRCUIT_FROM",
+    )
+    if not {"nodes", "wires"}.issubset(result):
+        raise ProtocolError("Unvollstaendige CIRCUIT_FROM-Antwort")
+    node_count = int(result["nodes"])
+    wire_count = int(result["wires"])
+    circuit = read_circuit(client)
+    if (node_count != len(circuit["nodes"]) or
+            wire_count != len(circuit["wires"])):
+        raise ProtocolError("Widerspruechliche CIRCUIT_FROM-Antwort")
+    return circuit
+
+
+def circuit_to_logic(client: Any, circuit: Any,
+                     node_id: int | None = None) -> dict[str, Any]:
+    normalized = normalize_circuit(circuit)
+    target = None
+    if node_id is not None:
+        target = next((index for index, node in enumerate(normalized["nodes"])
+                       if node["id"] == node_id), None)
+        if target is None:
+            raise ProtocolError("Unbekannter Schaltplanknoten")
+    synchronize_circuit(client, normalized)
+    command = "MODULE CIRCUIT EXPR"
+    if target is not None:
+        command += f" {target}"
+    result = parse_properties(client.command(command), "CIRCUIT_EXPR")
+    if not {"assignment", "expression"}.issubset(result):
+        raise ProtocolError("Unvollstaendige CIRCUIT_EXPR-Antwort")
+    assignment = int(result["assignment"])
+    if not 0 <= assignment < 64:
+        raise ProtocolError("Ungueltige CIRCUIT_EXPR-Belegung")
+    return {
+        "assignment": assignment,
+        "ascii_expression": result["expression"],
+        "expression": format_logic_expression(result["expression"]),
+    }
 
 
 def create_circuit(demo: bool = False) -> dict[str, Any]:
@@ -507,17 +607,19 @@ def analyze_graph(client: Any, action: str, first: str,
 
 def evaluate_logic(client: Any, expression: str,
                    assignment: int) -> dict[str, str]:
-    if not expression.strip() or not 0 <= assignment < 64:
+    normalized = normalize_logic_expression(expression)
+    if not normalized or not 0 <= assignment < 64:
         raise ProtocolError("Ungueltiger Logikausdruck oder Belegung")
     return parse_properties(client.command(
-        f"MODULE LOGIC EVAL {assignment} {expression}"), "LOGIC_VALUE")
+        f"MODULE LOGIC EVAL {assignment} {normalized}"), "LOGIC_VALUE")
 
 
 def read_truth_table(client: Any, expression: str) -> dict[str, Any]:
-    if not expression.strip():
+    normalized = normalize_logic_expression(expression)
+    if not normalized:
         raise ProtocolError("Logikausdruck darf nicht leer sein")
     info = parse_properties(client.command(
-        f"MODULE LOGIC INFO {expression}"), "LOGIC_INFO")
+        f"MODULE LOGIC INFO {normalized}"), "LOGIC_INFO")
     mask = int(info["mask"])
     row_count = int(info["rows"])
     variables = [chr(ord("A") + index) for index in range(6)
@@ -525,7 +627,7 @@ def read_truth_table(client: Any, expression: str) -> dict[str, Any]:
     rows = []
     for row in range(row_count):
         result = parse_properties(client.command(
-            f"MODULE LOGIC ROW {row} {expression}"), "LOGIC_VALUE")
+            f"MODULE LOGIC ROW {row} {normalized}"), "LOGIC_VALUE")
         assignment = int(result["assignment"])
         rows.append({
             "assignment": assignment,
@@ -538,8 +640,10 @@ def read_truth_table(client: Any, expression: str) -> dict[str, Any]:
 
 def read_logic_form(client: Any, expression: str, kind: str,
                     simplified: bool = True) -> str:
-    normalized = kind.upper()
-    if normalized not in ("DNF", "KNF") or not expression.strip():
+    normalized_kind = kind.upper()
+    normalized_expression = normalize_logic_expression(expression)
+    if (normalized_kind not in ("DNF", "KNF") or
+            not normalized_expression):
         raise ProtocolError("Ungueltige Normalform")
     style = "SIMPLE" if simplified else "CANONICAL"
     offset = 0
@@ -547,7 +651,8 @@ def read_logic_form(client: Any, expression: str, kind: str,
     total = None
     while total is None or offset < total:
         result = parse_properties(client.command(
-            f"MODULE LOGIC FORM {normalized} {style} {offset} {expression}"),
+            f"MODULE LOGIC FORM {normalized_kind} {style} {offset} "
+            f"{normalized_expression}"),
             "LOGIC_FORM",
         )
         response_offset = int(result["offset"])
@@ -560,7 +665,7 @@ def read_logic_form(client: Any, expression: str, kind: str,
         offset += len(data)
         if not data and offset < total:
             raise ProtocolError("Leere LOGIC_FORM-Teilantwort")
-    return "".join(chunks)
+    return format_logic_expression("".join(chunks))
 
 
 def read_unit_category(client: Any, category: int) -> dict[str, Any]:

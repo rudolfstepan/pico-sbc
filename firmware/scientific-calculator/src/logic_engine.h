@@ -26,6 +26,7 @@ typedef enum {
     LOGIC_NODE_XOR,
     LOGIC_NODE_NAND,
     LOGIC_NODE_NOR,
+    LOGIC_NODE_IMPLIES,
     LOGIC_NODE_XNOR
 } logic_node_kind_t;
 

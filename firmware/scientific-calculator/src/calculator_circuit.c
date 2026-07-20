@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CIRCUIT_TOOL_COUNT 7u
+#define CIRCUIT_TOOL_COUNT 8u
 #define CIRCUIT_PORT_TOUCH_RADIUS 12
 #define CIRCUIT_DRAG_THRESHOLD 5
 
@@ -245,6 +245,11 @@ static void draw_gate_shape(const calculator_circuit_t *circuit,
                   bottom - scale_value(circuit, 4), color, thickness);
         draw_line(x62, bottom - scale_value(circuit, 4), x45, bottom,
                   color, thickness);
+    } else if (node->type == CIRCUIT_GATE_IMPLIES) {
+        draw_line(left, top, right, top, color, thickness);
+        draw_line(right, top, right, bottom, color, thickness);
+        draw_line(right, bottom, left, bottom, color, thickness);
+        draw_line(left, bottom, left, top, color, thickness);
     } else {
         int extra = (node->type == CIRCUIT_GATE_XOR ||
                      node->type == CIRCUIT_GATE_XNOR)
@@ -294,6 +299,20 @@ static void draw_gate_shape(const calculator_circuit_t *circuit,
     }
 }
 
+static const char *gate_symbol(circuit_gate_type_t type) {
+    switch (type) {
+        case CIRCUIT_GATE_NOT: return LCD_TEXT_LOGIC_NOT;
+        case CIRCUIT_GATE_AND: return LCD_TEXT_LOGIC_AND;
+        case CIRCUIT_GATE_OR: return LCD_TEXT_LOGIC_OR;
+        case CIRCUIT_GATE_XOR: return LCD_TEXT_LOGIC_XOR;
+        case CIRCUIT_GATE_NAND: return LCD_TEXT_LOGIC_NAND;
+        case CIRCUIT_GATE_NOR: return LCD_TEXT_LOGIC_NOR;
+        case CIRCUIT_GATE_IMPLIES: return LCD_TEXT_LOGIC_IMPLIES;
+        case CIRCUIT_GATE_XNOR: return LCD_TEXT_LOGIC_XNOR;
+        default: return "";
+    }
+}
+
 static void draw_node(const calculator_circuit_t *circuit, uint8_t index) {
     const circuit_node_t *node = &circuit->model.nodes[index];
     int x = screen_x(circuit, node->x);
@@ -315,11 +334,11 @@ static void draw_node(const calculator_circuit_t *circuit, uint8_t index) {
               node->label, color, UI_COLOR_BACKGROUND, text_scale);
     if (node->type != CIRCUIT_GATE_INPUT &&
         node->type != CIRCUIT_GATE_OUTPUT) {
-        const char *name = circuit_gate_name(node->type);
-        int text_width = (int)strlen(name) * 6 * text_scale;
+        const char *symbol = gate_symbol(node->type);
+        int text_width = (int)strlen(symbol) * 6 * text_scale;
         int text_x = x + (node_width - text_width) / 2;
         int text_y = y + (node_height - 8 * text_scale) / 2;
-        safe_text(text_x, text_y, name, UI_COLOR_MUTED,
+        safe_text(text_x, text_y, symbol, UI_COLOR_MUTED,
                   UI_COLOR_BACKGROUND, text_scale);
     }
     char value[2] = {node->output_value ? '1' : '0', '\0'};
@@ -402,10 +421,13 @@ static void draw_grid(const calculator_circuit_t *circuit) {
 
 static void draw_toolbar(const calculator_circuit_t *circuit) {
     char add_label[10];
-    snprintf(add_label, sizeof add_label, "+%s",
-             circuit_gate_name(circuit->add_type));
+    const char *type_label = gate_symbol(circuit->add_type);
+    if (!type_label[0]) {
+        type_label = circuit->add_type == CIRCUIT_GATE_INPUT ? "IN" : "OUT";
+    }
+    snprintf(add_label, sizeof add_label, "+%s", type_label);
     const char *labels[CIRCUIT_TOOL_COUNT] = {
-        "HOME", add_label, "TYPE", "LINK", "DEL", "Z-", "Z+"
+        "HOME", add_label, "TYPE", "LINK", "DEL", "Z-", "Z+", "LOGIC"
     };
     int width = lcd_width();
     lcd_fill_rect(0, 0, width, CALCULATOR_CIRCUIT_TOOLBAR_HEIGHT,
@@ -473,6 +495,25 @@ void calculator_circuit_init(calculator_circuit_t *circuit) {
     circuit->add_type = CIRCUIT_GATE_AND;
     circuit->pressed_toolbar = CIRCUIT_NODE_NONE;
     set_status(circuit, "TAP INPUT OR DRAG GATE");
+}
+
+void calculator_circuit_set_model(calculator_circuit_t *circuit,
+                                  const circuit_model_t *model,
+                                  const char *status) {
+    if (!circuit || !model) return;
+    circuit->model = *model;
+    circuit->viewport_x = 0;
+    circuit->viewport_y = 0;
+    circuit->zoom_index = 0u;
+    circuit->selected_node = CIRCUIT_NODE_NONE;
+    circuit->wire_source = CIRCUIT_NODE_NONE;
+    circuit->add_armed = false;
+    circuit->touch_active = false;
+    circuit->touch_moved = false;
+    circuit->touch_target = TOUCH_TARGET_NONE;
+    circuit->pressed_toolbar = CIRCUIT_NODE_NONE;
+    (void)circuit_model_evaluate(&circuit->model);
+    set_status(circuit, status ? status : "CIRCUIT READY");
 }
 
 static int point_distance_squared(int x, int y, int target_x, int target_y) {
@@ -769,6 +810,9 @@ static unsigned int activate_toolbar(calculator_circuit_t *circuit,
             return CALCULATOR_CIRCUIT_RENDER | CALCULATOR_CIRCUIT_BEEP |
                    (changed ? CALCULATOR_CIRCUIT_CHANGED : 0u);
         }
+        case 7u:
+            return CALCULATOR_CIRCUIT_TO_LOGIC |
+                   CALCULATOR_CIRCUIT_BEEP;
         default:
             break;
     }

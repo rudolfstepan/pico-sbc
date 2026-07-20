@@ -491,16 +491,19 @@ static void render_logic_form(const calculator_logic_t *logic) {
         ? (size_t)(lcd_width() - 12) / 12u : 78u;
     for (size_t line = 0; line < visible_lines && offset < length; ++line) {
         char text[79];
+        char display_text[79];
         size_t remaining = length - offset;
         size_t count = remaining < line_capacity ? remaining : line_capacity;
         memcpy(text, logic->form + offset, count);
         text[count] = '\0';
+        (void)calculator_logic_format_display(
+            text, display_text, sizeof display_text);
         if (fullscreen) {
-            page_draw_text_absolute(6, 22 + (int)line * 18, text,
+            page_draw_text_absolute(6, 22 + (int)line * 18, display_text,
                                     line ? COL_MUTED : COL_TEXT,
                                     COL_BG, 2);
         } else {
-            lcd_draw_text(6, 17 + (int)line * 13, text,
+            lcd_draw_text(6, 17 + (int)line * 13, display_text,
                           line ? COL_MUTED : COL_TEXT, COL_BG, 1);
         }
         offset += count;
@@ -510,7 +513,7 @@ static void render_logic_form(const calculator_logic_t *logic) {
 static void render_logic_gates(const calculator_logic_t *logic) {
     char inputs[48] = "INPUT ";
     size_t input_length = strlen(inputs);
-    unsigned int counts[7] = {0};
+    unsigned int counts[8] = {0};
     for (unsigned int variable = 0; variable < LOGIC_VARIABLE_COUNT;
          ++variable) {
         if (!(logic->program.variable_mask & (1u << variable))) continue;
@@ -528,24 +531,32 @@ static void render_logic_gates(const calculator_logic_t *logic) {
     }
     char gates[78];
     snprintf(gates, sizeof gates,
-             "NOT%u AND%u OR%u XOR%u NAND%u NOR%u XNOR%u",
+             LCD_TEXT_LOGIC_NOT "%u " LCD_TEXT_LOGIC_AND "%u "
+             LCD_TEXT_LOGIC_OR "%u " LCD_TEXT_LOGIC_XOR "%u "
+             LCD_TEXT_LOGIC_NAND "%u " LCD_TEXT_LOGIC_NOR "%u "
+             LCD_TEXT_LOGIC_IMPLIES "%u " LCD_TEXT_LOGIC_XNOR "%u",
              counts[0], counts[1], counts[2], counts[3],
-             counts[4], counts[5], counts[6]);
+             counts[4], counts[5], counts[6], counts[7]);
     char output[16];
     snprintf(output, sizeof output, "OUT = %u",
              logic_engine_evaluate(&logic->program, logic->assignment)
                 ? 1u : 0u);
 
-    lcd_draw_text(6, 17, calculator_widget_tail(logic->editor.text, 78),
-                  COL_MUTED, COL_BG, 1);
+    char display_expression[EXPRESSION_EDITOR_CAPACITY];
+    (void)calculator_logic_format_display(
+        calculator_widget_tail(logic->editor.text, 78),
+        display_expression, sizeof display_expression);
+    lcd_draw_text(6, 17, display_expression, COL_MUTED, COL_BG, 1);
     lcd_draw_text(6, 32, inputs, COL_TEXT, COL_BG, 1);
     lcd_draw_text(6, 47, output, COL_TEXT, COL_BG, 2);
     lcd_draw_text(6, 70, gates, COL_MUTED, COL_BG, 1);
 
     if (calculator_widget_data_focus() || calculator_widget_fullscreen()) {
         static const char *const names[] = {
-            "CONST", "INPUT", "NOT", "AND", "OR", "XOR", "NAND",
-            "NOR", "XNOR"
+            "CONST", "INPUT", LCD_TEXT_LOGIC_NOT, LCD_TEXT_LOGIC_AND,
+            LCD_TEXT_LOGIC_OR, LCD_TEXT_LOGIC_XOR, LCD_TEXT_LOGIC_NAND,
+            LCD_TEXT_LOGIC_NOR, LCD_TEXT_LOGIC_IMPLIES,
+            LCD_TEXT_LOGIC_XNOR
         };
         size_t shown = logic->program.node_count < 7u
             ? logic->program.node_count : 7u;
@@ -592,10 +603,12 @@ void calculator_page_render_logic(const calculator_logic_t *logic,
     } else if (logic->view == LOGIC_VIEW_GATES && logic->compiled) {
         render_logic_gates(logic);
     } else {
-        lcd_draw_text(6, 20,
-                      expression_editor_view(&logic->editor, editor_text,
-                                             sizeof editor_text, 38),
-                      COL_TEXT, COL_BG, 2);
+        char display_text[EXPRESSION_EDITOR_CAPACITY + 2];
+        const char *editor_view = expression_editor_view(
+            &logic->editor, editor_text, sizeof editor_text, 38);
+        (void)calculator_logic_format_display(
+            editor_view, display_text, sizeof display_text);
+        lcd_draw_text(6, 20, display_text, COL_TEXT, COL_BG, 2);
         if (logic->compiled) {
             char output[48];
             format_logic_output(logic, output, sizeof output);
@@ -603,11 +616,15 @@ void calculator_page_render_logic(const calculator_logic_t *logic,
             lcd_draw_text(6, 69, "GATES CHANGES INPUTS A-F",
                           COL_MUTED, COL_BG, 1);
         } else {
-            lcd_draw_text(6, 52,
-                          "A-F  NOT AND OR XOR NAND NOR XNOR",
-                          COL_MUTED, COL_BG, 1);
+            lcd_draw_text(
+                6, 52,
+                "A-F  " LCD_TEXT_LOGIC_NOT " " LCD_TEXT_LOGIC_AND " "
+                LCD_TEXT_LOGIC_OR " " LCD_TEXT_LOGIC_XOR " "
+                LCD_TEXT_LOGIC_NAND " " LCD_TEXT_LOGIC_NOR " "
+                LCD_TEXT_LOGIC_IMPLIES " " LCD_TEXT_LOGIC_XNOR,
+                COL_MUTED, COL_BG, 1);
             lcd_draw_text(6, 67,
-                          "CHECK OR SELECT TABLE / DNF / KNF / GATES",
+                          "CHECK OR SELECT TABLE / DNF / KNF / PLAN",
                           COL_MUTED, COL_BG, 1);
         }
     }

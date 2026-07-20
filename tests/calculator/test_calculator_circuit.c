@@ -41,9 +41,10 @@ static int test_orientation(lcd_orientation_t orientation) {
         }
         CHECK(!mock_lcd_had_out_of_bounds_draw());
         CHECK(mock_lcd_drew_text("HOME"));
+        CHECK(mock_lcd_drew_text("LOGIC"));
         CHECK(mock_lcd_drew_text("Z-"));
         CHECK(mock_lcd_drew_text("Z+"));
-        CHECK(mock_lcd_drew_text("AND"));
+        CHECK(mock_lcd_drew_text("+" LCD_TEXT_LOGIC_AND));
     }
     return 0;
 }
@@ -55,7 +56,7 @@ int main(void) {
     lcd_set_orientation(LCD_ORIENTATION_LANDSCAPE);
     calculator_circuit_t toolbar;
     calculator_circuit_init(&toolbar);
-    unsigned int effect = tap(&toolbar, 200, 18);
+    unsigned int effect = tap(&toolbar, 150, 18);
     CHECK(effect & CALCULATOR_CIRCUIT_BEEP);
     CHECK(toolbar.add_type == CIRCUIT_GATE_OR);
     effect = tap(&toolbar, 100, 18);
@@ -63,23 +64,25 @@ int main(void) {
     effect = tap(&toolbar, 100, 18);
     CHECK(!toolbar.add_armed);
     toolbar.selected_node = 0u;
-    effect = tap(&toolbar, 240, 18);
+    effect = tap(&toolbar, 210, 18);
     CHECK(toolbar.wire_source == 0u);
-    effect = tap(&toolbar, 240, 18);
+    effect = tap(&toolbar, 210, 18);
     CHECK(toolbar.wire_source == CIRCUIT_NODE_NONE);
     CHECK(calculator_circuit_zoom_percent(&toolbar) == 150u);
-    effect = tap(&toolbar, 440, 18);
+    effect = tap(&toolbar, 390, 18);
     CHECK(effect & CALCULATOR_CIRCUIT_CHANGED);
     CHECK(calculator_circuit_zoom_percent(&toolbar) == 200u);
-    effect = tap(&toolbar, 380, 18);
+    effect = tap(&toolbar, 330, 18);
     CHECK(calculator_circuit_zoom_percent(&toolbar) == 150u);
     toolbar.selected_node = 2u;
     size_t toolbar_nodes = node_count(&toolbar);
-    effect = tap(&toolbar, 310, 18);
+    effect = tap(&toolbar, 270, 18);
     CHECK(effect & CALCULATOR_CIRCUIT_CHANGED);
     CHECK(node_count(&toolbar) == toolbar_nodes - 1u);
     effect = tap(&toolbar, 40, 18);
     CHECK(effect & CALCULATOR_CIRCUIT_EXIT);
+    effect = tap(&toolbar, 450, 18);
+    CHECK(effect & CALCULATOR_CIRCUIT_TO_LOGIC);
 
     calculator_circuit_t tolerant_touch;
     calculator_circuit_init(&tolerant_touch);

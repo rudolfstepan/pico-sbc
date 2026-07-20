@@ -19,6 +19,7 @@ size_t circuit_gate_input_count(circuit_gate_type_t type) {
         case CIRCUIT_GATE_XOR:
         case CIRCUIT_GATE_NAND:
         case CIRCUIT_GATE_NOR:
+        case CIRCUIT_GATE_IMPLIES:
         case CIRCUIT_GATE_XNOR:
             return 2u;
         case CIRCUIT_GATE_COUNT:
@@ -34,7 +35,7 @@ bool circuit_gate_has_output(circuit_gate_type_t type) {
 const char *circuit_gate_name(circuit_gate_type_t type) {
     static const char *const names[] = {
         "INPUT", "OUTPUT", "NOT", "AND", "OR",
-        "XOR", "NAND", "NOR", "XNOR"
+        "XOR", "NAND", "NOR", "IMPLIES", "XNOR"
     };
     return type < CIRCUIT_GATE_COUNT ? names[type] : "?";
 }
@@ -250,6 +251,7 @@ static bool evaluate_node(circuit_model_t *model, uint8_t node,
         case CIRCUIT_GATE_XOR: output = inputs[0] != inputs[1]; break;
         case CIRCUIT_GATE_NAND: output = !(inputs[0] && inputs[1]); break;
         case CIRCUIT_GATE_NOR: output = !(inputs[0] || inputs[1]); break;
+        case CIRCUIT_GATE_IMPLIES: output = !inputs[0] || inputs[1]; break;
         case CIRCUIT_GATE_XNOR: output = inputs[0] == inputs[1]; break;
         case CIRCUIT_GATE_COUNT: valid = false; break;
     }

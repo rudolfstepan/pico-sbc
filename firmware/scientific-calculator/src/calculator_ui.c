@@ -21,6 +21,7 @@
 #include "calculator_ui_types.h"
 #include "calculator_widgets.h"
 #include "expression_editor.h"
+#include "logic_circuit_bridge.h"
 #include "number_formats.h"
 #include "programmer_engine.h"
 #include "board.h"
@@ -359,7 +360,32 @@ static void apply_program_effects(unsigned int effects) {
 }
 
 static void apply_circuit_effects(unsigned int effects) {
-    if (effects & CALCULATOR_CIRCUIT_EXIT) {
+    if (effects & CALCULATOR_CIRCUIT_TO_LOGIC) {
+        char converted[EXPRESSION_EDITOR_CAPACITY];
+        uint8_t assignment = 0u;
+        uint8_t target = circuit.selected_node;
+        logic_circuit_status_t status = logic_circuit_to_expression(
+            &circuit.model, target, converted, sizeof converted,
+            &assignment);
+        if (status == LOGIC_CIRCUIT_OK &&
+            expression_editor_set(&logic.editor, converted)) {
+            logic.view = LOGIC_VIEW_EDIT;
+            logic.compiled = false;
+            logic.assignment = assignment;
+            logic.scroll = 0u;
+            (void)calculator_logic_compile(&logic, message, sizeof message);
+            snprintf(message, sizeof message, "PLAN TO LOGIC");
+            page = PAGE_LOGIC;
+            calculator_widget_set_layout(CALCULATOR_LAYOUT_STANDARD);
+            render_display();
+            render_keypad();
+            mark_persistence_dirty();
+        } else {
+            snprintf(circuit.status, sizeof circuit.status, "%s",
+                     logic_circuit_status_text(status));
+            render_circuit();
+        }
+    } else if (effects & CALCULATOR_CIRCUIT_EXIT) {
         page = PAGE_LAUNCHER;
         calculator_widget_set_layout(CALCULATOR_LAYOUT_STANDARD);
         calculator_program_set_layout(&basic_program_ui,
@@ -1001,6 +1027,26 @@ static void activate_graph_key(const calc_key_t *key) {
 }
 
 static void activate_logic_key(const calc_key_t *key) {
+    if (strcmp(key->token, "CIRCUIT") == 0) {
+        if (!calculator_logic_compile(&logic, message, sizeof message)) {
+            render_keypad();
+            return;
+        }
+        circuit_model_t converted;
+        logic_circuit_status_t status = logic_circuit_from_program(
+            &logic.program, logic.assignment, &converted);
+        if (status != LOGIC_CIRCUIT_OK) {
+            snprintf(message, sizeof message, "%s",
+                     logic_circuit_status_text(status));
+            render_keypad();
+            return;
+        }
+        calculator_circuit_set_model(&circuit, &converted, "FROM LOGIC");
+        page = PAGE_CIRCUIT;
+        calculator_widget_set_layout(CALCULATOR_LAYOUT_STANDARD);
+        mark_persistence_dirty();
+        return;
+    }
     calculator_logic_activate(&logic, key->token, message, sizeof message);
     render_keypad();
 }

@@ -4,6 +4,7 @@
 #include "complex_engine.h"
 #include "graph_model.h"
 #include "logic_engine.h"
+#include "logic_circuit_bridge.h"
 #include "number_theory.h"
 #include "number_formats.h"
 #include "numerical_analysis.h"
@@ -20,7 +21,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CALCULATOR_FIRMWARE_VERSION "2.2.0"
+#define CALCULATOR_FIRMWARE_VERSION "2.3.0"
 #define LOGIC_USB_CHUNK_CAPACITY 112u
 
 static void respond(char *response, size_t size, const char *format, ...) {
@@ -1564,6 +1565,70 @@ static void execute_circuit(calculator_usb_context_t *context, char *cursor,
     char *action = next_word(&cursor);
     if (!action) {
         respond(response, response_size, "ERR ARGUMENT CIRCUIT action");
+        return;
+    }
+
+    if (word_is(action, "FROM")) {
+        char *expression = remaining_text(cursor);
+        logic_program_t program;
+        int error_position = 0;
+        logic_status_t compile_status = logic_engine_compile(
+            expression, &program, &error_position);
+        if (compile_status != LOGIC_STATUS_OK) {
+            respond(response, response_size, "ERR LOGIC %s position=%d",
+                    logic_engine_status_text(compile_status), error_position);
+            return;
+        }
+        circuit_model_t converted;
+        logic_circuit_status_t status = logic_circuit_from_program(
+            &program, 0u, &converted);
+        if (status != LOGIC_CIRCUIT_OK) {
+            respond(response, response_size, "ERR CIRCUIT_CONVERT %s",
+                    logic_circuit_status_text(status));
+            return;
+        }
+        *model = converted;
+        state->circuit_viewport_x = 0u;
+        state->circuit_viewport_y = 0u;
+        state->circuit_zoom_index = 0u;
+        size_t nodes = 0u;
+        size_t wires = 0u;
+        for (size_t i = 0; i < CIRCUIT_NODE_CAPACITY; ++i) {
+            if (model->nodes[i].used) nodes++;
+        }
+        for (size_t i = 0; i < CIRCUIT_WIRE_CAPACITY; ++i) {
+            if (model->wires[i].used) wires++;
+        }
+        mark_circuit_changed(effect);
+        respond(response, response_size,
+                "OK CIRCUIT_FROM\tnodes=%u\twires=%u",
+                (unsigned int)nodes, (unsigned int)wires);
+        return;
+    }
+
+    if (word_is(action, "EXPR")) {
+        char *target_word = next_word(&cursor);
+        size_t target = CIRCUIT_NODE_NONE;
+        if (target_word &&
+            (!parse_index(target_word, &target) ||
+             target >= CIRCUIT_NODE_CAPACITY || *remaining_text(cursor))) {
+            respond(response, response_size,
+                    "ERR ARGUMENT CIRCUIT EXPR [node]");
+            return;
+        }
+        char expression[EXPRESSION_EDITOR_CAPACITY];
+        uint8_t assignment = 0u;
+        logic_circuit_status_t status = logic_circuit_to_expression(
+            model, (uint8_t)target, expression, sizeof expression,
+            &assignment);
+        if (status != LOGIC_CIRCUIT_OK) {
+            respond(response, response_size, "ERR CIRCUIT_CONVERT %s",
+                    logic_circuit_status_text(status));
+            return;
+        }
+        respond(response, response_size,
+                "OK CIRCUIT_EXPR\tassignment=%u\texpression=%s",
+                (unsigned int)assignment, expression);
         return;
     }
 

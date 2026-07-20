@@ -17,6 +17,7 @@ typedef enum {
     TOKEN_XOR,
     TOKEN_NAND,
     TOKEN_NOR,
+    TOKEN_IMPLIES,
     TOKEN_XNOR,
     TOKEN_LEFT,
     TOKEN_RIGHT,
@@ -66,6 +67,11 @@ static void next_token(parser_t *parser) {
         return;
     }
     parser->cursor++;
+    if (current == '-' && *parser->cursor == '>') {
+        parser->cursor++;
+        parser->token = TOKEN_IMPLIES;
+        return;
+    }
     switch (current) {
         case '!': case '~': parser->token = TOKEN_NOT; return;
         case '&': case '*': parser->token = TOKEN_AND; return;
@@ -109,7 +115,12 @@ static void next_token(parser_t *parser) {
         parser->token = TOKEN_NAND;
     } else if (identifier_equals(parser->token_start, length, "NOR")) {
         parser->token = TOKEN_NOR;
+    } else if (identifier_equals(parser->token_start, length, "IMPLIES") ||
+               identifier_equals(parser->token_start, length, "IMP")) {
+        parser->token = TOKEN_IMPLIES;
     } else if (identifier_equals(parser->token_start, length, "XNOR")) {
+        parser->token = TOKEN_XNOR;
+    } else if (identifier_equals(parser->token_start, length, "IFF")) {
         parser->token = TOKEN_XNOR;
     } else {
         parser->token = TOKEN_INVALID;
@@ -134,7 +145,7 @@ static uint8_t add_node(parser_t *parser, logic_node_kind_t kind,
     return (uint8_t)index;
 }
 
-static uint8_t parse_or(parser_t *parser);
+static uint8_t parse_equivalence(parser_t *parser);
 
 static void syntax_error(parser_t *parser) {
     if (parser->status != LOGIC_STATUS_OK) return;
@@ -159,7 +170,7 @@ static uint8_t parse_primary(parser_t *parser) {
     }
     if (parser->token == TOKEN_LEFT) {
         next_token(parser);
-        uint8_t expression = parse_or(parser);
+        uint8_t expression = parse_equivalence(parser);
         if (parser->token != TOKEN_RIGHT) {
             syntax_error(parser);
             return INVALID_NODE;
@@ -186,6 +197,7 @@ static logic_node_kind_t binary_kind(token_kind_t token) {
         case TOKEN_XOR: return LOGIC_NODE_XOR;
         case TOKEN_NAND: return LOGIC_NODE_NAND;
         case TOKEN_NOR: return LOGIC_NODE_NOR;
+        case TOKEN_IMPLIES: return LOGIC_NODE_IMPLIES;
         case TOKEN_XNOR: return LOGIC_NODE_XNOR;
         default: return LOGIC_NODE_CONSTANT;
     }
@@ -207,7 +219,7 @@ static uint8_t parse_and(parser_t *parser) {
 static uint8_t parse_xor(parser_t *parser) {
     uint8_t left = parse_and(parser);
     while (parser->status == LOGIC_STATUS_OK &&
-           (parser->token == TOKEN_XOR || parser->token == TOKEN_XNOR)) {
+           parser->token == TOKEN_XOR) {
         token_kind_t operation = parser->token;
         next_token(parser);
         uint8_t right = parse_and(parser);
@@ -230,6 +242,30 @@ static uint8_t parse_or(parser_t *parser) {
     return left;
 }
 
+static uint8_t parse_implies(parser_t *parser) {
+    uint8_t left = parse_or(parser);
+    if (parser->status == LOGIC_STATUS_OK &&
+        parser->token == TOKEN_IMPLIES) {
+        next_token(parser);
+        uint8_t right = parse_implies(parser);
+        if (right == INVALID_NODE) return INVALID_NODE;
+        left = add_node(parser, LOGIC_NODE_IMPLIES, left, right, 0);
+    }
+    return left;
+}
+
+static uint8_t parse_equivalence(parser_t *parser) {
+    uint8_t left = parse_implies(parser);
+    while (parser->status == LOGIC_STATUS_OK &&
+           parser->token == TOKEN_XNOR) {
+        next_token(parser);
+        uint8_t right = parse_implies(parser);
+        if (right == INVALID_NODE) return INVALID_NODE;
+        left = add_node(parser, LOGIC_NODE_XNOR, left, right, 0);
+    }
+    return left;
+}
+
 logic_status_t logic_engine_compile(const char *expression,
                                     logic_program_t *program,
                                     int *error_position) {
@@ -243,7 +279,7 @@ logic_status_t logic_engine_compile(const char *expression,
         .status = LOGIC_STATUS_OK,
     };
     next_token(&parser);
-    program->root = parse_or(&parser);
+    program->root = parse_equivalence(&parser);
     if (parser.status == LOGIC_STATUS_OK && parser.token != TOKEN_END) {
         syntax_error(&parser);
     }
@@ -272,6 +308,7 @@ static bool evaluate_node(const logic_program_t *program, uint8_t node,
         case LOGIC_NODE_XOR: return left != right;
         case LOGIC_NODE_NAND: return !(left && right);
         case LOGIC_NODE_NOR: return !(left || right);
+        case LOGIC_NODE_IMPLIES: return !left || right;
         case LOGIC_NODE_XNOR: return left == right;
         default: return false;
     }

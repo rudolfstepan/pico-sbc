@@ -126,6 +126,26 @@ static const uint8_t *font_for(char c) {
     static const uint8_t quote[5] = {0x00,0x07,0x00,0x07,0x00};
     static const uint8_t ampersand[5] = {0x36,0x49,0x55,0x22,0x50};
     static const uint8_t pipe[5] = {0x00,0x00,0x7f,0x00,0x00};
+    static const uint8_t logic_not[5] = {0x04,0x04,0x04,0x04,0x1c};
+    static const uint8_t logic_and[5] = {0x60,0x18,0x06,0x18,0x60};
+    static const uint8_t logic_or[5] = {0x06,0x18,0x60,0x18,0x06};
+    static const uint8_t logic_xor[5] = {0x3e,0x49,0x7f,0x49,0x3e};
+    static const uint8_t logic_nand[5] = {0x08,0x04,0x7f,0x04,0x08};
+    static const uint8_t logic_nor[5] = {0x10,0x20,0x7f,0x20,0x10};
+    static const uint8_t logic_implies[5] = {0x08,0x08,0x08,0x2a,0x1c};
+    static const uint8_t logic_xnor[5] = {0x1c,0x2a,0x08,0x2a,0x1c};
+
+    switch ((unsigned char)c) {
+        case (unsigned char)LCD_CHAR_LOGIC_NOT: return logic_not;
+        case (unsigned char)LCD_CHAR_LOGIC_AND: return logic_and;
+        case (unsigned char)LCD_CHAR_LOGIC_OR: return logic_or;
+        case (unsigned char)LCD_CHAR_LOGIC_XOR: return logic_xor;
+        case (unsigned char)LCD_CHAR_LOGIC_NAND: return logic_nand;
+        case (unsigned char)LCD_CHAR_LOGIC_NOR: return logic_nor;
+        case (unsigned char)LCD_CHAR_LOGIC_IMPLIES: return logic_implies;
+        case (unsigned char)LCD_CHAR_LOGIC_XNOR: return logic_xnor;
+        default: break;
+    }
 
     if (c >= '0' && c <= '9') return font_digits[c - '0'];
     if (c >= 'A' && c <= 'Z') return font_upper[c - 'A'];

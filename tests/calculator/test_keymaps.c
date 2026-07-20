@@ -50,6 +50,23 @@ int main(void) {
     CHECK(check_page(PAGE_SYMBOLS, 30, 6, 5) == 0);
     CHECK(check_page(PAGE_GRAPH, 6, 6, 5) == 0);
     CHECK(check_page(PAGE_LOGIC, 30, 6, 5) == 0);
+    size_t logic_count = 0;
+    const calc_key_t *logic = calculator_keymap(PAGE_LOGIC, &logic_count);
+    static const char *const logic_tokens[] = {
+        "GATES", "CIRCUIT", "!", "&", "|", "^",
+        " NAND ", " NOR ", " IMPLIES ", " XNOR "
+    };
+    for (size_t token = 0;
+         token < sizeof logic_tokens / sizeof logic_tokens[0]; ++token) {
+        bool found = false;
+        for (size_t key = 0; key < logic_count; ++key) {
+            if (strcmp(logic[key].token, logic_tokens[token]) == 0) {
+                found = true;
+                break;
+            }
+        }
+        CHECK(found);
+    }
     CHECK(check_page(PAGE_UNITS, 30, 6, 5) == 0);
     CHECK(check_page(PAGE_COMPLEX, 30, 6, 5) == 0);
     CHECK(check_page(PAGE_STATISTICS, 30, 6, 5) == 0);

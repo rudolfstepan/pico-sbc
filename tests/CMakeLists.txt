@@ -145,6 +145,18 @@ target_include_directories(circuit_model_tests PRIVATE ${CALCULATOR_SRC})
 enable_project_warnings(circuit_model_tests)
 add_test(NAME circuit_model COMMAND circuit_model_tests)
 
+add_executable(logic_circuit_bridge_tests
+    calculator/test_logic_circuit_bridge.c
+    ${CALCULATOR_SRC}/circuit_model.c
+    ${CALCULATOR_SRC}/logic_circuit_bridge.c
+    ${CALCULATOR_SRC}/logic_engine.c
+)
+target_include_directories(logic_circuit_bridge_tests PRIVATE
+    ${CALCULATOR_SRC}
+)
+enable_project_warnings(logic_circuit_bridge_tests)
+add_test(NAME logic_circuit_bridge COMMAND logic_circuit_bridge_tests)
+
 add_executable(calculator_circuit_tests
     calculator/test_calculator_circuit.c
     calculator/mock_lcd.c
@@ -172,7 +184,10 @@ add_executable(keymap_tests
     calculator/test_keymaps.c
     ${CALCULATOR_SRC}/calculator_keymaps.c
 )
-target_include_directories(keymap_tests PRIVATE ${CALCULATOR_SRC})
+target_include_directories(keymap_tests PRIVATE
+    ${CALCULATOR_SRC}
+    ${PROJECT_ROOT}/lib/board/include
+)
 enable_project_warnings(keymap_tests)
 add_test(NAME keymaps COMMAND keymap_tests)
 
@@ -317,7 +332,10 @@ add_executable(calculator_logic_tests
     ${CALCULATOR_SRC}/expression_editor.c
     ${CALCULATOR_SRC}/logic_engine.c
 )
-target_include_directories(calculator_logic_tests PRIVATE ${CALCULATOR_SRC})
+target_include_directories(calculator_logic_tests PRIVATE
+    ${CALCULATOR_SRC}
+    ${PROJECT_ROOT}/lib/board/include
+)
 enable_project_warnings(calculator_logic_tests)
 add_test(NAME calculator_logic COMMAND calculator_logic_tests)
 
@@ -389,6 +407,7 @@ add_executable(calculator_usb_protocol_tests
     ${CALCULATOR_SRC}/graph_model.c
     ${CALCULATOR_SRC}/high_precision_engine.c
     ${CALCULATOR_SRC}/logic_engine.c
+    ${CALCULATOR_SRC}/logic_circuit_bridge.c
     ${CALCULATOR_SRC}/number_theory.c
     ${CALCULATOR_SRC}/number_formats.c
     ${CALCULATOR_SRC}/numerical_analysis.c

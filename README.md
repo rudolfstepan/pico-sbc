@@ -8,12 +8,12 @@ flashbare Anwendungen und eine gemeinsame Hardwarebibliothek.
 
 | Komponente | Version/Stand |
 |---|---|
-| Scientific Calculator | Firmware `2.2.0` |
-| USB-CDC-Protokoll | Version `5` |
-| Persistenter Rechnerzustand | Flashformat `8`, ohne Altformat-Migration |
-| Pico Calculator Link | Version `2.2` |
+| Scientific Calculator | Firmware `2.3.0` |
+| USB-CDC-Protokoll | Version `6` |
+| Persistenter Rechnerzustand | Flashformat `9`, ohne Altformat-Migration |
+| Pico Calculator Link | Version `2.3` |
 | Mini Computer | Firmware `1.0.0` |
-| Automatisierte Host-Tests | 34 Tests |
+| Automatisierte Host-Tests | 35 Tests |
 
 ## Firmware
 
@@ -47,11 +47,14 @@ third_party/libbf/    LibBF fuer hochpraezise wissenschaftliche Funktionen
 
 ## Pico Calculator Link
 
-Die plattformunabhaengige Desktop-App `Pico Calculator Link 2.2` verbindet den
+Die plattformunabhaengige Desktop-App `Pico Calculator Link 2.3` verbindet den
 Scientific Calculator mit Windows, Linux oder macOS. Sie bildet alle
 Rechner-Module ab: Wissenschaft, Programmer und Zahlenformate, Graphanalyse,
 Logik, Zahlentheorie, den grafischen Schaltplaneditor, Einheiten und
-Konstanten, komplexe Zahlen, Statistik, Speicher/Favoriten und BASIC.
+Konstanten, komplexe Zahlen, Statistik, Speicher/Favoriten und BASIC. Der
+Logikeditor verwendet die Symbole `¬`, `∧`, `∨`, `⊕`, `↑`, `↓`, `→` und `↔` und
+kann Ausdruecke in grafische Schaltplaene sowie Schaltplaene wieder in
+Ausdruecke umwandeln.
 Persistente Daten einschliesslich Schaltplan werden synchronisiert und als
 JSON gesichert.
 
@@ -96,7 +99,7 @@ lassen sich mit `--target lafvin_minicomputer` beziehungsweise
 ## Tests
 
 Die Rechenkerne und PC-Werkzeuge sind vom Pico SDK entkoppelt und werden in
-aktuell 34 Host-Tests geprueft:
+aktuell 35 Host-Tests geprueft:
 
 ```sh
 cmake -S tests -B out/tests

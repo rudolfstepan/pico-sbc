@@ -9,6 +9,8 @@ from pico_calc_gui_model import (
     add_circuit_node,
     analyze_graph,
     analyze_statistics,
+    circuit_from_logic,
+    circuit_to_logic,
     connect_circuit_nodes,
     continue_basic_program,
     convert_unit,
@@ -17,10 +19,12 @@ from pico_calc_gui_model import (
     evaluate_complex,
     evaluate_expression,
     evaluate_logic,
+    format_logic_expression,
     format_number,
     inspect_ieee,
     inspect_number_format,
     number_theory_operation,
+    normalize_logic_expression,
     parse_properties,
     parse_integer,
     programmer_operation,
@@ -43,11 +47,12 @@ from pico_calc_gui_model import (
 class FakeClient:
     def __init__(self):
         self.commands = []
+        self.circuit_add_index = 0
 
     def command(self, command):
         self.commands.append(command)
         responses = {
-            "INFO": "OK INFO\tprotocol=5\tfirmware=2.2.0\tmodel=scientific-calculator",
+            "INFO": "OK INFO\tprotocol=6\tfirmware=2.3.0\tmodel=scientific-calculator",
             "DIAG": (
                 "OK DIAG\tpage=0\tangle=DEG\tprecision=HIGH"
                 "\thistory=1\tstats=1\tmode=1"
@@ -115,6 +120,13 @@ class FakeClient:
             ),
             "MODULE LOGIC FORM DNF SIMPLE 0 A&B": (
                 "OK LOGIC_FORM\ttotal=5\toffset=0\tdata=(A&B)"
+            ),
+            "MODULE CIRCUIT FROM A IMPLIES B": (
+                "OK CIRCUIT_FROM\tnodes=2\twires=1"
+            ),
+            "MODULE CIRCUIT EXPR 1": (
+                "OK CIRCUIT_EXPR\tassignment=1"
+                "\texpression=(A IMPLIES B)"
             ),
             "MODULE UNIT CATEGORY 0": (
                 "OK UNIT_CATEGORY\tindex=0\tname=LENGTH\tcount=2"
@@ -194,21 +206,30 @@ class FakeClient:
                     "\tdestination=1\tinput=0"
                 )
             return f"OK CIRCUIT_WIRE\tindex={index}\tused=0"
+        if command.startswith("MODULE CIRCUIT ADD "):
+            parts = command.split()
+            index = self.circuit_add_index
+            self.circuit_add_index += 1
+            return (
+                f"OK CIRCUIT_NODE\tindex={index}\tused=1\ttype={parts[3]}"
+                f"\tx={parts[4]}\ty={parts[5]}\tinput={parts[6]}"
+                f"\toutput=0\tlabel={parts[7]}"
+            )
         return responses.get(command, "OK")
 
 
 class GuiModelTests(unittest.TestCase):
     def test_parse_properties(self):
         parsed = parse_properties(
-            "OK INFO\tprotocol=5\tfirmware=2.2.0", "INFO"
+            "OK INFO\tprotocol=6\tfirmware=2.3.0", "INFO"
         )
-        self.assertEqual(parsed, {"protocol": "5", "firmware": "2.2.0"})
+        self.assertEqual(parsed, {"protocol": "6", "firmware": "2.3.0"})
         with self.assertRaises(ProtocolError):
             parse_properties("OK INFO\tbroken", "INFO")
 
     def test_read_device_snapshot(self):
         snapshot = read_device_snapshot(FakeClient())
-        self.assertEqual(snapshot.info["firmware"], "2.2.0")
+        self.assertEqual(snapshot.info["firmware"], "2.3.0")
         self.assertEqual(snapshot.diagnostics["angle"], "DEG")
         self.assertEqual(snapshot.state["precision"], "HIGH")
         self.assertEqual(snapshot.state["history"][0]["expression"], "6*7")
@@ -220,7 +241,7 @@ class GuiModelTests(unittest.TestCase):
             "OK INFO\tprotocol=3\tfirmware=1.5.0"
             if command == "INFO" else "OK"
         )
-        with self.assertRaisesRegex(ProtocolError, "Protokoll 5"):
+        with self.assertRaisesRegex(ProtocolError, "Protokoll 6"):
             read_device_snapshot(old_client)
 
     def test_evaluate_expression(self):
@@ -304,6 +325,33 @@ class GuiModelTests(unittest.TestCase):
         circuit = remove_circuit_node(circuit, gate_id)
         self.assertEqual(len(circuit["nodes"]), 2)
 
+        implication = create_circuit()
+        implication, left = add_circuit_node(implication, "INPUT", 20, 50)
+        implication, right = add_circuit_node(implication, "INPUT", 20, 150)
+        implication, gate = add_circuit_node(
+            implication, "IMPLIES", 180, 100)
+        implication = connect_circuit_nodes(implication, left, gate, 0)
+        implication = connect_circuit_nodes(implication, right, gate, 1)
+        implication = set_circuit_input(implication, left, True)
+        self.assertFalse(implication["nodes"][gate]["output"])
+
+    def test_logic_symbols_and_circuit_bridge(self):
+        self.assertEqual(
+            normalize_logic_expression("¬A∧B∨C⊕D↑E↓F→A↔B"),
+            "!A&B|C^D NAND E NOR F IMPLIES A XNOR B",
+        )
+        self.assertEqual(
+            format_logic_expression(
+                "!A AND B OR C XOR D NAND E NOR F IMPLIES A IFF B"),
+            "¬A ∧ B ∨ C ⊕ D ↑ E ↓ F → A ↔ B",
+        )
+        client = FakeClient()
+        circuit = circuit_from_logic(client, "A→B")
+        self.assertEqual(len(circuit["nodes"]), 2)
+        converted = circuit_to_logic(client, circuit, 1)
+        self.assertEqual(converted["expression"], "(A → B)")
+        self.assertEqual(converted["assignment"], 1)
+
     def test_graph_logic_units_complex_and_statistics(self):
         client = FakeClient()
         graph = analyze_graph(client, "ROOT", "F1", [-2, 2])
@@ -312,7 +360,7 @@ class GuiModelTests(unittest.TestCase):
         table = read_truth_table(client, "A&B")
         self.assertEqual(table["variables"], ["A", "B"])
         self.assertEqual(table["rows"][-1]["value"], 1)
-        self.assertEqual(read_logic_form(client, "A&B", "DNF"), "(A&B)")
+        self.assertEqual(read_logic_form(client, "A&B", "DNF"), "(A∧B)")
         units = read_unit_category(client, 0)
         self.assertEqual(len(units["units"]), 2)
         self.assertEqual(convert_unit(client, 0, 0, 1, 1000)["value"], "1")

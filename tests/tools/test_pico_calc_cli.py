@@ -6,6 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 
 from pico_calc_cli import (
     ProtocolError,
+    SerialClient,
     export_state,
     import_state,
     normalize_circuit,
@@ -111,6 +112,11 @@ class DependentFunctionClient(FakeClient):
 
 
 class CliStateTests(unittest.TestCase):
+    def test_protocol_line_capacity_matches_firmware(self):
+        client = SerialClient("unused", 115200, 1.0)
+        with self.assertRaisesRegex(ProtocolError, "255 Zeichen"):
+            client.command("X" * 256)
+
     def test_export_state(self):
         exported = export_state(FakeClient())
         self.assertEqual(exported["result"], 42.0)
@@ -266,6 +272,28 @@ class CliStateTests(unittest.TestCase):
         }
         with self.assertRaisesRegex(ProtocolError, "Zyklus"):
             normalize_circuit(cyclic)
+
+        implication = normalize_circuit({
+            "next_input": 2,
+            "next_output": 1,
+            "next_gate": 1,
+            "nodes": [
+                {"id": 0, "type": "INPUT", "x": 20, "y": 40,
+                 "input": 1, "label": "A"},
+                {"id": 1, "type": "INPUT", "x": 20, "y": 140,
+                 "input": 0, "label": "B"},
+                {"id": 2, "type": "IMPLIES", "x": 180, "y": 90,
+                 "input": 0, "label": "G1"},
+                {"id": 3, "type": "OUTPUT", "x": 340, "y": 90,
+                 "input": 0, "label": "Y"},
+            ],
+            "wires": [
+                {"id": 0, "source": 0, "destination": 2, "input": 0},
+                {"id": 1, "source": 1, "destination": 2, "input": 1},
+                {"id": 2, "source": 2, "destination": 3, "input": 0},
+            ],
+        })
+        self.assertFalse(implication["nodes"][3]["output"])
 
 
 if __name__ == "__main__":

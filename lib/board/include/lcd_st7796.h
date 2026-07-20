@@ -11,6 +11,24 @@
 #define LCD_WIDTH  LCD_LANDSCAPE_WIDTH
 #define LCD_HEIGHT LCD_LANDSCAPE_HEIGHT
 
+/* Single-byte extension glyphs used by the calculator UI. */
+#define LCD_CHAR_LOGIC_NOT  ((char)0x01)
+#define LCD_CHAR_LOGIC_AND  ((char)0x02)
+#define LCD_CHAR_LOGIC_OR   ((char)0x03)
+#define LCD_CHAR_LOGIC_XOR  ((char)0x04)
+#define LCD_CHAR_LOGIC_NAND ((char)0x05)
+#define LCD_CHAR_LOGIC_NOR  ((char)0x06)
+#define LCD_CHAR_LOGIC_IMPLIES ((char)0x07)
+#define LCD_CHAR_LOGIC_XNOR ((char)0x08)
+#define LCD_TEXT_LOGIC_NOT  "\x01"
+#define LCD_TEXT_LOGIC_AND  "\x02"
+#define LCD_TEXT_LOGIC_OR   "\x03"
+#define LCD_TEXT_LOGIC_XOR  "\x04"
+#define LCD_TEXT_LOGIC_NAND "\x05"
+#define LCD_TEXT_LOGIC_NOR  "\x06"
+#define LCD_TEXT_LOGIC_IMPLIES "\x07"
+#define LCD_TEXT_LOGIC_XNOR "\x08"
+
 #define RGB565(r, g, b) (uint16_t)((((r) & 0xf8) << 8) | (((g) & 0xfc) << 3) | ((b) >> 3))
 
 typedef enum {

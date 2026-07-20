@@ -20,6 +20,7 @@ typedef enum {
     CIRCUIT_GATE_XOR,
     CIRCUIT_GATE_NAND,
     CIRCUIT_GATE_NOR,
+    CIRCUIT_GATE_IMPLIES,
     CIRCUIT_GATE_XNOR,
     CIRCUIT_GATE_COUNT
 } circuit_gate_type_t;

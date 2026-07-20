@@ -53,12 +53,14 @@ int main(void) {
     static const bool xor_values[4] = {false, true, true, false};
     static const bool nand_values[4] = {true, true, true, false};
     static const bool nor_values[4] = {true, false, false, false};
+    static const bool implies_values[4] = {true, true, false, true};
     static const bool xnor_values[4] = {true, false, false, true};
     CHECK(check_binary_gate(CIRCUIT_GATE_AND, and_values) == 0);
     CHECK(check_binary_gate(CIRCUIT_GATE_OR, or_values) == 0);
     CHECK(check_binary_gate(CIRCUIT_GATE_XOR, xor_values) == 0);
     CHECK(check_binary_gate(CIRCUIT_GATE_NAND, nand_values) == 0);
     CHECK(check_binary_gate(CIRCUIT_GATE_NOR, nor_values) == 0);
+    CHECK(check_binary_gate(CIRCUIT_GATE_IMPLIES, implies_values) == 0);
     CHECK(check_binary_gate(CIRCUIT_GATE_XNOR, xnor_values) == 0);
 
     circuit_model_t model;
