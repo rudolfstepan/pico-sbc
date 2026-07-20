@@ -1,12 +1,14 @@
 #include "calculator_ui.h"
 
 #include "calculator_engine.h"
+#include "calculator_circuit.h"
 #include "calculator_complex.h"
 #include "calculator_graph.h"
 #include "calculator_list.h"
 #include "calculator_logic.h"
 #include "calculator_units.h"
 #include "calculator_navigation.h"
+#include "calculator_number_theory.h"
 #include "calculator_pages.h"
 #include "calculator_persistence.h"
 #include "calculator_program.h"
@@ -14,6 +16,8 @@
 #include "calculator_symbols.h"
 #include "calculator_statistics.h"
 #include "calculator_usb_protocol.h"
+#include "calculator_ui_input.h"
+#include "calculator_ui_theme.h"
 #include "calculator_ui_types.h"
 #include "calculator_widgets.h"
 #include "expression_editor.h"
@@ -29,7 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define COL_BG RGB565(0, 0, 0)
+#define COL_BG UI_COLOR_BACKGROUND
 #define EXPR_MAX EXPRESSION_EDITOR_CAPACITY
 #define PERSISTENCE_DELAY_MS 3000u
 #define PERSISTENCE_RETRY_MS 10000u
@@ -45,7 +49,14 @@ static programmer_engine_t programmer;
 static unsigned int fixed_fraction_bits = 16;
 static calculator_format_view_t format_view;
 static bool just_evaluated;
-static bool touch_locked;
+static calculator_touch_input_t touch_input;
+static uint8_t brightness_percent = 100u;
+static bool beep_enabled = true;
+static calculator_layout_t default_layout = CALCULATOR_LAYOUT_STANDARD;
+static bool graph_touch_active;
+static bool graph_touch_moved;
+static uint16_t graph_touch_x;
+static uint16_t graph_touch_y;
 
 #define HISTORY_MAX CALCULATOR_PERSISTENCE_HISTORY_CAPACITY
 typedef calculator_persisted_history_entry_t history_entry_t;
@@ -55,11 +66,13 @@ static calculator_list_t history_list;
 static double memory_value;
 static char memory_text[CALCULATOR_RESULT_TEXT_CAPACITY] = "0";
 static calculator_graph_t graph;
+static calculator_circuit_t circuit;
 static calculator_symbols_t symbols;
 static calculator_logic_t logic;
 static calculator_units_t units;
 static calculator_complex_t complex;
 static calculator_statistics_t statistics;
+static calculator_number_theory_t number_theory;
 static calculator_program_t basic_program_ui;
 static bool persistence_dirty;
 static absolute_time_t persistence_deadline;
@@ -69,10 +82,21 @@ static calculator_persisted_state_t persistence_io_state;
 static void render_display(void);
 static void render_graph(void);
 
+static void render_circuit(void) {
+    calculator_widget_set_page(PAGE_CIRCUIT);
+    (void)calculator_circuit_pan(&circuit, 0, 0,
+                                 lcd_width(), lcd_height());
+    calculator_circuit_render(&circuit);
+}
+
 static void capture_persisted_state(calculator_persisted_state_t *state) {
     calculator_persistence_defaults(state);
     state->degrees = calc_engine_uses_degrees();
     state->precision = calc_engine_precision();
+    state->brightness_percent = brightness_percent;
+    state->beep_enabled = beep_enabled;
+    state->portrait = lcd_orientation() == LCD_ORIENTATION_PORTRAIT;
+    state->default_layout = default_layout;
     state->page = page;
     state->format_bits = programmer.word_bits;
     state->fixed_fraction_bits = fixed_fraction_bits;
@@ -91,12 +115,24 @@ static void capture_persisted_state(calculator_persisted_state_t *state) {
     state->graph = graph;
     state->statistics = statistics.dataset;
     state->basic_program = *calculator_program_source(&basic_program_ui);
+    state->circuit = circuit.model;
+    state->circuit_viewport_x = (uint16_t)circuit.viewport_x;
+    state->circuit_viewport_y = (uint16_t)circuit.viewport_y;
+    state->circuit_zoom_index = circuit.zoom_index;
 }
 
 static void apply_persisted_state(
     const calculator_persisted_state_t *state) {
     calc_engine_set_degrees(state->degrees);
     calc_engine_set_precision(state->precision);
+    brightness_percent = state->brightness_percent;
+    beep_enabled = state->beep_enabled;
+    default_layout = state->default_layout;
+    lcd_set_orientation(state->portrait ? LCD_ORIENTATION_PORTRAIT
+                                        : LCD_ORIENTATION_LANDSCAPE);
+    lcd_set_backlight(brightness_percent);
+    calculator_widget_set_layout(default_layout);
+    calculator_program_set_layout(&basic_program_ui, default_layout);
     page = state->page;
     fixed_fraction_bits = state->fixed_fraction_bits;
     ans = state->ans;
@@ -119,6 +155,14 @@ static void apply_persisted_state(
     statistics.dataset = state->statistics;
     statistics.selected = 0;
     calculator_program_set_source(&basic_program_ui, &state->basic_program);
+    circuit.model = state->circuit;
+    circuit.viewport_x = state->circuit_viewport_x;
+    circuit.viewport_y = state->circuit_viewport_y;
+    circuit.zoom_index = state->circuit_zoom_index;
+    circuit.selected_node = CIRCUIT_NODE_NONE;
+    circuit.wire_source = CIRCUIT_NODE_NONE;
+    circuit.add_armed = false;
+    circuit_model_evaluate(&circuit.model);
     snprintf(result_text, sizeof result_text, "%s", ans_text);
 }
 
@@ -150,6 +194,9 @@ static void save_persistence_if_due(void) {
         snprintf(message, sizeof message, "SAVE ERROR");
         if (page == PAGE_GRAPH) {
             render_graph();
+        } else if (page == PAGE_CIRCUIT) {
+            snprintf(circuit.status, sizeof circuit.status, "SAVE ERROR");
+            render_circuit();
         } else {
             render_display();
         }
@@ -181,11 +228,20 @@ static calculator_widget_state_t current_widget_state(void) {
         .logic_assignment = logic.assignment,
         .unit_category = units.category,
         .units_view = units.view,
+        .units_selector = units.selector,
+        .units_selector_offset = units.selector_offset,
+        .units_constant_index = units.constant_index,
+        .units_from_index = units.from_index,
+        .units_to_index = units.to_index,
         .complex_polar = complex.polar_view,
         .complex_history = complex.history_view,
         .statistics_two_variable = statistics.dataset.two_variable,
         .statistics_active_y = statistics.active_y,
         .statistics_view = statistics.view,
+        .brightness_percent = brightness_percent,
+        .beep_enabled = beep_enabled,
+        .default_layout = default_layout,
+        .number_theory_input = number_theory.active_input,
     };
     for (size_t i = 0; i < CALCULATOR_FAVORITE_COUNT; ++i) {
         state.favorites[i] = symbols.favorites[i];
@@ -199,6 +255,26 @@ static void draw_key(const calc_key_t *key, bool pressed) {
 }
 
 static void render_display(void) {
+    calculator_widget_set_page(page);
+    if (page == PAGE_LAUNCHER) {
+        calculator_page_render_launcher(message);
+        return;
+    }
+    if (page == PAGE_SETTINGS) {
+        calculator_page_render_settings(
+            brightness_percent, beep_enabled,
+            lcd_orientation() == LCD_ORIENTATION_PORTRAIT,
+            default_layout, calc_engine_precision(), message);
+        return;
+    }
+    if (page == PAGE_NUMBER_THEORY) {
+        calculator_page_render_number_theory(&number_theory, message);
+        return;
+    }
+    if (page == PAGE_CIRCUIT) {
+        render_circuit();
+        return;
+    }
     if (page == PAGE_BASIC_PROGRAM) {
         calculator_program_render(&basic_program_ui);
         return;
@@ -252,12 +328,13 @@ static void render_display(void) {
 }
 
 static void render_keypad(void) {
-    if (page == PAGE_BASIC_PROGRAM) return;
+    if (page == PAGE_BASIC_PROGRAM || page == PAGE_CIRCUIT) return;
     calculator_widget_state_t state = current_widget_state();
     calculator_widget_render_keypad(page, &state);
 }
 
 static void render_graph(void) {
+    calculator_widget_set_page(PAGE_GRAPH);
     calculator_widget_state_t state = current_widget_state();
     calculator_graph_render(&graph, ans, &symbols, &state, message,
                             sizeof message);
@@ -265,7 +342,10 @@ static void render_graph(void) {
 
 static void apply_program_effects(unsigned int effects) {
     if (effects & CALCULATOR_PROGRAM_EXIT) {
-        page = PAGE_BASIC;
+        page = PAGE_LAUNCHER;
+        calculator_widget_set_layout(CALCULATOR_LAYOUT_STANDARD);
+        calculator_program_set_layout(&basic_program_ui,
+                                      CALCULATOR_LAYOUT_STANDARD);
         snprintf(message, sizeof message, "%s", calculator_page_message(page));
         render_display();
         render_keypad();
@@ -273,7 +353,32 @@ static void apply_program_effects(unsigned int effects) {
         calculator_program_render(&basic_program_ui);
     }
     if (effects & CALCULATOR_PROGRAM_DIRTY) mark_persistence_dirty();
-    if (effects & CALCULATOR_PROGRAM_BEEP) board_beep(1500, 10);
+    if ((effects & CALCULATOR_PROGRAM_BEEP) && beep_enabled) {
+        board_beep_async(1500, 10);
+    }
+}
+
+static void apply_circuit_effects(unsigned int effects) {
+    if (effects & CALCULATOR_CIRCUIT_EXIT) {
+        page = PAGE_LAUNCHER;
+        calculator_widget_set_layout(CALCULATOR_LAYOUT_STANDARD);
+        calculator_program_set_layout(&basic_program_ui,
+                                      CALCULATOR_LAYOUT_STANDARD);
+        snprintf(message, sizeof message, "%s", calculator_page_message(page));
+        render_display();
+        render_keypad();
+        mark_persistence_dirty();
+    } else if (effects & CALCULATOR_CIRCUIT_RENDER) {
+        render_circuit();
+    }
+    if (effects & CALCULATOR_CIRCUIT_CHANGED) mark_persistence_dirty();
+    if ((effects & CALCULATOR_CIRCUIT_BEEP) && beep_enabled) {
+        board_beep_async(1500, 10);
+    }
+}
+
+static void ui_beep(uint16_t frequency_hz, uint16_t duration_ms) {
+    if (beep_enabled) board_beep_async(frequency_hz, duration_ms);
 }
 
 static bool token_is_operator(const char *token) {
@@ -335,14 +440,14 @@ static void evaluate_expression(void) {
         snprintf(message, sizeof message, "%s",
                  result.decimal && !result.exact ? "ROUNDED" : "OK");
         just_evaluated = true;
-        board_beep(1800, 18);
+        ui_beep(1800, 18);
     } else {
         if (status == CALC_PARSE_ERROR && error_position > 0) {
             snprintf(message, sizeof message, "SYNTAX AT %d", error_position);
         } else {
             snprintf(message, sizeof message, "%s", calc_engine_status_text(status));
         }
-        board_beep(500, 60);
+        ui_beep(500, 60);
     }
 }
 
@@ -792,6 +897,16 @@ static void activate_graph_key(const calc_key_t *key) {
         }
     } else if (strcmp(key->token, "MENU") == 0) {
         graph_model_set_view(&graph, GRAPH_VIEW_MENU);
+    } else if (strcmp(key->token, "EDIT") == 0) {
+        expression_editor_set(
+            &expression_state,
+            graph.functions[graph.selected_function].expression);
+        just_evaluated = false;
+        page = PAGE_TOOLS;
+        snprintf(message, sizeof message, "EDIT F%u",
+                 (unsigned int)(graph.selected_function + 1u));
+        render_keypad();
+        return;
     } else if (strcmp(key->token, "ANALYZE") == 0) {
         graph_model_set_view(&graph, GRAPH_VIEW_ANALYSIS);
     } else if (strcmp(key->token, "ANMORE") == 0) {
@@ -922,6 +1037,72 @@ static void activate_statistics_key(const calc_key_t *key) {
     render_keypad();
 }
 
+static void activate_settings_key(const char *token) {
+    if (strcmp(token, "BRIGHT-") == 0) {
+        brightness_percent = brightness_percent > 20u
+            ? (uint8_t)(brightness_percent - 20u) : 20u;
+        lcd_set_backlight(brightness_percent);
+        snprintf(message, sizeof message, "LCD %u%%", brightness_percent);
+    } else if (strcmp(token, "BRIGHT+") == 0) {
+        brightness_percent = brightness_percent < 100u
+            ? (uint8_t)(brightness_percent + 20u) : 100u;
+        lcd_set_backlight(brightness_percent);
+        snprintf(message, sizeof message, "LCD %u%%", brightness_percent);
+    } else if (strcmp(token, "BEEP") == 0) {
+        beep_enabled = !beep_enabled;
+        snprintf(message, sizeof message, "BEEP %s",
+                 beep_enabled ? "ON" : "OFF");
+    } else if (strcmp(token, "LAND") == 0 ||
+               strcmp(token, "PORT") == 0) {
+        bool portrait = strcmp(token, "PORT") == 0;
+        lcd_set_orientation(portrait ? LCD_ORIENTATION_PORTRAIT
+                                     : LCD_ORIENTATION_LANDSCAPE);
+        lcd_fill(COL_BG);
+        snprintf(message, sizeof message, "%s",
+                 portrait ? "PORTRAIT" : "LANDSCAPE");
+    } else if (strcmp(token, "STANDARD") == 0) {
+        default_layout = CALCULATOR_LAYOUT_STANDARD;
+        snprintf(message, sizeof message, "START STANDARD");
+    } else if (strcmp(token, "FOCUS") == 0) {
+        default_layout = CALCULATOR_LAYOUT_DATA_FOCUS;
+        snprintf(message, sizeof message, "START FOCUS");
+    } else if (strcmp(token, "FULL") == 0) {
+        default_layout = CALCULATOR_LAYOUT_FULLSCREEN;
+        snprintf(message, sizeof message, "START FULLSCREEN");
+    } else if (strcmp(token, "PREC") == 0) {
+        calculator_precision_t precision = calc_engine_precision();
+        calc_engine_set_precision((calculator_precision_t)(
+            ((unsigned int)precision + 1u) % CALCULATOR_PRECISION_COUNT));
+        snprintf(message, sizeof message, "PRECISION %u",
+                 calculator_precision_digits(calc_engine_precision()));
+    } else if (strcmp(token, "DEFAULT") == 0) {
+        brightness_percent = 100u;
+        beep_enabled = true;
+        default_layout = CALCULATOR_LAYOUT_STANDARD;
+        calc_engine_set_precision(CALCULATOR_PRECISION_HIGH);
+        lcd_set_backlight(brightness_percent);
+        snprintf(message, sizeof message, "DEFAULTS RESTORED");
+    } else if (strcmp(token, "ABOUT") == 0) {
+        snprintf(message, sizeof message, "PICO CALCULATOR 2.0");
+    }
+    render_keypad();
+}
+
+static void activate_number_theory_key(const calc_key_t *key) {
+    uint64_t output = 0;
+    calculator_number_theory_output_t effect =
+        calculator_number_theory_activate(
+            &number_theory, key->token, ans_text, &output,
+            message, sizeof message);
+    if (effect == NUMBER_THEORY_OUTPUT_ANS) {
+        ans = (double)output;
+        snprintf(ans_text, sizeof ans_text, "%llu",
+                 (unsigned long long)output);
+        snprintf(result_text, sizeof result_text, "%s", ans_text);
+    }
+    render_keypad();
+}
+
 static void activate_key(const calc_key_t *key) {
     switch (key->action) {
         case ACT_INSERT:
@@ -936,7 +1117,7 @@ static void activate_key(const calc_key_t *key) {
                 bool calculated = programmer_engine_equals(&programmer);
                 snprintf(message, sizeof message, "%s",
                          calculated ? "OK" : "NO OPERATION");
-                board_beep(calculated ? 1800 : 500, calculated ? 18 : 45);
+                ui_beep(calculated ? 1800 : 500, calculated ? 18 : 45);
             } else {
                 evaluate_expression();
             }
@@ -961,8 +1142,29 @@ static void activate_key(const calc_key_t *key) {
             just_evaluated = false;
             break;
         case ACT_PAGE:
-            page = calculator_navigation_next(page);
+        case ACT_HOME:
+            page = PAGE_LAUNCHER;
+            calculator_widget_set_layout(CALCULATOR_LAYOUT_STANDARD);
+            calculator_program_set_layout(&basic_program_ui,
+                                          CALCULATOR_LAYOUT_STANDARD);
             snprintf(message, sizeof message, "%s", calculator_page_message(page));
+            render_keypad();
+            break;
+        case ACT_NAVIGATE:
+            page = calculator_navigation_target(key->token);
+            snprintf(message, sizeof message, "%s",
+                     calculator_page_message(page));
+            if (page == PAGE_GRAPH) {
+                graph_model_set_view(&graph, GRAPH_VIEW_PLOT);
+                render_graph();
+            } else if (page != PAGE_CIRCUIT) {
+                render_keypad();
+            }
+            break;
+        case ACT_LAYER:
+            page = page == PAGE_SCIENTIFIC ? PAGE_BASIC : PAGE_SCIENTIFIC;
+            snprintf(message, sizeof message, "%s",
+                     page == PAGE_SCIENTIFIC ? "2ND FUNCTIONS" : "CALCULATOR");
             render_keypad();
             break;
         case ACT_ANGLE:
@@ -1050,6 +1252,12 @@ static void activate_key(const calc_key_t *key) {
         case ACT_STATISTICS:
             activate_statistics_key(key);
             break;
+        case ACT_SETTINGS:
+            activate_settings_key(key->token);
+            break;
+        case ACT_NUMBER_THEORY:
+            activate_number_theory_key(key);
+            break;
     }
     render_display();
     mark_persistence_dirty();
@@ -1058,6 +1266,56 @@ static void activate_key(const calc_key_t *key) {
 static const calc_key_t *hit_key(uint16_t x, uint16_t y) {
     calculator_widget_state_t state = current_widget_state();
     return calculator_widget_hit_key(page, &state, x, y);
+}
+
+static bool handle_graph_touch(const touch_point_t *point) {
+    if (page != PAGE_GRAPH || graph.view != GRAPH_VIEW_PLOT) {
+        graph_touch_active = false;
+        return false;
+    }
+    int plot_top = 28;
+    int plot_bottom = calculator_widget_key_top(4) - 4;
+    if (!point->touched) {
+        if (!graph_touch_active) return false;
+        graph_touch_active = false;
+        if (!graph_touch_moved) {
+            double fraction = lcd_width() > 1
+                ? (double)graph_touch_x / (double)(lcd_width() - 1) : 0.0;
+            graph.trace_x = graph.x_center - graph.x_span * 0.5 +
+                            fraction * graph.x_span;
+            graph.trace_enabled = true;
+            snprintf(message, sizeof message, "TOUCH TRACE");
+            render_graph();
+            mark_persistence_dirty();
+        }
+        return true;
+    }
+    if (!graph_touch_active) {
+        if ((int)point->y < plot_top || (int)point->y >= plot_bottom) {
+            return false;
+        }
+        graph_touch_active = true;
+        graph_touch_moved = false;
+        graph_touch_x = point->x;
+        graph_touch_y = point->y;
+        return true;
+    }
+
+    int delta_x = (int)point->x - (int)graph_touch_x;
+    int delta_y = (int)point->y - (int)graph_touch_y;
+    if (delta_x > 2 || delta_x < -2 || delta_y > 2 || delta_y < -2) {
+        int plot_height = plot_bottom - plot_top;
+        calculator_graph_pan(
+            &graph, -(double)delta_x / (double)lcd_width(),
+            plot_height > 0 ? (double)delta_y / (double)plot_height : 0.0);
+        graph_touch_x = point->x;
+        graph_touch_y = point->y;
+        graph_touch_moved = true;
+        snprintf(message, sizeof message, "TOUCH PAN");
+        render_graph();
+        mark_persistence_dirty();
+    }
+    return true;
 }
 
 void calculator_ui_usb_command(const char *command,
@@ -1113,10 +1371,13 @@ void calculator_ui_init(void) {
     calculator_list_init(&history_list);
     programmer_engine_init(&programmer);
     calculator_logic_init(&logic);
+    calculator_circuit_init(&circuit);
     calculator_units_init(&units);
     calculator_complex_init(&complex);
     calculator_statistics_init(&statistics);
+    calculator_number_theory_init(&number_theory);
     calculator_program_init(&basic_program_ui);
+    calculator_touch_input_init(&touch_input);
     calculator_widget_set_layout(CALCULATOR_LAYOUT_STANDARD);
     calculator_program_set_layout(&basic_program_ui,
                                   CALCULATOR_LAYOUT_STANDARD);
@@ -1132,6 +1393,10 @@ void calculator_ui_init(void) {
         }
     }
     apply_persisted_state(&persistence_io_state);
+    page = PAGE_LAUNCHER;
+    calculator_widget_set_layout(CALCULATOR_LAYOUT_STANDARD);
+    calculator_program_set_layout(&basic_program_ui,
+                                  CALCULATOR_LAYOUT_STANDARD);
     if (!touch_is_ready()) {
         snprintf(message, sizeof message, "TOUCH ERROR");
     } else if (factory_reset) {
@@ -1153,38 +1418,61 @@ void calculator_ui_init(void) {
 }
 
 void calculator_ui_task(void) {
+    board_task();
     touch_point_t point;
     if (touch_read(&point) && point.updated) {
-        if (!point.touched) {
-            touch_locked = false;
-        } else if (!touch_locked) {
-            touch_locked = true;
-            if (page == PAGE_BASIC_PROGRAM) {
+        if (page == PAGE_CIRCUIT) {
+            apply_circuit_effects(calculator_circuit_touch(
+                &circuit, point.touched, point.x, point.y));
+            calculator_touch_input_init(&touch_input);
+        } else if (handle_graph_touch(&point)) {
+            calculator_touch_input_init(&touch_input);
+        } else {
+        static const char program_touch_target;
+        const void *target = NULL;
+        if (point.touched) {
+            target = page == PAGE_BASIC_PROGRAM
+                ? (const void *)&program_touch_target
+                : (const void *)hit_key(point.x, point.y);
+        }
+        const void *event_target = NULL;
+        calculator_touch_event_t event = calculator_touch_input_update(
+            &touch_input, point.touched, point.x, point.y,
+            target, &event_target);
+        if (event == CALCULATOR_TOUCH_PRESSED &&
+            page != PAGE_BASIC_PROGRAM && event_target) {
+            draw_key((const calc_key_t *)event_target, true);
+        } else if (event == CALCULATOR_TOUCH_CANCELLED && event_target) {
+            draw_key((const calc_key_t *)event_target, false);
+        } else if (event == CALCULATOR_TOUCH_ACTIVATED) {
+            if (event_target == &program_touch_target) {
                 apply_program_effects(calculator_program_touch(
-                    &basic_program_ui, point.x, point.y));
-            } else {
-                const calc_key_t *key = hit_key(point.x, point.y);
-                if (key) {
-                    draw_key(key, true);
-                    sleep_ms(25);
-                    draw_key(key, false);
-                    activate_key(key);
-                    if (key->action != ACT_EVALUATE) board_beep(1500, 10);
-                }
+                    &basic_program_ui, touch_input.last_x,
+                    touch_input.last_y));
+            } else if (event_target) {
+                const calc_key_t *key = (const calc_key_t *)event_target;
+                draw_key(key, false);
+                activate_key(key);
+                if (key->action != ACT_EVALUATE) ui_beep(1500, 10);
             }
+        }
         }
     }
 
     static bool old_button1;
     static bool old_button2;
     static bool joystick_locked;
+    static absolute_time_t joystick_repeat_at;
     static bool button2_long_handled;
     static absolute_time_t button2_pressed_at;
     static absolute_time_t button2_debounce_until;
     bool button1 = board_button1_pressed();
     bool button2 = board_button2_pressed();
     if (button1 && !old_button1) {
-        if (page == PAGE_BASIC_PROGRAM) {
+        if (page == PAGE_CIRCUIT) {
+            apply_circuit_effects(
+                calculator_circuit_activate_selected(&circuit));
+        } else if (page == PAGE_BASIC_PROGRAM) {
             apply_program_effects(calculator_program_enter(&basic_program_ui));
         } else if (page == PAGE_PROGRAMMER) {
             bool calculated = programmer_engine_equals(&programmer);
@@ -1202,7 +1490,7 @@ void calculator_ui_task(void) {
         } else if (calculator_page_accepts_evaluate(page)) {
             evaluate_expression();
         }
-        if (page != PAGE_BASIC_PROGRAM) {
+        if (page != PAGE_BASIC_PROGRAM && page != PAGE_CIRCUIT) {
             render_display();
             mark_persistence_dirty();
         }
@@ -1232,33 +1520,47 @@ void calculator_ui_task(void) {
         } else if (page == PAGE_GRAPH) {
             snprintf(message, sizeof message, "%s", orientation_message);
             render_graph();
+        } else if (page == PAGE_CIRCUIT) {
+            snprintf(circuit.status, sizeof circuit.status, "%s",
+                     orientation_message);
+            render_circuit();
         } else {
             snprintf(message, sizeof message, "%s", orientation_message);
             render_display();
             render_keypad();
         }
-        board_beep(1200, 20);
+        ui_beep(1200, 20);
     }
     if (!button2 && old_button2 && !button2_long_handled &&
         time_reached(button2_debounce_until)) {
         button2_debounce_until = make_timeout_time_ms(250);
-        calculator_layout_t layout = calculator_widget_cycle_layout();
-        calculator_program_set_layout(&basic_program_ui, layout);
-        const char *layout_message =
-            layout == CALCULATOR_LAYOUT_DATA_FOCUS ? "KEYBOARD SMALL" :
-            (layout == CALCULATOR_LAYOUT_FULLSCREEN
-                 ? "KEYBOARD HIDDEN" : "KEYBOARD LARGE");
-        if (page == PAGE_BASIC_PROGRAM) {
-            snprintf(basic_program_ui.notice,
-                     sizeof basic_program_ui.notice, "%s", layout_message);
-            apply_program_effects(CALCULATOR_PROGRAM_RENDER);
+        if (page == PAGE_CIRCUIT) {
+            if (calculator_circuit_zoom(&circuit, 0,
+                                        lcd_width(), lcd_height())) {
+                mark_persistence_dirty();
+            }
+            render_circuit();
+            ui_beep(1200, 20);
         } else {
-            snprintf(message, sizeof message, "%s", layout_message);
-            if (page == PAGE_GRAPH) {
-                render_graph();
+            calculator_layout_t layout = calculator_widget_cycle_layout();
+            calculator_program_set_layout(&basic_program_ui, layout);
+            const char *layout_message =
+                layout == CALCULATOR_LAYOUT_DATA_FOCUS ? "KEYBOARD SMALL" :
+                (layout == CALCULATOR_LAYOUT_FULLSCREEN
+                     ? "KEYBOARD HIDDEN" : "KEYBOARD LARGE");
+            if (page == PAGE_BASIC_PROGRAM) {
+                snprintf(basic_program_ui.notice,
+                         sizeof basic_program_ui.notice, "%s",
+                         layout_message);
+                apply_program_effects(CALCULATOR_PROGRAM_RENDER);
             } else {
-                render_display();
-                render_keypad();
+                snprintf(message, sizeof message, "%s", layout_message);
+                if (page == PAGE_GRAPH) {
+                    render_graph();
+                } else {
+                    render_display();
+                    render_keypad();
+                }
             }
         }
     }
@@ -1268,11 +1570,22 @@ void calculator_ui_task(void) {
     joystick_state_t joystick = board_read_joystick();
     bool joystick_active = joystick.left || joystick.right ||
                            joystick.up || joystick.down;
+    bool circuit_repeat = page == PAGE_CIRCUIT && joystick_active &&
+                          joystick_locked && time_reached(joystick_repeat_at);
     if (!joystick_active) {
         joystick_locked = false;
-    } else if (!joystick_locked) {
+    } else if (!joystick_locked || circuit_repeat) {
         joystick_locked = true;
-        if (page == PAGE_GRAPH) {
+        if (page == PAGE_CIRCUIT) {
+            int delta_x = joystick.left ? -48 : (joystick.right ? 48 : 0);
+            int delta_y = joystick.up ? -48 : (joystick.down ? 48 : 0);
+            if (calculator_circuit_pan(&circuit, delta_x, delta_y,
+                                       lcd_width(), lcd_height())) {
+                render_circuit();
+                mark_persistence_dirty();
+            }
+            joystick_repeat_at = make_timeout_time_ms(120);
+        } else if (page == PAGE_GRAPH) {
             if (graph.view == GRAPH_VIEW_TABLE) {
                 if (joystick.up) graph_model_scroll_table(&graph, -1.0);
                 if (joystick.down) graph_model_scroll_table(&graph, 1.0);

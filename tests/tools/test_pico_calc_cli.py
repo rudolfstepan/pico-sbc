@@ -8,7 +8,9 @@ from pico_calc_cli import (
     ProtocolError,
     export_state,
     import_state,
+    normalize_circuit,
     normalize_basic_program,
+    synchronize_circuit,
     synchronize_basic_program,
 )
 
@@ -16,6 +18,7 @@ from pico_calc_cli import (
 class FakeClient:
     def __init__(self):
         self.commands = []
+        self.circuit_add_index = 0
 
     def command(self, command):
         self.commands.append(command)
@@ -51,6 +54,43 @@ class FakeClient:
         if command.startswith("GET FAVORITE "):
             index = command[-1]
             return f"OK FAVORITE\t{index}\tsin("
+        if command == "MODULE CIRCUIT INFO":
+            return (
+                "OK CIRCUIT_INFO\tnodes=2\twires=1\tnode_capacity=24"
+                "\twire_capacity=48\tworld_width=1600\tworld_height=1200"
+                "\tviewport_x=20\tviewport_y=30\tzoom=150\tcycle=0"
+                "\tnext_input=1\tnext_output=1\tnext_gate=0"
+            )
+        if command.startswith("MODULE CIRCUIT NODE "):
+            index = int(command.rsplit(" ", 1)[1])
+            if index == 0:
+                return (
+                    "OK CIRCUIT_NODE\tindex=0\tused=1\ttype=INPUT"
+                    "\tx=20\ty=80\tinput=1\toutput=1\tlabel=A"
+                )
+            if index == 1:
+                return (
+                    "OK CIRCUIT_NODE\tindex=1\tused=1\ttype=OUTPUT"
+                    "\tx=220\ty=80\tinput=0\toutput=1\tlabel=Y"
+                )
+            return f"OK CIRCUIT_NODE\tindex={index}\tused=0"
+        if command.startswith("MODULE CIRCUIT WIRE "):
+            index = int(command.rsplit(" ", 1)[1])
+            if index == 0:
+                return (
+                    "OK CIRCUIT_WIRE\tindex=0\tused=1\tsource=0"
+                    "\tdestination=1\tinput=0"
+                )
+            return f"OK CIRCUIT_WIRE\tindex={index}\tused=0"
+        if command.startswith("MODULE CIRCUIT ADD "):
+            parts = command.split()
+            index = self.circuit_add_index
+            self.circuit_add_index += 1
+            return (
+                f"OK CIRCUIT_NODE\tindex={index}\tused=1\ttype={parts[3]}"
+                f"\tx={parts[4]}\ty={parts[5]}\tinput={parts[6]}"
+                f"\toutput=0\tlabel={parts[7]}"
+            )
         if command.startswith("GET"):
             return responses[command]
         return "OK"
@@ -87,6 +127,9 @@ class CliStateTests(unittest.TestCase):
         self.assertEqual(exported["number_format"], {"bits": 8, "fraction": 4})
         self.assertEqual(exported["favorites"]["FAV1"], "sin(")
         self.assertEqual(exported["graph"]["xmin"], -4.0)
+        self.assertEqual(exported["version"], 6)
+        self.assertEqual(exported["circuit"]["zoom"], 150)
+        self.assertTrue(exported["circuit"]["nodes"][1]["output"])
 
     def test_import_state(self):
         client = FakeClient()
@@ -169,6 +212,60 @@ class CliStateTests(unittest.TestCase):
 
         with self.assertRaises(ProtocolError):
             normalize_basic_program("PRINT 1")
+
+    def test_circuit_validation_and_synchronization(self):
+        circuit = normalize_circuit({
+            "viewport_x": 10,
+            "viewport_y": 20,
+            "zoom": 200,
+            "next_input": 1,
+            "next_output": 1,
+            "next_gate": 1,
+            "nodes": [
+                {"id": 4, "type": "INPUT", "x": 20, "y": 80,
+                 "input": 1, "label": "A"},
+                {"id": 7, "type": "NOT", "x": 160, "y": 80,
+                 "input": 0, "label": "G1"},
+                {"id": 9, "type": "OUTPUT", "x": 300, "y": 80,
+                 "input": 0, "label": "Y"},
+            ],
+            "wires": [
+                {"id": 2, "source": 4, "destination": 7, "input": 0},
+                {"id": 5, "source": 7, "destination": 9, "input": 0},
+            ],
+        })
+        self.assertFalse(circuit["nodes"][2]["output"])
+        client = FakeClient()
+        synchronize_circuit(client, circuit)
+        self.assertIn("MODULE CIRCUIT CLEAR", client.commands)
+        self.assertIn("MODULE CIRCUIT CONNECT 0 1 0", client.commands)
+        self.assertIn("MODULE CIRCUIT CONNECT 1 2 0", client.commands)
+        self.assertEqual(client.commands[-1], "MODULE CIRCUIT VIEW 10 20 200")
+
+        invalid = dict(circuit)
+        invalid["wires"] = list(circuit["wires"]) + [
+            {"id": 6, "source": 9, "destination": 4, "input": 0}
+        ]
+        untouched = FakeClient()
+        with self.assertRaises(ProtocolError):
+            synchronize_circuit(untouched, invalid)
+        self.assertNotIn("MODULE CIRCUIT CLEAR", untouched.commands)
+
+        cyclic = {
+            "next_gate": 2,
+            "nodes": [
+                {"id": 0, "type": "NOT", "x": 20, "y": 40,
+                 "input": 0, "label": "G1"},
+                {"id": 1, "type": "NOT", "x": 180, "y": 40,
+                 "input": 0, "label": "G2"},
+            ],
+            "wires": [
+                {"id": 0, "source": 0, "destination": 1, "input": 0},
+                {"id": 1, "source": 1, "destination": 0, "input": 0},
+            ],
+        }
+        with self.assertRaisesRegex(ProtocolError, "Zyklus"):
+            normalize_circuit(cyclic)
 
 
 if __name__ == "__main__":

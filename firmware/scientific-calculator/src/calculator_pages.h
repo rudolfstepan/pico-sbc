@@ -3,6 +3,7 @@
 
 #include "calculator_ui_types.h"
 #include "calculator_logic.h"
+#include "calculator_number_theory.h"
 #include "calculator_complex.h"
 #include "calculator_precision.h"
 #include "calculator_statistics.h"
@@ -45,5 +46,13 @@ void calculator_page_render_complex(const calculator_complex_t *complex,
                                     bool degrees, const char *message);
 void calculator_page_render_statistics(const calculator_statistics_t *stats,
                                        const char *message);
+void calculator_page_render_launcher(const char *message);
+void calculator_page_render_settings(uint8_t brightness_percent,
+                                     bool beep_enabled, bool portrait,
+                                     calculator_layout_t default_layout,
+                                     calculator_precision_t precision,
+                                     const char *message);
+void calculator_page_render_number_theory(
+    const calculator_number_theory_t *tool, const char *message);
 
 #endif

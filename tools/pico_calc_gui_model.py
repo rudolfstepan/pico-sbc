@@ -8,10 +8,18 @@ import time
 from typing import Any, Callable
 
 from pico_calc_cli import (
+    CIRCUIT_GATE_INPUTS,
+    CIRCUIT_GATE_TYPES,
+    CIRCUIT_NODE_CAPACITY,
+    CIRCUIT_WIRE_CAPACITY,
+    CIRCUIT_WORLD_HEIGHT,
+    CIRCUIT_WORLD_WIDTH,
+    CIRCUIT_ZOOM_LEVELS,
     ProtocolError,
     export_state,
     fields,
     import_state,
+    normalize_circuit,
     normalize_basic_program,
     read_basic_output,
     synchronize_basic_program,
@@ -49,9 +57,9 @@ def read_device_snapshot(client: Any) -> DeviceSnapshot:
         protocol_version = int(info.get("protocol", "0"))
     except ValueError as error:
         raise ProtocolError("Ungueltige Protokollversion") from error
-    if protocol_version < 4:
+    if protocol_version < 5:
         raise ProtocolError(
-            "Firmware 1.6.0 mit USB-Protokoll 4 oder neuer erforderlich"
+            "Firmware 2.2.0 mit USB-Protokoll 5 oder neuer erforderlich"
         )
     diagnostics = parse_properties(client.command("DIAG"), "DIAG")
     return DeviceSnapshot(
@@ -151,6 +159,215 @@ def format_number(value: Any) -> str:
     return f"{float(value):.12g}"
 
 
+def create_circuit(demo: bool = False) -> dict[str, Any]:
+    circuit: dict[str, Any] = {
+        "world_width": CIRCUIT_WORLD_WIDTH,
+        "world_height": CIRCUIT_WORLD_HEIGHT,
+        "viewport_x": 0,
+        "viewport_y": 0,
+        "zoom": 150,
+        "next_input": 0,
+        "next_output": 0,
+        "next_gate": 0,
+        "nodes": [],
+        "wires": [],
+    }
+    if not demo:
+        return normalize_circuit(circuit)
+    circuit.update({
+        "next_input": 2,
+        "next_output": 1,
+        "next_gate": 1,
+        "nodes": [
+            {"id": 0, "type": "INPUT", "x": 24, "y": 72,
+             "input": False, "label": "A"},
+            {"id": 1, "type": "INPUT", "x": 24, "y": 198,
+             "input": False, "label": "B"},
+            {"id": 2, "type": "AND", "x": 190, "y": 136,
+             "input": False, "label": "G1"},
+            {"id": 3, "type": "OUTPUT", "x": 358, "y": 136,
+             "input": False, "label": "Y"},
+        ],
+        "wires": [
+            {"id": 0, "source": 0, "destination": 2, "input": 0},
+            {"id": 1, "source": 1, "destination": 2, "input": 1},
+            {"id": 2, "source": 2, "destination": 3, "input": 0},
+        ],
+    })
+    return normalize_circuit(circuit)
+
+
+def _free_circuit_id(items: list[dict[str, Any]], capacity: int) -> int:
+    used = {int(item["id"]) for item in items}
+    for candidate in range(capacity):
+        if candidate not in used:
+            return candidate
+    raise ProtocolError("Schaltplankapazitaet erreicht")
+
+
+def _next_circuit_label(circuit: dict[str, Any], gate_type: str) -> str:
+    if gate_type == "INPUT":
+        index = int(circuit["next_input"])
+        circuit["next_input"] = index + 1
+        return chr(ord("A") + index) if index < 26 else f"I{index + 1}"
+    if gate_type == "OUTPUT":
+        index = int(circuit["next_output"])
+        circuit["next_output"] = index + 1
+        return chr(ord("Y") + index) if index < 2 else f"O{index + 1}"
+    index = int(circuit["next_gate"])
+    circuit["next_gate"] = index + 1
+    return f"G{index + 1}"
+
+
+def add_circuit_node(circuit: Any, gate_type: str,
+                     x: int, y: int) -> tuple[dict[str, Any], int]:
+    updated = normalize_circuit(circuit)
+    normalized_type = gate_type.upper()
+    if normalized_type not in CIRCUIT_GATE_TYPES:
+        raise ProtocolError(f"Unbekannter Gattertyp: {gate_type}")
+    node_id = _free_circuit_id(updated["nodes"], CIRCUIT_NODE_CAPACITY)
+    label = _next_circuit_label(updated, normalized_type)
+    if len(label) > 7:
+        raise ProtocolError("Keine weitere kurze Gatterbezeichnung verfuegbar")
+    updated["nodes"].append({
+        "id": node_id,
+        "type": normalized_type,
+        "x": int(x),
+        "y": int(y),
+        "input": False,
+        "label": label,
+    })
+    return normalize_circuit(updated), node_id
+
+
+def move_circuit_node(circuit: Any, node_id: int,
+                      x: int, y: int) -> dict[str, Any]:
+    updated = normalize_circuit(circuit)
+    node = next((item for item in updated["nodes"]
+                 if item["id"] == node_id), None)
+    if node is None:
+        raise ProtocolError("Unbekannter Schaltplanknoten")
+    node["x"] = max(0, min(CIRCUIT_WORLD_WIDTH, int(x)))
+    node["y"] = max(0, min(CIRCUIT_WORLD_HEIGHT, int(y)))
+    return normalize_circuit(updated)
+
+
+def remove_circuit_node(circuit: Any, node_id: int) -> dict[str, Any]:
+    updated = normalize_circuit(circuit)
+    if not any(node["id"] == node_id for node in updated["nodes"]):
+        raise ProtocolError("Unbekannter Schaltplanknoten")
+    updated["nodes"] = [node for node in updated["nodes"]
+                        if node["id"] != node_id]
+    updated["wires"] = [wire for wire in updated["wires"]
+                        if wire["source"] != node_id and
+                        wire["destination"] != node_id]
+    for index, wire in enumerate(updated["wires"]):
+        wire["id"] = index
+    return normalize_circuit(updated)
+
+
+def set_circuit_node_type(circuit: Any, node_id: int,
+                          gate_type: str) -> dict[str, Any]:
+    updated = normalize_circuit(circuit)
+    normalized_type = gate_type.upper()
+    if normalized_type not in CIRCUIT_GATE_TYPES:
+        raise ProtocolError(f"Unbekannter Gattertyp: {gate_type}")
+    node = next((item for item in updated["nodes"]
+                 if item["id"] == node_id), None)
+    if node is None:
+        raise ProtocolError("Unbekannter Schaltplanknoten")
+    if node["type"] == normalized_type:
+        return updated
+    node["type"] = normalized_type
+    node["label"] = _next_circuit_label(updated, normalized_type)
+    input_count = CIRCUIT_GATE_INPUTS[normalized_type]
+    updated["wires"] = [
+        wire for wire in updated["wires"]
+        if not (wire["destination"] == node_id and
+                wire["input"] >= input_count) and
+        not (wire["source"] == node_id and normalized_type == "OUTPUT")
+    ]
+    for index, wire in enumerate(updated["wires"]):
+        wire["id"] = index
+    return normalize_circuit(updated)
+
+
+def set_circuit_input(circuit: Any, node_id: int,
+                      value: bool) -> dict[str, Any]:
+    updated = normalize_circuit(circuit)
+    node = next((item for item in updated["nodes"]
+                 if item["id"] == node_id), None)
+    if node is None or node["type"] != "INPUT":
+        raise ProtocolError("Nur INPUT-Knoten besitzen einen Schalter")
+    node["input"] = bool(value)
+    return normalize_circuit(updated)
+
+
+def set_circuit_label(circuit: Any, node_id: int,
+                      label: str) -> dict[str, Any]:
+    updated = normalize_circuit(circuit)
+    node = next((item for item in updated["nodes"]
+                 if item["id"] == node_id), None)
+    if node is None:
+        raise ProtocolError("Unbekannter Schaltplanknoten")
+    node["label"] = label.strip()
+    return normalize_circuit(updated)
+
+
+def connect_circuit_nodes(circuit: Any, source: int, destination: int,
+                          destination_input: int) -> dict[str, Any]:
+    updated = normalize_circuit(circuit)
+    nodes = {node["id"]: node for node in updated["nodes"]}
+    if source not in nodes or destination not in nodes:
+        raise ProtocolError("Unbekannter Schaltplanknoten")
+    if (source == destination or nodes[source]["type"] == "OUTPUT" or
+            not 0 <= destination_input <
+            CIRCUIT_GATE_INPUTS[nodes[destination]["type"]]):
+        raise ProtocolError("Ungueltige Gatterverbindung")
+    updated["wires"] = [
+        wire for wire in updated["wires"]
+        if not (wire["destination"] == destination and
+                wire["input"] == destination_input)
+    ]
+    wire_id = _free_circuit_id(updated["wires"], CIRCUIT_WIRE_CAPACITY)
+    updated["wires"].append({
+        "id": wire_id,
+        "source": source,
+        "destination": destination,
+        "input": destination_input,
+    })
+    return normalize_circuit(updated)
+
+
+def disconnect_circuit_input(circuit: Any, destination: int,
+                             destination_input: int) -> dict[str, Any]:
+    updated = normalize_circuit(circuit)
+    original_count = len(updated["wires"])
+    updated["wires"] = [
+        wire for wire in updated["wires"]
+        if not (wire["destination"] == destination and
+                wire["input"] == destination_input)
+    ]
+    if len(updated["wires"]) == original_count:
+        raise ProtocolError("Dieser Eingang ist nicht verbunden")
+    for index, wire in enumerate(updated["wires"]):
+        wire["id"] = index
+    return normalize_circuit(updated)
+
+
+def set_circuit_view(circuit: Any, viewport_x: int, viewport_y: int,
+                     zoom: int) -> dict[str, Any]:
+    updated = normalize_circuit(circuit)
+    if zoom not in CIRCUIT_ZOOM_LEVELS:
+        raise ProtocolError("Ungueltiger Schaltplan-Zoom")
+    updated["viewport_x"] = max(
+        0, min(CIRCUIT_WORLD_WIDTH, int(viewport_x)))
+    updated["viewport_y"] = max(
+        0, min(CIRCUIT_WORLD_HEIGHT, int(viewport_y)))
+    updated["zoom"] = zoom
+    return normalize_circuit(updated)
+
+
 def parse_integer(text: str, base: str = "DEC") -> int:
     cleaned = text.strip().replace("_", "")
     bases = {"BIN": 2, "DEC": 10, "HEX": 16}
@@ -187,6 +404,42 @@ def programmer_operation(client: Any, action: str, value: int, bits: int,
     if not required.issubset(result):
         raise ProtocolError("Unvollstaendige PROGRAMMER-Antwort")
     int(result["value"])
+    return result
+
+
+def number_theory_operation(client: Any, action: str, a: int,
+                            b: int | None = None,
+                            modulus: int | None = None) -> dict[str, str]:
+    normalized = action.upper()
+    allowed = {"GCD", "LCM", "PRIME", "NEXT", "PREV",
+               "FACTOR", "PHI", "MOD", "POW"}
+    maximum = (1 << 64) - 1
+    try:
+        a_value = int(a)
+    except (TypeError, ValueError) as error:
+        raise ProtocolError("Ungueltiger Operand A") from error
+    if normalized not in allowed or not 0 <= a_value <= maximum:
+        raise ProtocolError("Ungueltige Zahlentheorie-Operation")
+    arguments = ["MODULE", "NUMBER", normalized, str(a_value)]
+    if normalized in {"GCD", "LCM", "MOD", "POW"}:
+        try:
+            b_value = int(b) if b is not None else -1
+        except (TypeError, ValueError) as error:
+            raise ProtocolError("Ungueltiger Operand B") from error
+        if not 0 <= b_value <= maximum:
+            raise ProtocolError("Operand B fehlt oder ist ungueltig")
+        arguments.append(str(b_value))
+    if normalized == "POW":
+        try:
+            modulus_value = int(modulus) if modulus is not None else 0
+        except (TypeError, ValueError) as error:
+            raise ProtocolError("Ungueltiger Modulus") from error
+        if not 1 <= modulus_value <= maximum:
+            raise ProtocolError("Modulus muss zwischen 1 und 2^64-1 liegen")
+        arguments.append(str(modulus_value))
+    result = parse_properties(client.command(" ".join(arguments)), "NUMBER")
+    if result.get("action", "").upper() != normalized or "value" not in result:
+        raise ProtocolError("Unvollstaendige NUMBER-Antwort")
     return result
 
 

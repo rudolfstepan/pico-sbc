@@ -43,3 +43,5 @@ joystick_state_t board_read_joystick(void);
 void board_led1(bool on);
 void board_led2(bool on);
 void board_beep(uint16_t frequency_hz, uint16_t duration_ms);
+void board_beep_async(uint16_t frequency_hz, uint16_t duration_ms);
+void board_task(void);

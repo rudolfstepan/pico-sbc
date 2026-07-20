@@ -7,6 +7,8 @@
 
 static uint slice_buzzer;
 static uint channel_buzzer;
+static bool buzzer_active;
+static absolute_time_t buzzer_deadline;
 
 static void buzzer_idle(void) {
     pwm_set_enabled(slice_buzzer, false);
@@ -14,6 +16,7 @@ static void buzzer_idle(void) {
     gpio_set_function(PIN_BUZZER, GPIO_FUNC_SIO);
     gpio_set_dir(PIN_BUZZER, GPIO_OUT);
     gpio_put(PIN_BUZZER, 0);
+    buzzer_active = false;
 }
 
 void board_init(void) {
@@ -75,7 +78,7 @@ void board_led2(bool on) {
     gpio_put(PIN_LED2, on);
 }
 
-void board_beep(uint16_t frequency_hz, uint16_t duration_ms) {
+void board_beep_async(uint16_t frequency_hz, uint16_t duration_ms) {
     if (frequency_hz == 0 || duration_ms == 0) {
         return;
     }
@@ -97,6 +100,16 @@ void board_beep(uint16_t frequency_hz, uint16_t duration_ms) {
     pwm_set_wrap(slice_buzzer, (uint16_t)wrap);
     pwm_set_chan_level(slice_buzzer, channel_buzzer, (uint16_t)(wrap / 2u));
     pwm_set_enabled(slice_buzzer, true);
+    buzzer_active = true;
+    buzzer_deadline = make_timeout_time_ms(duration_ms);
+}
+
+void board_task(void) {
+    if (buzzer_active && time_reached(buzzer_deadline)) buzzer_idle();
+}
+
+void board_beep(uint16_t frequency_hz, uint16_t duration_ms) {
+    board_beep_async(frequency_hz, duration_ms);
     sleep_ms(duration_ms);
     buzzer_idle();
 }

@@ -6,16 +6,21 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "tools"))
 
 from pico_calc_cli import ProtocolError
 from pico_calc_gui_model import (
+    add_circuit_node,
     analyze_graph,
     analyze_statistics,
+    connect_circuit_nodes,
     continue_basic_program,
     convert_unit,
+    create_circuit,
+    disconnect_circuit_input,
     evaluate_complex,
     evaluate_expression,
     evaluate_logic,
     format_number,
     inspect_ieee,
     inspect_number_format,
+    number_theory_operation,
     parse_properties,
     parse_integer,
     programmer_operation,
@@ -24,7 +29,11 @@ from pico_calc_gui_model import (
     read_logic_form,
     read_truth_table,
     read_unit_category,
+    remove_circuit_node,
     run_basic_program,
+    set_circuit_input,
+    set_circuit_node_type,
+    set_circuit_view,
     stop_basic_program,
     synchronize_statistics,
     synchronize_symbols,
@@ -38,7 +47,7 @@ class FakeClient:
     def command(self, command):
         self.commands.append(command)
         responses = {
-            "INFO": "OK INFO\tprotocol=4\tfirmware=1.6.0\tmodel=scientific-calculator",
+            "INFO": "OK INFO\tprotocol=5\tfirmware=2.2.0\tmodel=scientific-calculator",
             "DIAG": (
                 "OK DIAG\tpage=0\tangle=DEG\tprecision=HIGH"
                 "\thistory=1\tstats=1\tmode=1"
@@ -127,6 +136,19 @@ class FakeClient:
             "MODULE COMPLEX DEG 1+2i": (
                 "OK COMPLEX\treal=1\timag=2\tcart=1+2i\tpolar=2.236 < 63 deg"
             ),
+            "MODULE NUMBER GCD 84 30": (
+                "OK NUMBER\taction=GCD\ta=84\tb=30\tvalue=6"
+            ),
+            "MODULE NUMBER PRIME 97": (
+                "OK NUMBER\taction=PRIME\tinput=97\tvalue=1"
+            ),
+            "MODULE NUMBER FACTOR 360": (
+                "OK NUMBER\taction=FACTOR\tinput=360\tcount=6"
+                "\tcomplete=1\tvalue=2*2*2*3*3*5"
+            ),
+            "MODULE NUMBER POW 7 128 13": (
+                "OK NUMBER\taction=POW\ta=7\tb=128\tmodulus=13\tvalue=3"
+            ),
             "STAT SUMMARY X": (
                 "OK STATS_SUMMARY\taxis=X\tcount=2\tmean=1.5\tmedian=1.5"
                 "\tmin=1\tmax=2\tpopstd=0.5\tsamplestd=0.707"
@@ -144,32 +166,61 @@ class FakeClient:
             return f"OK FUNC\t{command[-2:]}\tx+1"
         if command.startswith("GET FAVORITE "):
             return f"OK FAVORITE\t{command[-1]}\tsin("
+        if command == "MODULE CIRCUIT INFO":
+            return (
+                "OK CIRCUIT_INFO\tnodes=2\twires=1\tnode_capacity=24"
+                "\twire_capacity=48\tworld_width=1600\tworld_height=1200"
+                "\tviewport_x=0\tviewport_y=0\tzoom=150\tcycle=0"
+                "\tnext_input=1\tnext_output=1\tnext_gate=0"
+            )
+        if command.startswith("MODULE CIRCUIT NODE "):
+            index = int(command.rsplit(" ", 1)[1])
+            if index == 0:
+                return (
+                    "OK CIRCUIT_NODE\tindex=0\tused=1\ttype=INPUT"
+                    "\tx=20\ty=80\tinput=1\toutput=1\tlabel=A"
+                )
+            if index == 1:
+                return (
+                    "OK CIRCUIT_NODE\tindex=1\tused=1\ttype=OUTPUT"
+                    "\tx=220\ty=80\tinput=0\toutput=1\tlabel=Y"
+                )
+            return f"OK CIRCUIT_NODE\tindex={index}\tused=0"
+        if command.startswith("MODULE CIRCUIT WIRE "):
+            index = int(command.rsplit(" ", 1)[1])
+            if index == 0:
+                return (
+                    "OK CIRCUIT_WIRE\tindex=0\tused=1\tsource=0"
+                    "\tdestination=1\tinput=0"
+                )
+            return f"OK CIRCUIT_WIRE\tindex={index}\tused=0"
         return responses.get(command, "OK")
 
 
 class GuiModelTests(unittest.TestCase):
     def test_parse_properties(self):
         parsed = parse_properties(
-            "OK INFO\tprotocol=4\tfirmware=1.6.0", "INFO"
+            "OK INFO\tprotocol=5\tfirmware=2.2.0", "INFO"
         )
-        self.assertEqual(parsed, {"protocol": "4", "firmware": "1.6.0"})
+        self.assertEqual(parsed, {"protocol": "5", "firmware": "2.2.0"})
         with self.assertRaises(ProtocolError):
             parse_properties("OK INFO\tbroken", "INFO")
 
     def test_read_device_snapshot(self):
         snapshot = read_device_snapshot(FakeClient())
-        self.assertEqual(snapshot.info["firmware"], "1.6.0")
+        self.assertEqual(snapshot.info["firmware"], "2.2.0")
         self.assertEqual(snapshot.diagnostics["angle"], "DEG")
         self.assertEqual(snapshot.state["precision"], "HIGH")
         self.assertEqual(snapshot.state["history"][0]["expression"], "6*7")
         self.assertEqual(snapshot.state["program"], ["10 END"])
+        self.assertTrue(snapshot.state["circuit"]["nodes"][1]["output"])
 
         old_client = FakeClient()
         old_client.command = lambda command: (
             "OK INFO\tprotocol=3\tfirmware=1.5.0"
             if command == "INFO" else "OK"
         )
-        with self.assertRaisesRegex(ProtocolError, "Protokoll 4"):
+        with self.assertRaisesRegex(ProtocolError, "Protokoll 5"):
             read_device_snapshot(old_client)
 
     def test_evaluate_expression(self):
@@ -222,6 +273,36 @@ class GuiModelTests(unittest.TestCase):
         self.assertEqual(formatted["fixed"], "-0.0625")
         ieee = inspect_ieee(client, 32, 0x3F800000)
         self.assertEqual(ieee["value"], "1")
+        self.assertEqual(number_theory_operation(
+            client, "GCD", 84, 30)["value"], "6")
+        self.assertEqual(number_theory_operation(
+            client, "PRIME", 97)["value"], "1")
+        self.assertEqual(number_theory_operation(
+            client, "FACTOR", 360)["count"], "6")
+        self.assertEqual(number_theory_operation(
+            client, "POW", 7, 128, 13)["value"], "3")
+        with self.assertRaises(ProtocolError):
+            number_theory_operation(client, "POW", 7, 128, 0)
+
+    def test_circuit_editor_model(self):
+        circuit = create_circuit()
+        circuit, input_id = add_circuit_node(circuit, "INPUT", 20, 80)
+        circuit, gate_id = add_circuit_node(circuit, "AND", 180, 80)
+        circuit, output_id = add_circuit_node(circuit, "OUTPUT", 340, 80)
+        circuit = connect_circuit_nodes(circuit, input_id, gate_id, 0)
+        circuit = connect_circuit_nodes(circuit, input_id, gate_id, 1)
+        circuit = connect_circuit_nodes(circuit, gate_id, output_id, 0)
+        circuit = set_circuit_input(circuit, input_id, True)
+        self.assertTrue(circuit["nodes"][2]["output"])
+        circuit = set_circuit_node_type(circuit, gate_id, "NOT")
+        self.assertFalse(circuit["nodes"][2]["output"])
+        self.assertEqual(len(circuit["wires"]), 2)
+        circuit = disconnect_circuit_input(circuit, output_id, 0)
+        self.assertFalse(circuit["nodes"][2]["output"])
+        circuit = set_circuit_view(circuit, 100, 120, 200)
+        self.assertEqual(circuit["zoom"], 200)
+        circuit = remove_circuit_node(circuit, gate_id)
+        self.assertEqual(len(circuit["nodes"]), 2)
 
     def test_graph_logic_units_complex_and_statistics(self):
         client = FakeClient()

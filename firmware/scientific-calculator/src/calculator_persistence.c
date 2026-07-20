@@ -183,10 +183,75 @@ static bool statistics_is_valid(const statistics_dataset_t *statistics) {
     return true;
 }
 
+static bool circuit_is_valid(const circuit_model_t *circuit,
+                             uint16_t viewport_x, uint16_t viewport_y,
+                             uint8_t zoom_index) {
+    if (!circuit || viewport_x > CIRCUIT_WORLD_WIDTH ||
+        viewport_y > CIRCUIT_WORLD_HEIGHT || zoom_index >= 3u) {
+        return false;
+    }
+    uint8_t indegree[CIRCUIT_NODE_CAPACITY] = {0};
+    bool occupied_input[CIRCUIT_NODE_CAPACITY][2] = {{false}};
+    size_t used_nodes = 0u;
+    for (size_t i = 0; i < CIRCUIT_NODE_CAPACITY; ++i) {
+        const circuit_node_t *node = &circuit->nodes[i];
+        if (!node->used) continue;
+        ++used_nodes;
+        if (node->type >= CIRCUIT_GATE_COUNT || node->x < 0 || node->y < 0 ||
+            node->x > CIRCUIT_WORLD_WIDTH ||
+            node->y > CIRCUIT_WORLD_HEIGHT ||
+            !string_is_terminated(node->label, sizeof node->label)) {
+            return false;
+        }
+    }
+    for (size_t i = 0; i < CIRCUIT_WIRE_CAPACITY; ++i) {
+        const circuit_wire_t *wire = &circuit->wires[i];
+        if (!wire->used) continue;
+        if (wire->source >= CIRCUIT_NODE_CAPACITY ||
+            wire->destination >= CIRCUIT_NODE_CAPACITY ||
+            !circuit->nodes[wire->source].used ||
+            !circuit->nodes[wire->destination].used ||
+            !circuit_gate_has_output(circuit->nodes[wire->source].type) ||
+            wire->destination_input >= 2u ||
+            wire->destination_input >= circuit_gate_input_count(
+                circuit->nodes[wire->destination].type) ||
+            occupied_input[wire->destination][wire->destination_input]) {
+            return false;
+        }
+        occupied_input[wire->destination][wire->destination_input] = true;
+        ++indegree[wire->destination];
+    }
+
+    uint8_t queue[CIRCUIT_NODE_CAPACITY];
+    size_t head = 0u;
+    size_t tail = 0u;
+    for (uint8_t node = 0; node < CIRCUIT_NODE_CAPACITY; ++node) {
+        if (circuit->nodes[node].used && indegree[node] == 0u) {
+            queue[tail++] = node;
+        }
+    }
+    size_t processed = 0u;
+    while (head < tail) {
+        uint8_t source = queue[head++];
+        ++processed;
+        for (size_t i = 0; i < CIRCUIT_WIRE_CAPACITY; ++i) {
+            const circuit_wire_t *wire = &circuit->wires[i];
+            if (!wire->used || wire->source != source) continue;
+            if (--indegree[wire->destination] == 0u) {
+                queue[tail++] = wire->destination;
+            }
+        }
+    }
+    return processed == used_nodes;
+}
+
 static bool state_is_valid(const calculator_persisted_state_t *state) {
     if (!state || state->page < PAGE_BASIC ||
-        state->page > PAGE_BASIC_PROGRAM ||
+        state->page > PAGE_CIRCUIT ||
         state->precision >= CALCULATOR_PRECISION_COUNT ||
+        state->brightness_percent < 20u ||
+        state->brightness_percent > 100u ||
+        state->default_layout >= CALCULATOR_LAYOUT_COUNT ||
         !format_bits_valid(state->format_bits) ||
         state->fixed_fraction_bits >= state->format_bits ||
         !isfinite(state->ans) || !isfinite(state->memory_value) ||
@@ -230,13 +295,21 @@ static bool state_is_valid(const calculator_persisted_state_t *state) {
     }
     return graph_is_valid(&state->graph, &state->symbols) &&
            statistics_is_valid(&state->statistics) &&
-           basic_program_is_valid(&state->basic_program);
+           basic_program_is_valid(&state->basic_program) &&
+           circuit_is_valid(&state->circuit,
+                            state->circuit_viewport_x,
+                            state->circuit_viewport_y,
+                            state->circuit_zoom_index);
 }
 
 void calculator_persistence_defaults(calculator_persisted_state_t *state) {
     memset(state, 0, sizeof *state);
     state->degrees = true;
     state->precision = CALCULATOR_PRECISION_HIGH;
+    state->brightness_percent = 100u;
+    state->beep_enabled = true;
+    state->portrait = false;
+    state->default_layout = CALCULATOR_LAYOUT_STANDARD;
     state->page = PAGE_BASIC;
     state->format_bits = 32;
     state->fixed_fraction_bits = 16;
@@ -246,6 +319,8 @@ void calculator_persistence_defaults(calculator_persisted_state_t *state) {
     calculator_symbols_init(&state->symbols);
     graph_model_init(&state->graph);
     graph_model_reset_range(&state->graph);
+    circuit_model_init(&state->circuit);
+    state->circuit_zoom_index = 1u;
 }
 
 static void write_payload(writer_t *writer,
@@ -338,6 +413,32 @@ static void write_payload(writer_t *writer,
         write_decimal_text(writer, state->symbols.variable_text[i]);
     }
     write_u8(writer, (uint8_t)state->precision);
+    write_u8(writer, state->brightness_percent);
+    write_u8(writer, state->beep_enabled ? 1u : 0u);
+    write_u8(writer, state->portrait ? 1u : 0u);
+    write_u8(writer, (uint8_t)state->default_layout);
+    write_u16(writer, state->circuit_viewport_x);
+    write_u16(writer, state->circuit_viewport_y);
+    write_u8(writer, state->circuit.next_input_label);
+    write_u8(writer, state->circuit.next_output_label);
+    write_u8(writer, state->circuit.next_gate_label);
+    write_u8(writer, (uint8_t)(state->circuit_zoom_index + 1u));
+    for (size_t i = 0; i < CIRCUIT_NODE_CAPACITY; ++i) {
+        const circuit_node_t *node = &state->circuit.nodes[i];
+        write_u8(writer, node->used ? 1u : 0u);
+        write_u8(writer, (uint8_t)node->type);
+        write_u16(writer, (uint16_t)node->x);
+        write_u16(writer, (uint16_t)node->y);
+        write_u8(writer, node->input_value ? 1u : 0u);
+        write_bytes(writer, node->label, sizeof node->label);
+    }
+    for (size_t i = 0; i < CIRCUIT_WIRE_CAPACITY; ++i) {
+        const circuit_wire_t *wire = &state->circuit.wires[i];
+        write_u8(writer, wire->used ? 1u : 0u);
+        write_u8(writer, wire->source);
+        write_u8(writer, wire->destination);
+        write_u8(writer, wire->destination_input);
+    }
 }
 
 static uint32_t crc32_update(uint32_t crc, const uint8_t *data, size_t size) {
@@ -487,6 +588,35 @@ static void read_payload(reader_t *reader,
                           sizeof state->symbols.variable_text[i]);
     }
     state->precision = (calculator_precision_t)read_u8(reader);
+    state->brightness_percent = read_u8(reader);
+    state->beep_enabled = read_u8(reader) != 0;
+    state->portrait = read_u8(reader) != 0;
+    state->default_layout = (calculator_layout_t)read_u8(reader);
+    state->circuit_viewport_x = read_u16(reader);
+    state->circuit_viewport_y = read_u16(reader);
+    circuit_model_clear(&state->circuit);
+    state->circuit.next_input_label = read_u8(reader);
+    state->circuit.next_output_label = read_u8(reader);
+    state->circuit.next_gate_label = read_u8(reader);
+    uint8_t stored_zoom = read_u8(reader);
+    state->circuit_zoom_index = stored_zoom == 0u
+        ? 1u : (uint8_t)(stored_zoom - 1u);
+    for (size_t i = 0; i < CIRCUIT_NODE_CAPACITY; ++i) {
+        circuit_node_t *node = &state->circuit.nodes[i];
+        node->used = read_u8(reader) != 0;
+        node->type = (circuit_gate_type_t)read_u8(reader);
+        node->x = (int16_t)read_u16(reader);
+        node->y = (int16_t)read_u16(reader);
+        node->input_value = read_u8(reader) != 0;
+        read_bytes(reader, node->label, sizeof node->label);
+    }
+    for (size_t i = 0; i < CIRCUIT_WIRE_CAPACITY; ++i) {
+        circuit_wire_t *wire = &state->circuit.wires[i];
+        wire->used = read_u8(reader) != 0;
+        wire->source = read_u8(reader);
+        wire->destination = read_u8(reader);
+        wire->destination_input = read_u8(reader);
+    }
 }
 
 static bool record_is_erased(const uint8_t *record, size_t size) {
@@ -542,6 +672,7 @@ calculator_persistence_status_t calculator_persistence_decode(
         !state_is_valid(&decoded)) {
         return CALCULATOR_PERSISTENCE_CORRUPT;
     }
+    circuit_model_evaluate(&decoded.circuit);
     if (state) *state = decoded;
     if (sequence) *sequence = decoded_sequence;
     return CALCULATOR_PERSISTENCE_VALID;

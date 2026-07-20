@@ -41,14 +41,24 @@ typedef struct {
     uint8_t logic_assignment;
     unit_category_t unit_category;
     calculator_units_view_t units_view;
+    calculator_units_selector_t units_selector;
+    size_t units_selector_offset;
+    size_t units_constant_index;
+    size_t units_from_index;
+    size_t units_to_index;
     bool complex_polar;
     bool complex_history;
     bool statistics_two_variable;
     bool statistics_active_y;
     calculator_statistics_view_t statistics_view;
+    uint8_t brightness_percent;
+    bool beep_enabled;
+    calculator_layout_t default_layout;
+    uint8_t number_theory_input;
     const char *favorites[6];
 } calculator_widget_state_t;
 
+void calculator_widget_set_page(calc_page_t page);
 void calculator_widget_set_layout(calculator_layout_t layout);
 calculator_layout_t calculator_widget_layout(void);
 calculator_layout_t calculator_widget_cycle_layout(void);

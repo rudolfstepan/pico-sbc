@@ -72,6 +72,11 @@ static void fill_state(calculator_persisted_state_t *state) {
     state->basic_program.lines[2].number = 30;
     snprintf(state->basic_program.lines[2].text,
              sizeof state->basic_program.lines[2].text, "NEXT I");
+    (void)circuit_model_toggle_input(&state->circuit, 0u);
+    (void)circuit_model_toggle_input(&state->circuit, 1u);
+    state->circuit_viewport_x = 128u;
+    state->circuit_viewport_y = 64u;
+    state->circuit_zoom_index = 2u;
 }
 
 int main(void) {
@@ -115,6 +120,11 @@ int main(void) {
     CHECK(decoded.basic_program.count == 3);
     CHECK(decoded.basic_program.lines[1].number == 20);
     CHECK(strcmp(decoded.basic_program.lines[2].text, "NEXT I") == 0);
+    CHECK(decoded.circuit_viewport_x == 128u &&
+          decoded.circuit_viewport_y == 64u);
+    CHECK(decoded.circuit_zoom_index == 2u);
+    CHECK(decoded.circuit.nodes[0].input_value);
+    CHECK(decoded.circuit.nodes[3].output_value);
 
     uint8_t canonical[CALCULATOR_PERSISTENCE_RECORD_CAPACITY];
     size_t canonical_size = 0;
@@ -171,6 +181,14 @@ int main(void) {
 
     fill_state(&original);
     original.graph.x_span = 0.0;
+    CHECK(!calculator_persistence_encode(&original, 1, first, sizeof first,
+                                         &first_size));
+
+    fill_state(&original);
+    original.circuit.nodes[3].type = CIRCUIT_GATE_NOT;
+    original.circuit.wires[0].source = 3u;
+    original.circuit.wires[0].destination = 2u;
+    original.circuit.wires[0].destination_input = 0u;
     CHECK(!calculator_persistence_encode(&original, 1, first, sizeof first,
                                          &first_size));
 

@@ -1,6 +1,6 @@
 # Benutzerhandbuch: Pico Scientific Calculator
 
-Gueltig fuer Firmware `1.8.0`, USB-Protokoll `4`, Pico Calculator Link `2.1`
+Gueltig fuer Firmware `2.2.0`, USB-Protokoll `5`, Pico Calculator Link `2.2`
 und das LAFVIN Pico Development Kit mit RP2040, ST7796U-LCD und
 GT911-Touchscreen.
 
@@ -14,15 +14,16 @@ GT911-Touchscreen.
 6. [Graphen und numerische Analyse](#6-graphen-und-numerische-analyse)
 7. [PROGRAMMER](#7-programmer)
 8. [FORMAT, Zweierkomplement und IEEE-754](#8-format-zweierkomplement-und-ieee-754)
-9. [Schaltalgebra](#9-schaltalgebra)
-10. [Einheiten und Konstanten](#10-einheiten-und-konstanten)
-11. [Komplexe Zahlen](#11-komplexe-zahlen)
-12. [Statistik](#12-statistik)
-13. [BASIC-Programmierung](#13-basic-programmierung)
-14. [Pico Calculator Link](#14-pico-calculator-link)
-15. [Speicherung und Werksreset](#15-speicherung-und-werksreset)
-16. [Meldungen und Fehlerbehebung](#16-meldungen-und-fehlerbehebung)
-17. [Grenzen und technische Hinweise](#17-grenzen-und-technische-hinweise)
+9. [Zahlentheorie und Primzahlen](#9-zahlentheorie-und-primzahlen)
+10. [Schaltalgebra](#10-schaltalgebra)
+11. [Einheiten und Konstanten](#11-einheiten-und-konstanten)
+12. [Komplexe Zahlen](#12-komplexe-zahlen)
+13. [Statistik](#13-statistik)
+14. [BASIC-Programmierung](#14-basic-programmierung)
+15. [Pico Calculator Link](#15-pico-calculator-link)
+16. [Speicherung und Werksreset](#16-speicherung-und-werksreset)
+17. [Meldungen und Fehlerbehebung](#17-meldungen-und-fehlerbehebung)
+18. [Grenzen und technische Hinweise](#18-grenzen-und-technische-hinweise)
 
 ## 1. Schnellstart
 
@@ -106,11 +107,11 @@ werden.
 
 ### Hardwaretasten
 
-| Taste | Normale Seiten | STATS | CODE |
-|---|---|---|---|
-| `K1` | Entspricht `=` | Entspricht `ADD` | Speichert die Eingabezeile |
-| `K2` kurz | Drei Displaylayouts | Drei Displaylayouts | Drei Displaylayouts |
-| `K2` 0,8 s halten | Portrait/Landscape | Portrait/Landscape | Portrait/Landscape |
+| Taste | Normale Seiten | STATS | CODE | CIRCUIT |
+|---|---|---|---|---|
+| `K1` | Entspricht `=` | Entspricht `ADD` | Speichert die Eingabezeile | Eingang schalten oder Link starten |
+| `K2` kurz | Drei Displaylayouts | Drei Displaylayouts | Drei Displaylayouts | Zoom 100/150/200 % |
+| `K2` 0,8 s halten | Portrait/Landscape | Portrait/Landscape | Portrait/Landscape | Portrait/Landscape |
 
 Werden `K1` und `K2` beim Einschalten gleichzeitig gehalten, setzt die
 Firmware den gespeicherten Zustand bei der Initialisierung zurueck. Die Tasten
@@ -124,10 +125,11 @@ Der Joystick ist kontextabhaengig:
 - In Programmlisten wird geblaettert oder die Auswahl bewegt.
 - Im Statistikmodus werden Zeile und X-/Y-Feld gewaehlt.
 - Im Graphen verschiebt er den Ausschnitt oder den Trace-Cursor.
+- In `CIRCUIT` scrollt er die Schaltplanflaeche kontinuierlich.
 
 ### Displayansichten
 
-`K2` durchlaeuft auf allen Seiten drei Layouts:
+`K2` durchlaeuft auf den tastenbasierten Seiten drei Layouts:
 
 - **Standard:** grosseres Tastenfeld und kompakter Datenbereich.
 - **Datenfokus:** doppelt hoher Datenbereich mit groesserer Schrift und
@@ -139,6 +141,10 @@ Die Touchbereiche werden zusammen mit dem sichtbaren Layout umgestellt. Im
 Vollbild reagieren keine unsichtbaren Tastaturfelder. Ein weiterer Druck auf
 `K2` kehrt zum Standardlayout zurueck. Nach einem Neustart beginnt der Rechner
 wieder im Standardlayout.
+
+`CIRCUIT` verwendet unabhaengig davon immer die komplette Anzeige als
+Schaltplanflaeche. Ein kurzer Druck auf `K2` blendet dort keine Tastatur ein,
+sondern wechselt zyklisch zwischen 100, 150 und 200 Prozent Zoom.
 
 ### Displayorientierung
 
@@ -383,11 +389,14 @@ Die Belegung bleibt nach einem Neustart erhalten.
 
 ### Funktion zeichnen
 
-1. Auf `TOOLS` den Ausdruck mit `x` eingeben, zum Beispiel `sin(x)`.
-2. `GRAPH` druecken. Der Ausdruck wird im ausgewaehlten Funktionsplatz
+1. Im Graphen `MORE` und danach `EDIT` druecken. Dadurch wird der aktuell
+   gewaehlte Funktionsplatz im `TOOLS`-Editor geoeffnet.
+2. Den Ausdruck mit der direkten `X`-Taste eingeben, zum Beispiel `sin(x)`.
+   `X` liegt in der unteren Tastenreihe und bleibt auch im Datenfokus sichtbar.
+3. `GRAPH` druecken. Der Ausdruck wird im ausgewaehlten Funktionsplatz
    gespeichert und die y-Achse automatisch skaliert.
-3. Mit `F1`, `F2` oder `F3` den aktiven Platz waehlen.
-4. `ON/OFF` blendet die ausgewaehlte Funktion ein oder aus.
+4. Mit `F1`, `F2` oder `F3` den aktiven Platz waehlen.
+5. `ON/OFF` blendet die ausgewaehlte Funktion ein oder aus.
 
 Die drei Farben sind:
 
@@ -533,7 +542,30 @@ Der Inspector zeigt Vorzeichen, Roh-Exponent, Arbeitsexponent, Mantisse und
 Klassifikation als Normal, Subnormal, Null, Unendlich oder NaN. Unendliche und
 NaN-Werte koennen nicht nach `ANS` uebernommen werden.
 
-## 9. Schaltalgebra
+## 9. Zahlentheorie und Primzahlen
+
+`PRIMES` im Launcher arbeitet mit vorzeichenlosen Ganzzahlen von 0 bis
+18446744073709551615. Mit `A`, `B` und `M` wird das aktive Eingabefeld
+gewaehlt; Ziffern, `DEL` und `AC` bearbeiten den Wert. `ANS` setzt ein
+ganzzahliges Rechnerergebnis ein, `MAX64` den groessten 64-Bit-Wert.
+
+| Taste | Berechnung |
+|---|---|
+| `ggT/GCD` | Groesster gemeinsamer Teiler von A und B |
+| `kgV/LCM` | Kleinstes gemeinsames Vielfaches von A und B |
+| `PRIME?` | Deterministischer Primzahltest fuer A |
+| `NEXT P` / `PREV P` | Naechste beziehungsweise vorherige Primzahl zu A |
+| `FACT` | Primfaktorzerlegung von A |
+| `PHI` | Eulersche Phi-Funktion von A |
+| `MOD` | Rest A modulo B |
+| `A^B MOD M` | Modulare Potenz mit Basis A, Exponent B und Modulus M |
+
+`USE` setzt das letzte ganzzahlige Ergebnis in das aktive Feld ein. `>ANS`
+uebernimmt es in den normalen Rechner, `SWAP` vertauscht A und B. Ein kgV-
+Ueberlauf, Division durch null und nicht vorhandene benachbarte Primzahlen
+werden als Fehler gemeldet.
+
+## 10. Schaltalgebra
 
 LOGIC verarbeitet Boolesche Ausdruecke mit A bis F.
 
@@ -570,24 +602,71 @@ Ausgang und Gatteranzahl werden unmittelbar aktualisiert.
 Die Simulation basiert auf einem Ausdrucksbaum. Offene Leitungen oder
 Rueckkopplungen koennen daher nicht dargestellt werden.
 
-## 10. Einheiten und Konstanten
+### Graphischer Schaltplaneditor
+
+Die App `CIRCUIT` im Launcher ist ein davon unabhaengiger Vollbildeditor. Beim
+ersten Start zeigt sie zwei Eingaenge `A` und `B`, ein AND-Gatter und den
+Ausgang `Y`. Unterstuetzt werden `INPUT`, `OUTPUT`, `NOT`, `AND`, `OR`, `XOR`,
+`NAND`, `NOR` und `XNOR`. Die Standardvergroesserung ist 150 Prozent.
+
+Direkte Bedienung auf der Zeichenflaeche:
+
+- Gate-Koerper antippen, um das Gate auszuwaehlen.
+- Ein Gate ziehen, um es frei im Schaltplan zu verschieben.
+- `INPUT` antippen, um den Pegel zwischen `0` und `1` umzuschalten.
+- Einen Ausgangsport und danach einen Eingangsport antippen, um beide zu
+  verbinden. Eine vorhandene Verbindung am Eingang wird dabei ersetzt.
+- Einen bereits verbundenen Eingangsport ohne aktiven Link antippen, um die
+  Leitung zu trennen.
+- Mit dem Joystick links, rechts, oben oder unten durch die 1600 x 1200 Pixel
+  grosse Arbeitsflaeche scrollen. Gedrueckthalten wiederholt die Bewegung.
+
+Die obere Werkzeugleiste bleibt als schmale Einblendung ueber dem Schaltplan:
+
+| Werkzeug | Funktion |
+|---|---|
+| `HOME` | Zum App-Launcher zurueckkehren |
+| `+AND` usw. | Einfuegemodus fuer den angezeigten Gate-Typ aktivieren |
+| `TYPE` | Typ des ausgewaehlten Gates aendern; ohne Auswahl den Einfuegetyp wechseln |
+| `LINK` | Ausgang des ausgewaehlten Gates als Leitungsquelle verwenden oder abbrechen |
+| `DEL` | Ausgewaehltes Gate samt angeschlossenen Leitungen loeschen |
+| `Z-` / `Z+` | Schaltplan auf 100, 150 oder 200 Prozent verkleinern/vergroessern |
+
+Im Einfuegemodus setzt ein Tipp auf eine freie Stelle ein Gate. Wird stattdessen
+ein Port angetippt, entsteht das neue Gate auf der passenden Seite und wird
+sofort verbunden. Ein Tipp auf eine freie Stelle ohne Einfuegemodus hebt die
+Auswahl und einen begonnenen Link auf. Rueckkopplungen werden mit
+`LINK REJECTED` abgelehnt. Logische `1`-Leitungen erscheinen gelb, `0`-Leitungen
+grau; das ausgewaehlte Gate ist gelb markiert.
+
+Schaltplan, Eingangspegel, Verbindungen, Scrollposition und Zoomstufe werden
+automatisch im Flash gespeichert.
+
+## 11. Einheiten und Konstanten
 
 ### Umrechnung
 
 Es stehen 68 Einheiten in zehn Kategorien bereit: Laenge, Flaeche, Volumen,
 Masse, Zeit, Temperatur, Winkel, Druck, Energie und Leistung.
 
-1. Ausgangswert im normalen Rechner berechnen.
-2. `UNITS` oeffnen und Kategorie auswaehlen.
-3. Mit `<FROM` / `FROM>` die Quelle einstellen.
-4. Mit `<TO` / `TO>` das Ziel einstellen.
-5. `ANS>IN` druecken.
-6. `CONVERT` ausfuehren.
-7. Mit `OUT>ANS` das Ergebnis uebernehmen oder mit `OUT>EDIT` einen neuen
-   Ausdruck beginnen.
+1. `UNITS` oeffnen und die Kategorie mit `<CAT` / `CAT>` auswaehlen.
+2. `FROM` oder `TO` antippen und eine der sechs angezeigten Einheiten waehlen.
+   Erneutes Antippen von `FROM` beziehungsweise `TO` zeigt die naechsten sechs
+   Einheiten. Alternativ blaettern `<FROM`, `FROM>`, `<TO` und `TO>` einzeln.
+3. Den Wert direkt mit dem Zahlenblock eingeben. Das Ergebnis wird nach jeder
+   vollstaendigen Eingabe automatisch aktualisiert; `=` berechnet erneut.
+4. Mit `ANS IN` kann weiterhin das letzte Rechnerergebnis als Eingangswert
+   verwendet werden.
+5. Mit `ANS OUT` das Ergebnis uebernehmen oder mit `>EDIT` einen neuen
+   Rechenausdruck beginnen.
 
-`SWAP` vertauscht Quell- und Zieleinheit. Temperaturen unter dem absoluten
-Nullpunkt werden abgelehnt. `RESET` setzt die Einheitenansicht zurueck.
+Der Zahlenblock besitzt `0` bis `9`, Dezimalpunkt, `+/-`, `DEL` und `AC`.
+`EE` gibt einen Zehnerexponenten ein: `1`, `EE`, `+/-`, `3` entspricht
+`1e-3`.
+
+`SWAP` vertauscht Quell- und Zieleinheit und verwendet das bisherige Ergebnis
+als neuen Eingangswert. Temperaturen unter dem absoluten Nullpunkt werden
+abgelehnt. `AC` loescht die direkte Eingabe.
 
 ### Physikalische Konstanten
 
@@ -595,7 +674,7 @@ Nullpunkt werden abgelehnt. `RESET` setzt die Einheitenansicht zurueck.
 `C>ANS` uebernimmt den Wert als Ergebnis, `C>EDIT` setzt ihn in den Editor.
 `INFO` zeigt die Quellenangabe.
 
-## 11. Komplexe Zahlen
+## 12. Komplexe Zahlen
 
 COMPLEX besitzt einen eigenen Editor, Ergebniszustand und Verlauf.
 
@@ -622,7 +701,7 @@ weitergerechnet werden.
 laden einen Eintrag. `HCLR` loescht nur den komplexen Verlauf; `BACK` kehrt zum
 komplexen Editor zurueck.
 
-## 12. Statistik
+## 13. Statistik
 
 STATS speichert bis zu 32 Werte oder Wertepaare.
 
@@ -667,7 +746,7 @@ Stichproben-Standardabweichung. In `2VAR` waehlt `X/Y` die Spalte.
 `PLOT` zeichnet in `1VAR` ein Histogramm und in `2VAR` ein Streudiagramm mit
 gestrichelter Regressionsgerade.
 
-## 13. BASIC-Programmierung
+## 14. BASIC-Programmierung
 
 ### Programmeditor
 
@@ -747,9 +826,9 @@ verhindert, dass eine Endlosschleife die Bedienung blockiert.
 Weitere ladbare Programme liegen unter `examples/basic/`, darunter Schleifen,
 Verzweigungen, Fakultaet, Trigonometrie und ein Mandelbrot-Textbild.
 
-## 14. Pico Calculator Link
+## 15. Pico Calculator Link
 
-Die Desktop-Anwendung Pico Calculator Link `2.1` steuert und synchronisiert
+Die Desktop-Anwendung Pico Calculator Link `2.2` steuert und synchronisiert
 den Rechner ueber dessen normalen USB-Anschluss.
 
 ![Pico Calculator Link](images/pico-calculator-link.png)
@@ -765,7 +844,7 @@ python tools/pico_calc_gui.py
 
 Unter Linux kann zusaetzlich `python3-tk` notwendig sein. Unter Windows und
 macOS muss Python mit Tk/Tcl installiert sein. Diese Version der Anwendung
-erwartet Firmware `1.8.0` mit USB-Protokoll `4`.
+erwartet Firmware `2.2.0` mit USB-Protokoll `5`.
 
 ### Verbindung
 
@@ -783,26 +862,47 @@ Seite und Datenzaehler.
 |---|---|
 | `Rechner` | Wissenschaftlichen Ausdruck senden, Ergebnis anzeigen sowie DEG/RAD und NORMAL/HIGH/ULTRA schalten |
 | `Code` | BIN/DEC/HEX, Bitoperationen, 2er-Komplement, Q-Fixpunkt und IEEE-754 untersuchen |
+| `Zahlen` | GGT/KGV, Primzahltest, benachbarte Primzahlen, Faktorisierung, Phi, Modulo und modulare Potenz berechnen |
 | `Graph` | F1-F3 plotten sowie Nullstelle, Schnittpunkt, Ableitung, Integral und Extrema berechnen |
 | `Logik` | Gatterbelegung auswerten, Wahrheitstabelle sowie vereinfachte oder kanonische DNF/KNF erzeugen |
-| `Einheiten` | Alle Einheitenkategorien umrechnen und physikalische Konstanten lesen |
+| `Gatter` | Grafischen Schaltplan laden, bearbeiten, simulieren und zum Pico schreiben |
+| `Einheit` | Alle Einheitenkategorien umrechnen und physikalische Konstanten lesen |
 | `Komplex` | Komplexe Ausdruecke in kartesischer und polarer Form berechnen |
-| `Statistik` | Werte oder Wertepaare verwalten, Summary, Regression und Histogramm berechnen |
+| `Stats` | Werte oder Wertepaare verwalten, Summary, Regression und Histogramm berechnen |
 | `Speicher` | A-F, F1-F3, M und FAV1-FAV6 bearbeiten und synchronisieren |
 | `BASIC` | `.bas` laden, speichern, uebertragen und ausfuehren |
 | `Verlauf` | Acht Recheneintraege lesen und wiederverwenden |
-| `Protokoll` | Einzelne USB-Befehle senden und Antworten ansehen |
+| `USB` | Einzelne USB-Befehle senden und Antworten ansehen |
 
 Fuer Berechnungen und die Anzeige verwendet die Anwendung den vom Pico
 gelieferten Dezimaltext. Im JSON-Export sind `result_text`, A-F und M die
 autoritativen Textfelder. Das zusaetzliche Feld `result` ist nur eine
 angenaherte Gleitkomma-Kopie fuer einfache externe Werkzeuge.
 
-Alle Modulberechnungen laufen auf dem Pico. Die PC-App zeichnet Ergebnisse wie
-Graphen und Tabellen nur auf; Rechenkern, Winkelmodus, Bereichspruefung und
-Fehlermeldungen stammen aus derselben Firmware wie die LCD-Bedienung. Bei
+Alle mathematischen Modulberechnungen laufen auf dem Pico. Die PC-App zeichnet
+Ergebnisse wie Graphen und Tabellen nur auf; Rechenkern, Winkelmodus,
+Bereichspruefung und Fehlermeldungen stammen aus derselben Firmware wie die
+LCD-Bedienung. Der Gattereditor spiegelt Pegel zusaetzlich lokal, damit sie
+waehrend des Bearbeitens sofort sichtbar sind. Bei
 Graphen werden F1-F3 und der sichtbare Bereich vor dem Plotten synchronisiert.
 Eine Wahrheitstabelle kann je nach Ausdruck bis zu 64 Zeilen besitzen.
+
+### Grafischer Gattereditor am PC
+
+`Pico -> Laden` liest Gates, Leitungen, Pegel, Ausschnitt und Zoom. Zum Bearbeiten
+wird ein Gattertyp gewaehlt und `Einfuegen` gedrueckt; der naechste Klick auf
+die Zeichenflaeche setzt das Symbol. Gates lassen sich mit der linken
+Maustaste ziehen. Ein Klick auf einen Ausgangsport und danach auf einen
+Eingangsport verbindet beide. Rechtsklick auf einen belegten Eingangsport
+oder die Trennen-Tasten in der Auswahlleiste loest die Leitung.
+
+Ein INPUT wird per Doppelklick oder ueber `Eingang aktiv` geschaltet. Typ und
+Bezeichnung des ausgewaehlten Knotens koennen rechts bearbeitet werden. Ziehen
+auf freier Flaeche verschiebt den Ausschnitt; Mausrad sowie `-` und `+`
+wechseln zwischen 100, 150 und 200 Prozent. Das Menue `Plan` erstellt einen
+leeren Plan oder laedt die AND-Demo. `Pico -> Sichern` validiert den gesamten
+Plan auf Portfehler, Kapazitaet und Zyklen und speichert ihn danach persistent
+auf dem Geraet.
 
 ### BASIC ueber den PC
 
@@ -812,14 +912,15 @@ Eingabefeld. Die Programmausgabe wird fortlaufend vom Rechner gelesen.
 
 ### JSON-Sicherung
 
-Der Export im JSON-Format 5 erfasst Ausdruck, exaktes Ergebnis, Winkel- und
+Der Export im JSON-Format 6 erfasst Ausdruck, exaktes Ergebnis, Winkel- und
 Praezisionsmodus, A-F, F1-F3, Speicher M, Favoriten, Programmer- und
-Zahlenformatzustand, Graphbereich, Verlauf, Statistik und BASIC-Programm.
+Zahlenformatzustand, Graphbereich, Verlauf, Statistik, BASIC-Programm sowie
+den Schaltplan mit Pegeln, Leitungen, Viewport und Zoom.
 Beim Import werden Ausdruck, Winkel- und Praezisionsmodus, A-F, F1-F3, M,
-Favoriten, Programmer- und Zahlenformatzustand, Graphbereich, Statistik und
-BASIC-Programm zurueckgeschrieben. `ANS` und Verlauf sind Export- und
-Protokolldaten und werden nicht importiert. Abhaengige Benutzerfunktionen
-werden in einer gueltigen Reihenfolge uebertragen.
+Favoriten, Programmer- und Zahlenformatzustand, Graphbereich, Statistik,
+BASIC-Programm und Schaltplan zurueckgeschrieben. `ANS` und Verlauf sind
+Export- und Protokolldaten und werden nicht importiert. Abhaengige
+Benutzerfunktionen werden in einer gueltigen Reihenfolge uebertragen.
 
 ### Kommandozeile
 
@@ -831,7 +932,7 @@ python tools/pico_calc_cli.py --port COM5 export calculator-state.json
 python tools/pico_calc_cli.py --port COM5 import calculator-state.json
 ```
 
-## 15. Speicherung und Werksreset
+## 16. Speicherung und Werksreset
 
 Automatisch gespeichert werden:
 
@@ -843,6 +944,7 @@ Automatisch gespeichert werden:
 - Graphfunktionen und Bereiche
 - Statistikmodus und Datensaetze
 - BASIC-Programm
+- Schaltplan mit Gates, Leitungen, Eingangspegeln und Scrollposition
 
 Aenderungen werden etwa drei Sekunden gesammelt. Vor dem Trennen der
 Stromversorgung sollte deshalb kurz gewartet werden, wenn gerade Daten
@@ -850,7 +952,7 @@ geaendert wurden.
 
 Zwei je 8 KiB grosse, CRC-geschuetzte Flashslots werden abwechselnd beschrieben. Ein
 Stromausfall waehrend des Speicherns zerstoert dadurch nicht den vorherigen
-gueltigen Zustand. Firmware 1.8 akzeptiert ausschliesslich Flashformat 6.
+gueltigen Zustand. Firmware 2.2 akzeptiert ausschliesslich Flashformat 8.
 Aeltere Formate werden bewusst nicht migriert; nach einem Update startet der
 Rechner mit Werkseinstellungen.
 
@@ -863,9 +965,9 @@ Rechner mit Werkseinstellungen.
 5. Die Meldung `FACTORY RESET` bestaetigt das Loeschen.
 
 Der Werksreset entfernt alle benutzerdefinierten Funktionen, Favoriten, den
-normalen Verlauf, Statistikdaten und BASIC-Programme.
+normalen Verlauf, Statistikdaten, BASIC-Programme und Schaltplaene.
 
-## 16. Meldungen und Fehlerbehebung
+## 17. Meldungen und Fehlerbehebung
 
 ### Typische Statusmeldungen
 
@@ -911,7 +1013,7 @@ dort Tasten wirklich, aktuelle Firmware neu flashen.
 
 ### Ergebnis wirkt ungenau
 
-Fuer mathematische Funktionen Firmware `1.8.0` verwenden und auf `TOOLS` den
+Fuer mathematische Funktionen Firmware `2.2.0` verwenden und auf `TOOLS` den
 gewuenschten Modus P40, P80 oder P128 waehlen. ULTRA rechnet mit 512 Bit und
 zeigt bis zu 128 Stellen. Graph, Statistik, komplexe Zahlen und BASIC-Programme
 verwenden weiterhin `double`. Fuer exakt endliche Ergebnisse nur Literale,
@@ -929,10 +1031,10 @@ transzendente Werte sind prinzipbedingt gerundete Naeherungen.
 
 ### PC meldet inkompatibles Protokoll
 
-Firmware `1.8.0` flashen. Die aktuelle Desktop-Anwendung erwartet
-USB-Protokoll `4` sowie die Praezisionsbefehle der Firmware 1.8.
+Firmware `2.2.0` flashen. Die aktuelle Desktop-Anwendung erwartet
+USB-Protokoll `5` mit Schaltplan- und Zahlentheorie-Befehlen.
 
-## 17. Grenzen und technische Hinweise
+## 18. Grenzen und technische Hinweise
 
 | Bereich | Grenze |
 |---|---:|
@@ -946,6 +1048,7 @@ USB-Protokoll `4` sowie die Praezisionsbefehle der Firmware 1.8.
 | Favoriten | 6 |
 | Graphfunktionen | 3 |
 | Logikeingaenge | A-F, maximal 6 |
+| Schaltplaneditor | 24 Gates, 48 Leitungen, 1600 x 1200 Pixel |
 | Statistik | 32 Werte oder Wertepaare |
 | BASIC-Programm | 20 Zeilen |
 | BASIC-Anweisung | 63 Zeichen |
@@ -954,7 +1057,7 @@ USB-Protokoll `4` sowie die Praezisionsbefehle der Firmware 1.8.
 | Programmer | 8, 16, 32 oder 64 Bit |
 | USB-Befehlszeile | 255 druckbare ASCII-Zeichen |
 | USB-Antworttext | 511 ASCII-Zeichen zuzueglich `CRLF` |
-| Persistenz | 2 wechselnde Flashslots mit je 8 KiB, nur Format 6 |
+| Persistenz | 2 wechselnde Flashslots mit je 8 KiB, nur Format 8 |
 
 Der RP2040 ist ein Mikrocontroller ohne Betriebssystem und besitzt 264 KiB
 SRAM. Die Firmware zeichnet deshalb direkt auf das LCD und verwendet keinen

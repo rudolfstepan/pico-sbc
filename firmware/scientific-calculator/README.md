@@ -2,7 +2,7 @@
 
 Eigenstaendige Taschenrechner-Firmware fuer das LAFVIN Pico Development Kit.
 
-Aktueller Stand: Firmware `1.8.0`, USB-Protokoll `4`, Flashformat `6` und
+Aktueller Stand: Firmware `2.2.0`, USB-Protokoll `5`, Flashformat `8` und
 waehlbare Praezision bis 128 signifikante Stellen.
 
 Das schrittweise [Benutzerhandbuch](../../docs/user-manual.md) beschreibt
@@ -19,8 +19,9 @@ Installation, Bedienung, alle Rechnermodi und die PC-Anwendung.
   Kombinationen und Permutationen
 - Waehlbare 40-, 80- oder 128-stellige wissenschaftliche Funktionen und
   Konstanten Pi, e, Tau und Phi
-- Elf Touch-Ebenen: `BASIC`, `SCIENTIFIC`, `PROGRAMMER`, `FORMAT`, `TOOLS`,
-  `SYMBOLS`, `LOGIC`, `UNITS`, `COMPLEX`, `STATS` und `CODE`
+- Dreizehn Touch-Ebenen: `BASIC`, `SCIENTIFIC`, `PROGRAMMER`, `FORMAT`,
+  `TOOLS`, `SYMBOLS`, `LOGIC`, `NUMBER`, `CIRCUIT`, `UNITS`, `COMPLEX`,
+  `STATS` und `CODE`
 - `PROGRAMMER`-Ebene fuer exakte 64-Bit-Werte
 - Direkte Umwandlung zwischen Dezimal, Hexadezimal und Binaer
 - Bitoperationen `AND`, `OR`, `XOR`, `NOT`, Schieben und Zweierkomplement
@@ -31,10 +32,14 @@ Installation, Bedienung, alle Rechnermodi und die PC-Anwendung.
 - IEEE-754-Umwandlung fuer Float32 und Float64, auch von und zu `ANS`
 - IEEE-754-Inspector fuer Vorzeichen, Roh- und Arbeitsexponent, Mantisse und
   Klassifikation als Normal, Subnormal, Null, Unendlich oder NaN
+- Zahlentheorie mit ggT, kgV, Primzahltest, benachbarten Primzahlen,
+  Primfaktorzerlegung, Euler-Phi, Modulo und modularer Potenz fuer 64 Bit
 - Schaltalgebra mit Wahrheitstabelle, vereinfachter und kanonischer KNF/DNF
   sowie Live-Simulation fuer bis zu sechs Eingaenge
-- 68 Einheiten in zehn Kategorien sowie zwoelf physikalische Konstanten mit
-  Einheit und Quellenangabe
+- Vollbild-Schaltplaneditor mit neun Gate-Typen, direkter Portverdrahtung,
+  Touch-Drag, Logiksimulation und Joystick-Scrolling
+- 68 Einheiten in zehn Kategorien mit direktem Zahlenblock sowie zwoelf
+  physikalische Konstanten mit Einheit und Quellenangabe
 - Komplexer Rechner mit kartesischer und polarer Anzeige, Betrag, Phase,
   Konjugation und eigenem verlustfreien Verlauf
 - Ein- und Zwei-Variablen-Statistik mit editierbarer Zahlenliste,
@@ -69,6 +74,10 @@ Funktionen setzen automatisch eine oeffnende Klammer. Die schliessende Klammer
 wird ueber `)` eingegeben. Fuer `nCr` und `nPr` trennt `,` die Argumente, zum
 Beispiel `ncr(6,2)`.
 
+Im Graphen oeffnet `MORE -> EDIT` den gewaehlten Platz F1-F3 direkt im
+`TOOLS`-Editor. Die `X`-Taste liegt dort in der unteren Reihe und bleibt auch
+im Datenfokus sichtbar. `GRAPH` speichert den Ausdruck und zeichnet ihn neu.
+
 Auf `TOOLS` schaltet die dynamisch beschriftete Taste `P40`, `P80` oder
 `P128` zyklisch zwischen NORMAL, HIGH und ULTRA um. Der Modus gilt fuer reine
 Dezimalarithmetik, wissenschaftliche Funktionen, Konstanten, `ANS`, A-F und M
@@ -76,7 +85,7 @@ und wird automatisch gespeichert.
 
 ## Displaylayout
 
-K2 durchlaeuft auf allen Seiten drei Ansichten:
+K2 durchlaeuft auf den tastenbasierten Seiten drei Ansichten:
 
 1. Die Standardansicht verwendet einen 84 Pixel hohen Datenbereich und grosse
    Touch-Tasten.
@@ -92,6 +101,10 @@ keine unsichtbaren Tasten aktiv. Ein weiterer Druck auf K2 kehrt zur
 Standardansicht zurueck. Nach einem Neustart startet der Rechner ebenfalls im
 Standardlayout. K1 bleibt fuer `=`, Programmer-Operationen, `ADD` und CODE-
 Eingaben verfuegbar.
+
+`CIRCUIT` bleibt immer im Vollbild, weil Touchflaeche und Schaltplan dort
+identisch sind. Ein kurzer K2-Druck wechselt dort zwischen 100, 150 und
+200 Prozent Zoom.
 
 Wird K2 mindestens 0,8 Sekunden gehalten, wechselt die Firmware zwischen
 Landscape (`480x320`) und Portrait (`320x480`). Displayinhalt, Graphen,
@@ -154,6 +167,14 @@ Wertebereiche oder fehlende Konvergenz werden direkt im Graphkopf angezeigt.
 Mit `RANGE` und dem Joystick lassen sich Intervall und Startwert vor der
 Berechnung anpassen.
 
+## Zahlentheorie
+
+Die Launcher-App `PRIMES` verarbeitet vorzeichenlose 64-Bit-Ganzzahlen. A und
+B sind die normalen Operanden, M ist der Modulus fuer `A^B mod M`. Verfuegbar
+sind `ggT/GCD`, `kgV/LCM`, `PRIME?`, `NEXT P`, `PREV P`, `FACT`, `PHI`, `MOD`
+und `POW`. Der Primzahltest ist fuer den gesamten 64-Bit-Bereich
+deterministisch; die Faktorzerlegung verwendet Pollard-Rho.
+
 ## Schaltalgebra und Gatter
 
 Auf `LOGIC` werden Boolesche Ausdruecke mit den Variablen `A` bis `F`
@@ -175,17 +196,29 @@ Die Logik wird als Ausdrucksbaum aufgebaut. Dadurch sind offene Verbindungen
 und zyklische Netze nicht darstellbar; unvollstaendige Ausdruecke werden mit
 der Fehlerposition abgelehnt.
 
+Die separate Launcher-App `CIRCUIT` ist ein freier grafischer Netzeditor fuer
+`INPUT`, `OUTPUT`, `NOT`, `AND`, `OR`, `XOR`, `NAND`, `NOR` und `XNOR`.
+Gate-Koerper lassen sich per Touch auswaehlen und ziehen. Ein Ausgangsport und
+danach ein Eingangsport erzeugen eine Leitung; ein Tipp auf einen belegten
+Eingang trennt sie. `+GATE` fuegt auf der Flaeche oder direkt an einem Port ein
+neues Symbol ein, `TYPE` bearbeitet den ausgewaehlten Typ, `DEL` entfernt ihn.
+`Z-` und `Z+` skalieren Gates und Trefferflaechen gemeinsam; voreingestellt
+sind 150 Prozent. Der Joystick scrollt die 1600 x 1200 Pixel grosse
+Arbeitsflaeche. Zyklen werden beim Verbinden abgelehnt.
+
 ## Einheiten und Konstanten
 
 Auf `UNITS` stehen Laenge, Flaeche, Volumen, Masse, Zeit, Temperatur, Winkel,
 Druck, Energie und Leistung zur Wahl. Die aktuelle Quell- und Zieleinheit
 steht ausgeschrieben im Display.
 
-1. Den Ausgangswert im normalen Rechner berechnen.
-2. Zu `UNITS` wechseln und die Kategorie auswaehlen.
-3. Mit `<FROM`/`FROM>` und `<TO`/`TO>` die Einheiten einstellen.
-4. `ANS>IN` und danach bei Bedarf `CONVERT` druecken.
-5. Das Ergebnis mit `OUT>ANS` uebernehmen oder mit `OUT>EDIT` in einen neuen
+1. Zu `UNITS` wechseln und die Kategorie mit `<CAT`/`CAT>` auswaehlen.
+2. `FROM` oder `TO` oeffnet die direkte Einheitenliste; erneutes Antippen
+   blaettert zur naechsten Gruppe. Die Pfeiltasten wechseln einzeln.
+3. Den Wert mit `0` bis `9`, `.`, `+/-`, `DEL`, `AC` und bei Bedarf `EE`
+   direkt eingeben. Die Umrechnung wird laufend aktualisiert.
+4. Alternativ mit `ANS IN` das letzte Rechnerergebnis laden.
+5. Das Ergebnis mit `ANS OUT` uebernehmen oder mit `>EDIT` in einen neuen
    Rechenausdruck laden.
 
 `SWAP` vertauscht Quell- und Zieleinheit. Temperaturen unter dem absoluten
@@ -291,7 +324,7 @@ Damit lassen sich Ausdruecke berechnen, Variablen und Funktionen setzen sowie
 Verlauf und Statistikdaten lesen oder schreiben. `INFO` zeigt die Firmware- und
 Protokollversion, `DIAG` den kompakten Laufzeitzustand.
 
-Pico Calculator Link `2.1` bildet alle Rechnermodule der Firmware ab. Die App
+Pico Calculator Link `2.2` bildet alle Rechnermodule der Firmware ab. Die App
 kann unter anderem BASIC-Programme als `.bas`-Datei laden und speichern, mit
 dem Rechner synchronisieren, starten und stoppen. Ausgabe und angeforderte
 `INPUT`-Werte werden direkt im BASIC-Tab angezeigt beziehungsweise eingegeben.
@@ -304,9 +337,11 @@ python tools/pico_calc_cli.py --port COM5 export calculator-state.json
 python tools/pico_calc_gui.py
 ```
 
-Die grafische Anwendung bietet Rechner, Programmer und Zahlenformate, Graph,
-Logik, Einheiten, komplexe Zahlen, Statistik, Speicher, BASIC, Verlauf,
-Rohkonsole und JSON-Sicherungen. Die vollstaendige Befehlsreferenz,
+Die grafische Anwendung bietet Rechner, Programmer und Zahlenformate,
+Zahlentheorie, Graph, Logik, einen grafischen Gattereditor, Einheiten,
+komplexe Zahlen, Statistik, Speicher, BASIC, Verlauf, Rohkonsole und
+JSON-Sicherungen. Schaltplaene koennen vom Pico geladen, am PC bearbeitet und
+wieder auf das Geraet geschrieben werden. Die vollstaendige Befehlsreferenz,
 Linux-Beispiele, Grenzen und das JSON-Format stehen in
 [docs/usb-protocol.md](../../docs/usb-protocol.md).
 
@@ -352,7 +387,8 @@ aufgerufen oder in weiteren Graphfunktionen verwendet werden.
 
 Der Rechner speichert Winkelmodus, `ANS`, Speicherregister, letzte Seite,
 Praezisionsmodus, Programmer-Zustand, Verlauf, Variablen, Benutzerfunktionen,
-Favoriten, Graphbereiche, Statistiklisten und das BASIC-Programm automatisch.
+Favoriten, Graphbereiche, Statistiklisten, das BASIC-Programm und den
+grafischen Schaltplan automatisch.
 Aenderungen werden drei Sekunden gesammelt; ein unveraenderter Zustand wird
 nicht erneut in den Flash geschrieben.
 
@@ -362,7 +398,7 @@ Zustand zerstoert.
 Defekte oder unbekannte Speicherdaten werden beim Start verworfen und durch
 sichere Werkseinstellungen ersetzt.
 
-Firmware 1.8 verwendet ausschliesslich Flashformat 6. Es gibt bewusst keine
+Firmware 2.2 verwendet ausschliesslich Flashformat 8. Es gibt bewusst keine
 Rueckwaertskompatibilitaet: Datensaetze aelterer Firmwareversionen werden nicht
 gelesen und der Rechner startet stattdessen mit Werkseinstellungen.
 

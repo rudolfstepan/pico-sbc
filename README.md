@@ -8,19 +8,19 @@ flashbare Anwendungen und eine gemeinsame Hardwarebibliothek.
 
 | Komponente | Version/Stand |
 |---|---|
-| Scientific Calculator | Firmware `1.8.0` |
-| USB-CDC-Protokoll | Version `4` |
-| Persistenter Rechnerzustand | Flashformat `6`, ohne Altformat-Migration |
-| Pico Calculator Link | Version `2.1` |
+| Scientific Calculator | Firmware `2.2.0` |
+| USB-CDC-Protokoll | Version `5` |
+| Persistenter Rechnerzustand | Flashformat `8`, ohne Altformat-Migration |
+| Pico Calculator Link | Version `2.2` |
 | Mini Computer | Firmware `1.0.0` |
-| Automatisierte Host-Tests | 30 Tests |
+| Automatisierte Host-Tests | 34 Tests |
 
 ## Firmware
 
 | Anwendung | Beschreibung | Ziel |
 |---|---|---|
 | [Mini Computer](firmware/mini-computer/README.md) | Touch-Tastatur und kleine Kommandozeile | `lafvin_minicomputer` |
-| [Scientific Calculator](firmware/scientific-calculator/README.md) | Wissenschaftlicher Rechner mit waehlbarer 40-, 80- oder 128-stelliger Arithmetik, Programmer-, Graph-, Logik-, Statistik- und BASIC-Modus | `lafvin_scientific_calculator` |
+| [Scientific Calculator](firmware/scientific-calculator/README.md) | Wissenschaftlicher Rechner mit hochpraeziser Arithmetik, Graphik, Logik, Vollbild-Schaltplaneditor, Statistik und BASIC | `lafvin_scientific_calculator` |
 
 ## Projektstruktur
 
@@ -47,11 +47,12 @@ third_party/libbf/    LibBF fuer hochpraezise wissenschaftliche Funktionen
 
 ## Pico Calculator Link
 
-Die plattformunabhaengige Desktop-App `Pico Calculator Link 2.1` verbindet den
+Die plattformunabhaengige Desktop-App `Pico Calculator Link 2.2` verbindet den
 Scientific Calculator mit Windows, Linux oder macOS. Sie bildet alle
 Rechner-Module ab: Wissenschaft, Programmer und Zahlenformate, Graphanalyse,
-Logik, Einheiten und Konstanten, komplexe Zahlen, Statistik,
-Speicher/Favoriten und BASIC. Persistente Daten werden synchronisiert und als
+Logik, Zahlentheorie, den grafischen Schaltplaneditor, Einheiten und
+Konstanten, komplexe Zahlen, Statistik, Speicher/Favoriten und BASIC.
+Persistente Daten einschliesslich Schaltplan werden synchronisiert und als
 JSON gesichert.
 
 ![Pico Calculator Link](docs/images/pico-calculator-link.png)
@@ -95,7 +96,7 @@ lassen sich mit `--target lafvin_minicomputer` beziehungsweise
 ## Tests
 
 Die Rechenkerne und PC-Werkzeuge sind vom Pico SDK entkoppelt und werden in
-aktuell 30 Host-Tests geprueft:
+aktuell 34 Host-Tests geprueft:
 
 ```sh
 cmake -S tests -B out/tests

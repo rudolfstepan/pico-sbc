@@ -169,12 +169,13 @@ int main(void) {
         .statistics_two_variable = true,
         .statistics_view = STATISTICS_VIEW_PLOT,
     };
+    calculator_widget_set_page(PAGE_STATISTICS);
     calculator_widget_set_data_focus(true);
     CHECK(calculator_widget_data_focus());
     CHECK(calculator_widget_display_height() == 168);
     CHECK(calculator_widget_key_top(0) == 188);
-    CHECK(calculator_widget_key_top(4) == 280);
-    CHECK(calculator_widget_key_height() == 21);
+    CHECK(calculator_widget_key_top(4) == 254);
+    CHECK(calculator_widget_key_height() == 62);
 
     mock_lcd_reset();
     calculator_page_render_programmer(&programmer, "DATA DISPLAY LARGE");
@@ -191,12 +192,12 @@ int main(void) {
 
     const calc_key_t *first = calculator_widget_hit_key(
         PAGE_STATISTICS, &widget_state, 5, 189);
-    const calc_key_t *gap = calculator_widget_hit_key(
-        PAGE_STATISTICS, &widget_state, 5, 209);
+    const calc_key_t *second_row = calculator_widget_hit_key(
+        PAGE_STATISTICS, &widget_state, 5, 252);
     const calc_key_t *last = calculator_widget_hit_key(
         PAGE_STATISTICS, &widget_state, 5, 300);
     CHECK(first && first->row == 0 && first->col == 0);
-    CHECK(gap == NULL);
+    CHECK(second_row && second_row->row == 4 && second_row->col == 0);
     CHECK(last && last->row == 4 && last->col == 0);
 
     calculator_widget_set_layout(CALCULATOR_LAYOUT_FULLSCREEN);
@@ -278,8 +279,8 @@ int main(void) {
     CHECK(calculator_widget_display_height() == 126);
     CHECK(calculator_widget_key_width() == 48);
     CHECK(calculator_widget_key_top(0) == 132);
-    CHECK(calculator_widget_key_top(4) == 404);
-    CHECK(calculator_widget_key_height() == 64);
+    CHECK(calculator_widget_key_top(4) == 408);
+    CHECK(calculator_widget_key_height() == 65);
 
     mock_lcd_reset();
     calculator_page_render_expression(
@@ -314,7 +315,10 @@ int main(void) {
           portrait_last->col == 5);
     mock_lcd_reset();
     for (calc_page_t test_page = PAGE_BASIC;
-         test_page < PAGE_BASIC_PROGRAM; ++test_page) {
+         test_page <= PAGE_CIRCUIT; ++test_page) {
+        if (test_page == PAGE_BASIC_PROGRAM || test_page == PAGE_CIRCUIT) {
+            continue;
+        }
         widget_state.page = test_page;
         calculator_widget_render_keypad(test_page, &widget_state);
     }
@@ -324,8 +328,8 @@ int main(void) {
     calculator_widget_set_layout(CALCULATOR_LAYOUT_DATA_FOCUS);
     CHECK(calculator_widget_display_height() == 252);
     CHECK(calculator_widget_key_top(0) == 258);
-    CHECK(calculator_widget_key_top(4) == 426);
-    CHECK(calculator_widget_key_height() == 39);
+    CHECK(calculator_widget_key_top(4) == 369);
+    CHECK(calculator_widget_key_height() == 107);
     mock_lcd_reset();
     calculator_page_render_programmer(&programmer, "PORTRAIT DATA");
     calculator_page_render_format(&programmer, 24, FORMAT_VIEW_IEEE64,

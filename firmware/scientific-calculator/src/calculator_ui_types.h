@@ -35,7 +35,12 @@ typedef enum {
     ACT_LOGIC,
     ACT_UNITS,
     ACT_COMPLEX,
-    ACT_STATISTICS
+    ACT_STATISTICS,
+    ACT_HOME,
+    ACT_NAVIGATE,
+    ACT_LAYER,
+    ACT_SETTINGS,
+    ACT_NUMBER_THEORY
 } calc_action_t;
 
 typedef enum {
@@ -50,7 +55,11 @@ typedef enum {
     PAGE_UNITS,
     PAGE_COMPLEX,
     PAGE_STATISTICS,
-    PAGE_BASIC_PROGRAM
+    PAGE_BASIC_PROGRAM,
+    PAGE_LAUNCHER,
+    PAGE_SETTINGS,
+    PAGE_NUMBER_THEORY,
+    PAGE_CIRCUIT
 } calc_page_t;
 
 typedef enum {

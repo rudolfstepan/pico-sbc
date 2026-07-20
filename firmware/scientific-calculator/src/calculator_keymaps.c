@@ -1,81 +1,73 @@
 #include "calculator_keymaps.h"
 
 static const calc_key_t basic_keys[] = {
-    {"SCI", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
-    {"DEG", "", 1, 0, ACT_ANGLE, STYLE_COMMAND},
-    {"(", "(", 2, 0, ACT_INSERT, STYLE_FUNCTION},
-    {")", ")", 3, 0, ACT_INSERT, STYLE_FUNCTION},
-    {"DEL", "", 4, 0, ACT_DELETE, STYLE_COMMAND},
-    {"AC", "", 5, 0, ACT_CLEAR, STYLE_COMMAND},
-
-    {"7", "7", 0, 1, ACT_INSERT, STYLE_NUMBER},
-    {"8", "8", 1, 1, ACT_INSERT, STYLE_NUMBER},
-    {"9", "9", 2, 1, ACT_INSERT, STYLE_NUMBER},
-    {"/", "/", 3, 1, ACT_INSERT, STYLE_FUNCTION},
-    {"SQRT", "sqrt(", 4, 1, ACT_INSERT, STYLE_FUNCTION},
-    {"X^2", "^2", 5, 1, ACT_INSERT, STYLE_FUNCTION},
-
-    {"4", "4", 0, 2, ACT_INSERT, STYLE_NUMBER},
-    {"5", "5", 1, 2, ACT_INSERT, STYLE_NUMBER},
-    {"6", "6", 2, 2, ACT_INSERT, STYLE_NUMBER},
-    {"*", "*", 3, 2, ACT_INSERT, STYLE_FUNCTION},
-    {"1/X", "1/(", 4, 2, ACT_INSERT, STYLE_FUNCTION},
-    {"X^Y", "^", 5, 2, ACT_INSERT, STYLE_FUNCTION},
-
-    {"1", "1", 0, 3, ACT_INSERT, STYLE_NUMBER},
-    {"2", "2", 1, 3, ACT_INSERT, STYLE_NUMBER},
-    {"3", "3", 2, 3, ACT_INSERT, STYLE_NUMBER},
-    {"-", "-", 3, 3, ACT_INSERT, STYLE_FUNCTION},
-    {"PI", "pi", 4, 3, ACT_INSERT, STYLE_FUNCTION},
-    {"%", "%", 5, 3, ACT_INSERT, STYLE_FUNCTION},
-
-    {"0", "0", 0, 4, ACT_INSERT, STYLE_NUMBER},
-    {".", ".", 1, 4, ACT_INSERT, STYLE_NUMBER},
-    {"ANS", "ans", 2, 4, ACT_INSERT, STYLE_FUNCTION},
-    {"+", "+", 3, 4, ACT_INSERT, STYLE_FUNCTION},
-    {",", ",", 4, 4, ACT_INSERT, STYLE_FUNCTION},
-    {"=", "", 5, 4, ACT_EVALUATE, STYLE_EQUALS},
+    {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
+    {"2nd", "", 1, 0, ACT_LAYER, STYLE_COMMAND},
+    {"DEG", "", 2, 0, ACT_ANGLE, STYLE_COMMAND},
+    {"DEL", "", 3, 0, ACT_DELETE, STYLE_COMMAND},
+    {"AC", "", 4, 0, ACT_CLEAR, STYLE_COMMAND},
+    {"sin", "sin(", 0, 1, ACT_INSERT, STYLE_FUNCTION},
+    {"cos", "cos(", 1, 1, ACT_INSERT, STYLE_FUNCTION},
+    {"tan", "tan(", 2, 1, ACT_INSERT, STYLE_FUNCTION},
+    {"ln", "ln(", 3, 1, ACT_INSERT, STYLE_FUNCTION},
+    {"sqrt", "sqrt(", 4, 1, ACT_INSERT, STYLE_FUNCTION},
+    {"7", "7", 0, 2, ACT_INSERT, STYLE_NUMBER},
+    {"8", "8", 1, 2, ACT_INSERT, STYLE_NUMBER},
+    {"9", "9", 2, 2, ACT_INSERT, STYLE_NUMBER},
+    {"/", "/", 3, 2, ACT_INSERT, STYLE_FUNCTION},
+    {"^", "^", 4, 2, ACT_INSERT, STYLE_FUNCTION},
+    {"4", "4", 0, 3, ACT_INSERT, STYLE_NUMBER},
+    {"5", "5", 1, 3, ACT_INSERT, STYLE_NUMBER},
+    {"6", "6", 2, 3, ACT_INSERT, STYLE_NUMBER},
+    {"*", "*", 3, 3, ACT_INSERT, STYLE_FUNCTION},
+    {"(", "(", 4, 3, ACT_INSERT, STYLE_FUNCTION},
+    {"1", "1", 0, 4, ACT_INSERT, STYLE_NUMBER},
+    {"2", "2", 1, 4, ACT_INSERT, STYLE_NUMBER},
+    {"3", "3", 2, 4, ACT_INSERT, STYLE_NUMBER},
+    {"-", "-", 3, 4, ACT_INSERT, STYLE_FUNCTION},
+    {")", ")", 4, 4, ACT_INSERT, STYLE_FUNCTION},
+    {"0", "0", 0, 5, ACT_INSERT, STYLE_NUMBER},
+    {".", ".", 1, 5, ACT_INSERT, STYLE_NUMBER},
+    {"ANS", "ans", 2, 5, ACT_INSERT, STYLE_FUNCTION},
+    {"+", "+", 3, 5, ACT_INSERT, STYLE_FUNCTION},
+    {"=", "", 4, 5, ACT_EVALUATE, STYLE_EQUALS},
 };
 
 static const calc_key_t scientific_keys[] = {
-    {"PROG", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
-    {"DEG", "", 1, 0, ACT_ANGLE, STYLE_COMMAND},
-    {"(", "(", 2, 0, ACT_INSERT, STYLE_FUNCTION},
-    {")", ")", 3, 0, ACT_INSERT, STYLE_FUNCTION},
-    {"DEL", "", 4, 0, ACT_DELETE, STYLE_COMMAND},
-    {"AC", "", 5, 0, ACT_CLEAR, STYLE_COMMAND},
-
-    {"SIN", "sin(", 0, 1, ACT_INSERT, STYLE_FUNCTION},
-    {"COS", "cos(", 1, 1, ACT_INSERT, STYLE_FUNCTION},
-    {"TAN", "tan(", 2, 1, ACT_INSERT, STYLE_FUNCTION},
-    {"ASIN", "asin(", 3, 1, ACT_INSERT, STYLE_FUNCTION},
-    {"ACOS", "acos(", 4, 1, ACT_INSERT, STYLE_FUNCTION},
-    {"ATAN", "atan(", 5, 1, ACT_INSERT, STYLE_FUNCTION},
-
-    {"LN", "ln(", 0, 2, ACT_INSERT, STYLE_FUNCTION},
-    {"LOG", "log(", 1, 2, ACT_INSERT, STYLE_FUNCTION},
-    {"SQRT", "sqrt(", 2, 2, ACT_INSERT, STYLE_FUNCTION},
-    {"EXP", "exp(", 3, 2, ACT_INSERT, STYLE_FUNCTION},
-    {"10^X", "10^(", 4, 2, ACT_INSERT, STYLE_FUNCTION},
-    {"X^Y", "^", 5, 2, ACT_INSERT, STYLE_FUNCTION},
-
-    {"SINH", "sinh(", 0, 3, ACT_INSERT, STYLE_FUNCTION},
-    {"COSH", "cosh(", 1, 3, ACT_INSERT, STYLE_FUNCTION},
-    {"TANH", "tanh(", 2, 3, ACT_INSERT, STYLE_FUNCTION},
-    {"ABS", "abs(", 3, 3, ACT_INSERT, STYLE_FUNCTION},
-    {"FLOOR", "floor(", 4, 3, ACT_INSERT, STYLE_FUNCTION},
-    {",", ",", 5, 3, ACT_INSERT, STYLE_FUNCTION},
-
-    {"PI", "pi", 0, 4, ACT_INSERT, STYLE_FUNCTION},
-    {"E", "e", 1, 4, ACT_INSERT, STYLE_FUNCTION},
-    {"FAC", "fac(", 2, 4, ACT_INSERT, STYLE_FUNCTION},
-    {"NCR", "ncr(", 3, 4, ACT_INSERT, STYLE_FUNCTION},
-    {"NPR", "npr(", 4, 4, ACT_INSERT, STYLE_FUNCTION},
-    {"=", "", 5, 4, ACT_EVALUATE, STYLE_EQUALS},
+    {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
+    {"1st", "", 1, 0, ACT_LAYER, STYLE_EQUALS},
+    {"DEG", "", 2, 0, ACT_ANGLE, STYLE_COMMAND},
+    {"DEL", "", 3, 0, ACT_DELETE, STYLE_COMMAND},
+    {"AC", "", 4, 0, ACT_CLEAR, STYLE_COMMAND},
+    {"asin", "asin(", 0, 1, ACT_INSERT, STYLE_FUNCTION},
+    {"acos", "acos(", 1, 1, ACT_INSERT, STYLE_FUNCTION},
+    {"atan", "atan(", 2, 1, ACT_INSERT, STYLE_FUNCTION},
+    {"exp", "exp(", 3, 1, ACT_INSERT, STYLE_FUNCTION},
+    {"log", "log(", 4, 1, ACT_INSERT, STYLE_FUNCTION},
+    {"sinh", "sinh(", 0, 2, ACT_INSERT, STYLE_FUNCTION},
+    {"cosh", "cosh(", 1, 2, ACT_INSERT, STYLE_FUNCTION},
+    {"tanh", "tanh(", 2, 2, ACT_INSERT, STYLE_FUNCTION},
+    {"10^x", "10^(", 3, 2, ACT_INSERT, STYLE_FUNCTION},
+    {"fac", "fac(", 4, 2, ACT_INSERT, STYLE_FUNCTION},
+    {"abs", "abs(", 0, 3, ACT_INSERT, STYLE_FUNCTION},
+    {"floor", "floor(", 1, 3, ACT_INSERT, STYLE_FUNCTION},
+    {"ceil", "ceil(", 2, 3, ACT_INSERT, STYLE_FUNCTION},
+    {"nCr", "ncr(", 3, 3, ACT_INSERT, STYLE_FUNCTION},
+    {"nPr", "npr(", 4, 3, ACT_INSERT, STYLE_FUNCTION},
+    {"pi", "pi", 0, 4, ACT_INSERT, STYLE_FUNCTION},
+    {"e", "e", 1, 4, ACT_INSERT, STYLE_FUNCTION},
+    {",", ",", 2, 4, ACT_INSERT, STYLE_FUNCTION},
+    {"1/x", "1/(", 3, 4, ACT_INSERT, STYLE_FUNCTION},
+    {"x^2", "^2", 4, 4, ACT_INSERT, STYLE_FUNCTION},
+    {"(", "(", 0, 5, ACT_INSERT, STYLE_FUNCTION},
+    {")", ")", 1, 5, ACT_INSERT, STYLE_FUNCTION},
+    {"ANS", "ans", 2, 5, ACT_INSERT, STYLE_FUNCTION},
+    {"^", "^", 3, 5, ACT_INSERT, STYLE_FUNCTION},
+    {"=", "", 4, 5, ACT_EVALUATE, STYLE_EQUALS},
 };
 
 static const calc_key_t programmer_keys[] = {
-    {"FMT", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
     {"DEC", "DEC", 1, 0, ACT_PROG_BASE, STYLE_COMMAND},
     {"HEX", "HEX", 2, 0, ACT_PROG_BASE, STYLE_COMMAND},
     {"BIN", "BIN", 3, 0, ACT_PROG_BASE, STYLE_COMMAND},
@@ -112,7 +104,7 @@ static const calc_key_t programmer_keys[] = {
 };
 
 static const calc_key_t format_keys[] = {
-    {"TOOLS", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
     {"BITS", "BITS", 1, 0, ACT_FMT_VIEW, STYLE_COMMAND},
     {"8BIT", "8", 2, 0, ACT_FMT_WIDTH, STYLE_COMMAND},
     {"16BIT", "16", 3, 0, ACT_FMT_WIDTH, STYLE_COMMAND},
@@ -149,7 +141,7 @@ static const calc_key_t format_keys[] = {
 };
 
 static const calc_key_t format_bits_keys[] = {
-    {"TOOLS", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
     {"CONV", "CONV", 1, 0, ACT_FMT_VIEW, STYLE_COMMAND},
     {"8BIT", "8", 2, 0, ACT_FMT_WIDTH, STYLE_COMMAND},
     {"16BIT", "16", 3, 0, ACT_FMT_WIDTH, STYLE_COMMAND},
@@ -186,7 +178,7 @@ static const calc_key_t format_bits_keys[] = {
 };
 
 static const calc_key_t format_ieee_keys[] = {
-    {"TOOLS", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
     {"CONV", "CONV", 1, 0, ACT_FMT_VIEW, STYLE_COMMAND},
     {"BITS", "BITS", 2, 0, ACT_FMT_VIEW, STYLE_COMMAND},
     {"F32", "IEEE32", 3, 0, ACT_FMT_VIEW, STYLE_COMMAND},
@@ -223,7 +215,7 @@ static const calc_key_t format_ieee_keys[] = {
 };
 
 static const calc_key_t tools_keys[] = {
-    {"SYMBOLS", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
     {"GRAPH", "", 1, 0, ACT_GOTO_GRAPH, STYLE_COMMAND},
     {"M+", "M+", 2, 0, ACT_MEMORY, STYLE_FUNCTION},
     {"M-", "M-", 3, 0, ACT_MEMORY, STYLE_FUNCTION},
@@ -235,7 +227,7 @@ static const calc_key_t tools_keys[] = {
     {"USE", "USE", 2, 1, ACT_HISTORY, STYLE_FUNCTION},
     {"HCLR", "CLEAR", 3, 1, ACT_HISTORY, STYLE_FUNCTION},
     {"ANS", "ans", 4, 1, ACT_INSERT, STYLE_FUNCTION},
-    {"X", "x", 5, 1, ACT_INSERT, STYLE_FUNCTION},
+    {"X^3", "^3", 5, 1, ACT_INSERT, STYLE_FUNCTION},
 
     {"<", "LEFT", 0, 2, ACT_CURSOR, STYLE_FUNCTION},
     {">", "RIGHT", 1, 2, ACT_CURSOR, STYLE_FUNCTION},
@@ -252,7 +244,7 @@ static const calc_key_t tools_keys[] = {
     {"SQRT", "sqrt(", 5, 3, ACT_INSERT, STYLE_FUNCTION},
 
     {"X^2", "^2", 0, 4, ACT_INSERT, STYLE_FUNCTION},
-    {"X^3", "^3", 1, 4, ACT_INSERT, STYLE_FUNCTION},
+    {"X", "x", 1, 4, ACT_INSERT, STYLE_NUMBER},
     {"+", "+", 2, 4, ACT_INSERT, STYLE_FUNCTION},
     {"-", "-", 3, 4, ACT_INSERT, STYLE_FUNCTION},
     {"*", "*", 4, 4, ACT_INSERT, STYLE_FUNCTION},
@@ -260,7 +252,7 @@ static const calc_key_t tools_keys[] = {
 };
 
 static const calc_key_t symbol_keys[] = {
-    {"LOGIC", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
     {"A", "A", 1, 0, ACT_INSERT, STYLE_NUMBER},
     {"B", "B", 2, 0, ACT_INSERT, STYLE_NUMBER},
     {"C", "C", 3, 0, ACT_INSERT, STYLE_NUMBER},
@@ -297,7 +289,7 @@ static const calc_key_t symbol_keys[] = {
 };
 
 static const calc_key_t logic_keys[] = {
-    {"UNITS", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
     {"CHECK", "CHECK", 1, 0, ACT_LOGIC, STYLE_COMMAND},
     {"TABLE", "TABLE", 2, 0, ACT_LOGIC, STYLE_COMMAND},
     {"DNF", "DNF", 3, 0, ACT_LOGIC, STYLE_COMMAND},
@@ -333,12 +325,49 @@ static const calc_key_t logic_keys[] = {
     {"USE", "USE", 5, 4, ACT_LOGIC, STYLE_EQUALS},
 };
 
-static const calc_key_t unit_keys[] = {
-    {"COMPLEX", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
-    {"<CAT", "CAT-", 1, 0, ACT_UNITS, STYLE_COMMAND},
-    {"CAT>", "CAT+", 2, 0, ACT_UNITS, STYLE_COMMAND},
-    {"<FROM", "FROM-", 3, 0, ACT_UNITS, STYLE_COMMAND},
-    {"FROM>", "FROM+", 4, 0, ACT_UNITS, STYLE_COMMAND},
+static const calc_key_t unit_input_keys[] = {
+    {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
+    {"FROM", "FROMSEL", 1, 0, ACT_UNITS, STYLE_COMMAND},
+    {"TO", "TOSEL", 2, 0, ACT_UNITS, STYLE_COMMAND},
+    {"<CAT", "CAT-", 3, 0, ACT_UNITS, STYLE_COMMAND},
+    {"CAT>", "CAT+", 4, 0, ACT_UNITS, STYLE_COMMAND},
+    {"SWAP", "SWAP", 5, 0, ACT_UNITS, STYLE_EQUALS},
+
+    {"7", "7", 0, 1, ACT_UNITS, STYLE_NUMBER},
+    {"8", "8", 1, 1, ACT_UNITS, STYLE_NUMBER},
+    {"9", "9", 2, 1, ACT_UNITS, STYLE_NUMBER},
+    {"+/-", "SIGN", 3, 1, ACT_UNITS, STYLE_FUNCTION},
+    {"DEL", "DEL", 4, 1, ACT_UNITS, STYLE_COMMAND},
+    {"AC", "AC", 5, 1, ACT_UNITS, STYLE_COMMAND},
+
+    {"4", "4", 0, 2, ACT_UNITS, STYLE_NUMBER},
+    {"5", "5", 1, 2, ACT_UNITS, STYLE_NUMBER},
+    {"6", "6", 2, 2, ACT_UNITS, STYLE_NUMBER},
+    {".", ".", 3, 2, ACT_UNITS, STYLE_NUMBER},
+    {"EE", "EXP", 4, 2, ACT_UNITS, STYLE_FUNCTION},
+    {"=", "CONVERT", 5, 2, ACT_UNITS, STYLE_EQUALS},
+
+    {"1", "1", 0, 3, ACT_UNITS, STYLE_NUMBER},
+    {"2", "2", 1, 3, ACT_UNITS, STYLE_NUMBER},
+    {"3", "3", 2, 3, ACT_UNITS, STYLE_NUMBER},
+    {"0", "0", 3, 3, ACT_UNITS, STYLE_NUMBER},
+    {"ANS IN", "ANSIN", 4, 3, ACT_UNITS, STYLE_FUNCTION},
+    {"ANS OUT", "OUTANS", 5, 3, ACT_UNITS, STYLE_FUNCTION},
+
+    {"CONST", "CONST", 0, 4, ACT_UNITS, STYLE_COMMAND},
+    {">EDIT", "OUTEDIT", 1, 4, ACT_UNITS, STYLE_FUNCTION},
+    {"<FROM", "FROM-", 2, 4, ACT_UNITS, STYLE_FUNCTION},
+    {"FROM>", "FROM+", 3, 4, ACT_UNITS, STYLE_FUNCTION},
+    {"<TO", "TO-", 4, 4, ACT_UNITS, STYLE_FUNCTION},
+    {"TO>", "TO+", 5, 4, ACT_UNITS, STYLE_FUNCTION},
+};
+
+static const calc_key_t unit_selection_keys[] = {
+    {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
+    {"FROM", "FROMSEL", 1, 0, ACT_UNITS, STYLE_COMMAND},
+    {"TO", "TOSEL", 2, 0, ACT_UNITS, STYLE_COMMAND},
+    {"<CAT", "CAT-", 3, 0, ACT_UNITS, STYLE_COMMAND},
+    {"CAT>", "CAT+", 4, 0, ACT_UNITS, STYLE_COMMAND},
     {"SWAP", "SWAP", 5, 0, ACT_UNITS, STYLE_EQUALS},
 
     {"LEN", "LENGTH", 0, 1, ACT_UNITS, STYLE_NUMBER},
@@ -352,26 +381,37 @@ static const calc_key_t unit_keys[] = {
     {"PRESS", "PRESSURE", 1, 2, ACT_UNITS, STYLE_FUNCTION},
     {"ENERGY", "ENERGY", 2, 2, ACT_UNITS, STYLE_FUNCTION},
     {"POWER", "POWER", 3, 2, ACT_UNITS, STYLE_FUNCTION},
-    {"CONV", "CONV", 4, 2, ACT_UNITS, STYLE_COMMAND},
-    {"CONST", "CONST", 5, 2, ACT_UNITS, STYLE_COMMAND},
+    {"ANS>IN", "ANSIN", 4, 2, ACT_UNITS, STYLE_FUNCTION},
+    {"CONVERT", "CONVERT", 5, 2, ACT_UNITS, STYLE_EQUALS},
 
-    {"ANS>IN", "ANSIN", 0, 3, ACT_UNITS, STYLE_FUNCTION},
-    {"<TO", "TO-", 1, 3, ACT_UNITS, STYLE_FUNCTION},
-    {"TO>", "TO+", 2, 3, ACT_UNITS, STYLE_FUNCTION},
-    {"CONVERT", "CONVERT", 3, 3, ACT_UNITS, STYLE_EQUALS},
-    {"OUT>ANS", "OUTANS", 4, 3, ACT_UNITS, STYLE_FUNCTION},
-    {"OUT>EDIT", "OUTEDIT", 5, 3, ACT_UNITS, STYLE_FUNCTION},
+    {"OUT>ANS", "OUTANS", 0, 3, ACT_UNITS, STYLE_FUNCTION},
+    {"OUT>EDIT", "OUTEDIT", 1, 3, ACT_UNITS, STYLE_FUNCTION},
+    {"CONST", "CONST", 2, 3, ACT_UNITS, STYLE_COMMAND},
+    {"C>ANS", "CANS", 3, 3, ACT_UNITS, STYLE_FUNCTION},
+    {"C>EDIT", "CEDIT", 4, 3, ACT_UNITS, STYLE_FUNCTION},
+    {"INFO", "INFO", 5, 3, ACT_UNITS, STYLE_COMMAND},
 
-    {"C-", "C-", 0, 4, ACT_UNITS, STYLE_FUNCTION},
-    {"C+", "C+", 1, 4, ACT_UNITS, STYLE_FUNCTION},
-    {"C>ANS", "CANS", 2, 4, ACT_UNITS, STYLE_FUNCTION},
-    {"C>EDIT", "CEDIT", 3, 4, ACT_UNITS, STYLE_FUNCTION},
-    {"INFO", "INFO", 4, 4, ACT_UNITS, STYLE_COMMAND},
-    {"RESET", "RESET", 5, 4, ACT_UNITS, STYLE_COMMAND},
+    {"U1", "U0", 0, 4, ACT_UNITS, STYLE_FUNCTION},
+    {"U2", "U1", 1, 4, ACT_UNITS, STYLE_FUNCTION},
+    {"U3", "U2", 2, 4, ACT_UNITS, STYLE_FUNCTION},
+    {"U4", "U3", 3, 4, ACT_UNITS, STYLE_FUNCTION},
+    {"U5", "U4", 4, 4, ACT_UNITS, STYLE_FUNCTION},
+    {"U6", "U5", 5, 4, ACT_UNITS, STYLE_FUNCTION},
 };
 
+const calc_key_t *calculator_units_keymap(
+    calculator_units_view_t view, calculator_units_selector_t selector,
+    size_t *count) {
+    if (view == UNITS_VIEW_CONVERTER && selector == UNITS_SELECTOR_NONE) {
+        *count = sizeof unit_input_keys / sizeof unit_input_keys[0];
+        return unit_input_keys;
+    }
+    *count = sizeof unit_selection_keys / sizeof unit_selection_keys[0];
+    return unit_selection_keys;
+}
+
 static const calc_key_t complex_keys[] = {
-    {"STATS", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
     {"CART", "VIEW", 1, 0, ACT_COMPLEX, STYLE_COMMAND},
     {"DEG", "", 2, 0, ACT_ANGLE, STYLE_COMMAND},
     {"DEL", "DEL", 3, 0, ACT_COMPLEX, STYLE_COMMAND},
@@ -408,7 +448,7 @@ static const calc_key_t complex_keys[] = {
 };
 
 static const calc_key_t complex_history_keys[] = {
-    {"STATS", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
     {"CART", "VIEW", 1, 0, ACT_COMPLEX, STYLE_COMMAND},
     {"DEG", "", 2, 0, ACT_ANGLE, STYLE_COMMAND},
     {"DEL", "DEL", 3, 0, ACT_COMPLEX, STYLE_COMMAND},
@@ -445,7 +485,7 @@ static const calc_key_t complex_history_keys[] = {
 };
 
 static const calc_key_t statistics_keys[] = {
-    {"CODE", "", 0, 0, ACT_PAGE, STYLE_COMMAND},
+    {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
     {"1VAR", "1VAR", 1, 0, ACT_STATISTICS, STYLE_COMMAND},
     {"2VAR", "2VAR", 2, 0, ACT_STATISTICS, STYLE_COMMAND},
     {"DATA", "DATA", 3, 0, ACT_STATISTICS, STYLE_COMMAND},
@@ -481,6 +521,71 @@ static const calc_key_t statistics_keys[] = {
     {"REG", "REGRESSION", 5, 4, ACT_STATISTICS, STYLE_EQUALS},
 };
 
+static const calc_key_t launcher_keys[] = {
+    {"CALC", "CALC", 0, 0, ACT_NAVIGATE, STYLE_EQUALS},
+    {"PROG", "PROG", 1, 0, ACT_NAVIGATE, STYLE_FUNCTION},
+    {"GRAPH", "GRAPH", 2, 0, ACT_NAVIGATE, STYLE_FUNCTION},
+    {"LOGIC", "LOGIC", 0, 1, ACT_NAVIGATE, STYLE_FUNCTION},
+    {"UNITS", "UNITS", 1, 1, ACT_NAVIGATE, STYLE_FUNCTION},
+    {"COMPLEX", "COMPLEX", 2, 1, ACT_NAVIGATE, STYLE_FUNCTION},
+    {"STATS", "STATS", 0, 2, ACT_NAVIGATE, STYLE_FUNCTION},
+    {"BASIC", "BASIC", 1, 2, ACT_NAVIGATE, STYLE_FUNCTION},
+    {"SYMBOLS", "SYMBOLS", 2, 2, ACT_NAVIGATE, STYLE_FUNCTION},
+    {"FORMAT", "FORMAT", 0, 3, ACT_NAVIGATE, STYLE_COMMAND},
+    {"TOOLS", "TOOLS", 1, 3, ACT_NAVIGATE, STYLE_COMMAND},
+    {"SETTINGS", "SETTINGS", 2, 3, ACT_NAVIGATE, STYLE_COMMAND},
+    {"PRIMES", "NUMBER", 0, 4, ACT_NAVIGATE, STYLE_FUNCTION},
+    {"CIRCUIT", "CIRCUIT", 1, 4, ACT_NAVIGATE, STYLE_FUNCTION},
+};
+
+static const calc_key_t settings_keys[] = {
+    {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
+    {"LCD FIXED", "ABOUT", 1, 0, ACT_SETTINGS, STYLE_COMMAND},
+    {"VERSION", "ABOUT", 2, 0, ACT_SETTINGS, STYLE_FUNCTION},
+    {"BEEP", "BEEP", 0, 1, ACT_SETTINGS, STYLE_FUNCTION},
+    {"LAND", "LAND", 1, 1, ACT_SETTINGS, STYLE_FUNCTION},
+    {"PORT", "PORT", 2, 1, ACT_SETTINGS, STYLE_FUNCTION},
+    {"STANDARD", "STANDARD", 0, 2, ACT_SETTINGS, STYLE_FUNCTION},
+    {"FOCUS", "FOCUS", 1, 2, ACT_SETTINGS, STYLE_FUNCTION},
+    {"FULL", "FULL", 2, 2, ACT_SETTINGS, STYLE_FUNCTION},
+    {"PREC", "PREC", 0, 3, ACT_SETTINGS, STYLE_FUNCTION},
+    {"DEFAULT", "DEFAULT", 1, 3, ACT_SETTINGS, STYLE_COMMAND},
+    {"ABOUT", "ABOUT", 2, 3, ACT_SETTINGS, STYLE_EQUALS},
+};
+
+static const calc_key_t number_theory_keys[] = {
+    {"HOME", "", 0, 0, ACT_HOME, STYLE_COMMAND},
+    {"A", "A", 1, 0, ACT_NUMBER_THEORY, STYLE_FUNCTION},
+    {"B", "B", 2, 0, ACT_NUMBER_THEORY, STYLE_FUNCTION},
+    {"M", "C", 3, 0, ACT_NUMBER_THEORY, STYLE_FUNCTION},
+    {"DEL", "DEL", 4, 0, ACT_NUMBER_THEORY, STYLE_COMMAND},
+    {"AC", "AC", 5, 0, ACT_NUMBER_THEORY, STYLE_COMMAND},
+    {"7", "7", 0, 1, ACT_NUMBER_THEORY, STYLE_NUMBER},
+    {"8", "8", 1, 1, ACT_NUMBER_THEORY, STYLE_NUMBER},
+    {"9", "9", 2, 1, ACT_NUMBER_THEORY, STYLE_NUMBER},
+    {"ggT/GCD", "GCD", 3, 1, ACT_NUMBER_THEORY, STYLE_FUNCTION},
+    {"kgV/LCM", "LCM", 4, 1, ACT_NUMBER_THEORY, STYLE_FUNCTION},
+    {"PRIME?", "PRIME", 5, 1, ACT_NUMBER_THEORY, STYLE_EQUALS},
+    {"4", "4", 0, 2, ACT_NUMBER_THEORY, STYLE_NUMBER},
+    {"5", "5", 1, 2, ACT_NUMBER_THEORY, STYLE_NUMBER},
+    {"6", "6", 2, 2, ACT_NUMBER_THEORY, STYLE_NUMBER},
+    {"NEXT P", "NEXT", 3, 2, ACT_NUMBER_THEORY, STYLE_FUNCTION},
+    {"PREV P", "PREV", 4, 2, ACT_NUMBER_THEORY, STYLE_FUNCTION},
+    {"FACT", "FACTOR", 5, 2, ACT_NUMBER_THEORY, STYLE_FUNCTION},
+    {"1", "1", 0, 3, ACT_NUMBER_THEORY, STYLE_NUMBER},
+    {"2", "2", 1, 3, ACT_NUMBER_THEORY, STYLE_NUMBER},
+    {"3", "3", 2, 3, ACT_NUMBER_THEORY, STYLE_NUMBER},
+    {"PHI", "PHI", 3, 3, ACT_NUMBER_THEORY, STYLE_FUNCTION},
+    {"MOD", "MOD", 4, 3, ACT_NUMBER_THEORY, STYLE_FUNCTION},
+    {"A^B MOD M", "POW", 5, 3, ACT_NUMBER_THEORY, STYLE_FUNCTION},
+    {"0", "0", 0, 4, ACT_NUMBER_THEORY, STYLE_NUMBER},
+    {"ANS", "ANS", 1, 4, ACT_NUMBER_THEORY, STYLE_FUNCTION},
+    {"USE", "USE", 2, 4, ACT_NUMBER_THEORY, STYLE_FUNCTION},
+    {">ANS", "TOANS", 3, 4, ACT_NUMBER_THEORY, STYLE_FUNCTION},
+    {"SWAP", "SWAP", 4, 4, ACT_NUMBER_THEORY, STYLE_FUNCTION},
+    {"MAX64", "MAX", 5, 4, ACT_NUMBER_THEORY, STYLE_COMMAND},
+};
+
 const calc_key_t *calculator_complex_keymap(bool history, size_t *count) {
     if (history) {
         *count = sizeof complex_history_keys / sizeof complex_history_keys[0];
@@ -491,7 +596,7 @@ const calc_key_t *calculator_complex_keymap(bool history, size_t *count) {
 }
 
 static const calc_key_t graph_plot_keys[] = {
-    {"TOOLS", "", 0, 4, ACT_GOTO_TOOLS, STYLE_COMMAND},
+    {"HOME", "", 0, 4, ACT_HOME, STYLE_COMMAND},
     {"F1", "F1", 1, 4, ACT_GRAPH, STYLE_FUNCTION},
     {"F2", "F2", 2, 4, ACT_GRAPH, STYLE_FUNCTION},
     {"F3", "F3", 3, 4, ACT_GRAPH, STYLE_FUNCTION},
@@ -503,7 +608,7 @@ static const calc_key_t graph_menu_keys[] = {
     {"PLOT", "PLOT", 0, 4, ACT_GRAPH, STYLE_COMMAND},
     {"TABLE", "TABLE", 1, 4, ACT_GRAPH, STYLE_FUNCTION},
     {"TRACE", "TRACE", 2, 4, ACT_GRAPH, STYLE_FUNCTION},
-    {"AUTO", "AUTO", 3, 4, ACT_GRAPH, STYLE_FUNCTION},
+    {"EDIT", "EDIT", 3, 4, ACT_GRAPH, STYLE_FUNCTION},
     {"ANALYZE", "ANALYZE", 4, 4, ACT_GRAPH, STYLE_FUNCTION},
     {"RANGE", "RANGE", 5, 4, ACT_GRAPH, STYLE_EQUALS},
 };
@@ -605,13 +710,25 @@ const calc_key_t *calculator_keymap(calc_page_t page, size_t *count) {
             *count = sizeof logic_keys / sizeof logic_keys[0];
             return logic_keys;
         case PAGE_UNITS:
-            *count = sizeof unit_keys / sizeof unit_keys[0];
-            return unit_keys;
+            return calculator_units_keymap(UNITS_VIEW_CONVERTER,
+                                           UNITS_SELECTOR_NONE, count);
         case PAGE_COMPLEX:
             return calculator_complex_keymap(false, count);
         case PAGE_STATISTICS:
             *count = sizeof statistics_keys / sizeof statistics_keys[0];
             return statistics_keys;
+        case PAGE_LAUNCHER:
+            *count = sizeof launcher_keys / sizeof launcher_keys[0];
+            return launcher_keys;
+        case PAGE_SETTINGS:
+            *count = sizeof settings_keys / sizeof settings_keys[0];
+            return settings_keys;
+        case PAGE_NUMBER_THEORY:
+            *count = sizeof number_theory_keys / sizeof number_theory_keys[0];
+            return number_theory_keys;
+        case PAGE_CIRCUIT:
+            *count = 0u;
+            return NULL;
         case PAGE_BASIC_PROGRAM:
         case PAGE_BASIC:
         default:

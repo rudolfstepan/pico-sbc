@@ -721,6 +721,7 @@ void calculator_graph_render(const calculator_graph_t *graph,
                              const calculator_symbols_t *symbols,
                              const calculator_widget_state_t *widget_state,
                              char *message, size_t message_size) {
+    calculator_widget_set_page(PAGE_GRAPH);
     bool previous_degrees = calc_engine_uses_degrees();
     calc_engine_set_degrees(false);
 

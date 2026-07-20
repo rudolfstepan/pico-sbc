@@ -39,6 +39,8 @@ int main(void) {
     calculator_symbols_init(&state.symbols);
     graph_model_init(&state.graph);
     statistics_engine_init(&state.statistics);
+    circuit_model_init(&state.circuit);
+    state.circuit_zoom_index = 1u;
     expression_editor_init(&editor);
     basic_engine_init(&basic_engine);
     calculator_usb_context_t context = {
@@ -50,7 +52,7 @@ int main(void) {
 
     CHECK(strcmp(run(&context, "PING", &effect), "OK PONG") == 0);
     CHECK(!effect.changed);
-    CHECK(strstr(run(&context, "INFO", &effect), "protocol=4") != NULL);
+    CHECK(strstr(run(&context, "INFO", &effect), "protocol=5") != NULL);
     CHECK(strstr(run(&context, "DIAG", &effect), "precision=HIGH") != NULL);
 
     CHECK(strcmp(run(&context, "SET EXPR 6*7", &effect),
@@ -171,6 +173,65 @@ int main(void) {
                  "OK CONSTANTS\t12") == 0);
     CHECK(strstr(run(&context, "MODULE COMPLEX DEG (1+2i)*(3-i)", &effect),
                  "real=5") != NULL);
+    CHECK(strstr(run(&context, "MODULE NUMBER GCD 84 30", &effect),
+                 "value=6") != NULL);
+    CHECK(strstr(run(&context, "MODULE NUMBER LCM 21 6", &effect),
+                 "value=42") != NULL);
+    CHECK(strstr(run(&context, "MODULE NUMBER PRIME 2305843009213693951",
+                     &effect), "value=1") != NULL);
+    CHECK(strstr(run(&context, "MODULE NUMBER NEXT 100", &effect),
+                 "value=101") != NULL);
+    CHECK(strstr(run(&context, "MODULE NUMBER PREV 100", &effect),
+                 "value=97") != NULL);
+    CHECK(strstr(run(&context, "MODULE NUMBER FACTOR 360", &effect),
+                 "value=2*2*2*3*3*5") != NULL);
+    CHECK(strstr(run(&context, "MODULE NUMBER PHI 36", &effect),
+                 "value=12") != NULL);
+    CHECK(strstr(run(&context, "MODULE NUMBER MOD 17 5", &effect),
+                 "value=2") != NULL);
+    CHECK(strstr(run(&context, "MODULE NUMBER POW 7 128 13", &effect),
+                 "value=3") != NULL);
+
+    CHECK(strstr(run(&context, "MODULE CIRCUIT INFO", &effect),
+                 "nodes=4\twires=3") != NULL);
+    CHECK(strstr(run(&context, "MODULE CIRCUIT NODE 0", &effect),
+                 "type=INPUT") != NULL);
+    CHECK(strstr(run(&context, "MODULE CIRCUIT WIRE 0", &effect),
+                 "source=0\tdestination=2\tinput=0") != NULL);
+    CHECK(strcmp(run(&context, "MODULE CIRCUIT CLEAR", &effect),
+                 "OK CIRCUIT\tCLEAR") == 0);
+    CHECK(effect.changed && effect.persistent_changed);
+    CHECK(strstr(run(&context,
+                     "MODULE CIRCUIT ADD INPUT 20 80 0 A", &effect),
+                 "index=0") != NULL);
+    CHECK(strstr(run(&context,
+                     "MODULE CIRCUIT ADD NOT 180 80 0 G1", &effect),
+                 "index=1") != NULL);
+    CHECK(strstr(run(&context,
+                     "MODULE CIRCUIT ADD OUTPUT 340 80 0 Y", &effect),
+                 "index=2") != NULL);
+    CHECK(strstr(run(&context, "MODULE CIRCUIT CONNECT 0 1 0", &effect),
+                 "destination=1") != NULL);
+    CHECK(strstr(run(&context, "MODULE CIRCUIT CONNECT 1 2 0", &effect),
+                 "destination=2") != NULL);
+    CHECK(strcmp(run(&context, "MODULE CIRCUIT VALUE 0 0", &effect),
+                 "OK CIRCUIT\tVALUE\t0\t0") == 0);
+    CHECK(strstr(run(&context, "MODULE CIRCUIT NODE 2", &effect),
+                 "output=1") != NULL);
+    CHECK(strcmp(run(&context, "MODULE CIRCUIT MOVE 1 200 90", &effect),
+                 "OK CIRCUIT\tMOVE\t1") == 0);
+    CHECK(strcmp(run(&context, "MODULE CIRCUIT VIEW 120 80 200", &effect),
+                 "OK CIRCUIT_VIEW\tx=120\ty=80\tzoom=200") == 0);
+    CHECK(strcmp(run(&context, "MODULE CIRCUIT COUNTERS 1 1 1", &effect),
+                 "OK CIRCUIT_COUNTERS\tinput=1\toutput=1\tgate=1") == 0);
+    CHECK(strcmp(run(&context, "MODULE CIRCUIT COUNTERS 0 0 0", &effect),
+                 "ERR RANGE CIRCUIT COUNTERS") == 0);
+    CHECK(strstr(run(&context, "MODULE CIRCUIT INFO", &effect),
+                 "viewport_x=120\tviewport_y=80\tzoom=200") != NULL);
+    CHECK(strcmp(run(&context, "MODULE CIRCUIT CONNECT 2 0 0", &effect),
+                 "ERR CIRCUIT CONNECT") == 0);
+    CHECK(strcmp(run(&context, "MODULE CIRCUIT DISCONNECT 2 0", &effect),
+                 "OK CIRCUIT\tDISCONNECT\t2\t0") == 0);
 
     CHECK(strcmp(run(&context, "STAT MODE 2", &effect),
                  "OK STATS\t2\t0") == 0);

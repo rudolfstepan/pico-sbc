@@ -15,21 +15,33 @@ from tkinter import filedialog, messagebox, ttk
 from typing import Any, Callable
 
 from pico_calc_cli import (
+    CIRCUIT_GATE_INPUTS,
+    CIRCUIT_GATE_TYPES,
+    CIRCUIT_WORLD_HEIGHT,
+    CIRCUIT_WORLD_WIDTH,
+    CIRCUIT_ZOOM_LEVELS,
     ProtocolError,
     SerialClient,
     export_state,
     import_state,
+    normalize_circuit,
     normalize_basic_program,
     read_basic_program,
+    read_circuit,
+    synchronize_circuit,
     synchronize_basic_program,
 )
 from pico_calc_gui_model import (
     BasicRunResult,
     DeviceSnapshot,
+    add_circuit_node,
     analyze_graph,
     analyze_statistics,
+    connect_circuit_nodes,
     continue_basic_program,
     convert_unit,
+    create_circuit,
+    disconnect_circuit_input,
     evaluate_complex,
     evaluate_expression,
     evaluate_logic,
@@ -45,14 +57,21 @@ from pico_calc_gui_model import (
     read_unit_category,
     run_basic_program,
     sample_graph,
+    set_circuit_input,
+    set_circuit_label,
+    set_circuit_node_type,
+    set_circuit_view,
     stop_basic_program,
+    remove_circuit_node,
+    move_circuit_node,
+    number_theory_operation,
     synchronize_statistics,
     synchronize_symbols,
 )
 
 
 APP_NAME = "Pico Calculator Link"
-APP_VERSION = "2.1"
+APP_VERSION = "2.2"
 BG = "#eef1f4"
 PANEL = "#ffffff"
 INK = "#202428"
@@ -64,6 +83,9 @@ ACCENT_ACTIVE = "#921f25"
 TEAL = "#00796b"
 AMBER = "#f2b84b"
 DISPLAY = "#111418"
+CIRCUIT_NODE_WIDTH = 88
+CIRCUIT_NODE_HEIGHT = 54
+CIRCUIT_PORT_RADIUS = 10
 
 
 Task = tuple[
@@ -142,6 +164,10 @@ class CalculatorLinkApp:
         self.programmer_bit_var = tk.IntVar(value=0)
         self.programmer_signed_var = tk.BooleanVar(value=False)
         self.programmer_result_var = tk.StringVar(value="")
+        self.number_a_var = tk.StringVar(value="84")
+        self.number_b_var = tk.StringVar(value="30")
+        self.number_modulus_var = tk.StringVar(value="17")
+        self.number_result_var = tk.StringVar(value="")
         self.format_fraction_var = tk.IntVar(value=16)
         self.ieee_width_var = tk.IntVar(value=32)
         self.ieee_raw_var = tk.StringVar(value="00000000")
@@ -168,6 +194,21 @@ class CalculatorLinkApp:
         self.complex_expression_var = tk.StringVar(value="(1+2i)*(3-i)")
         self.complex_angle_var = tk.StringVar(value="DEG")
         self.complex_result_var = tk.StringVar(value="")
+        self.circuit = create_circuit(demo=True)
+        self.circuit_gate_var = tk.StringVar(value="AND")
+        self.circuit_zoom_var = tk.StringVar(value="150%")
+        self.circuit_status_var = tk.StringVar(value="4 Knoten, 3 Leitungen")
+        self.circuit_label_var = tk.StringVar()
+        self.circuit_selected_type_var = tk.StringVar(value="AND")
+        self.circuit_input_var = tk.BooleanVar(value=False)
+        self.circuit_selected: int | None = None
+        self.circuit_wire_source: int | None = None
+        self.circuit_add_armed = False
+        self.circuit_drag_node: int | None = None
+        self.circuit_drag_origin = (0, 0)
+        self.circuit_drag_node_origin = (0, 0)
+        self.circuit_pan_origin: tuple[int, int, int, int] | None = None
+        self.circuit_connection_buttons: list[ttk.Button] = []
 
         self._configure_styles()
         self._build_ui()
@@ -204,8 +245,8 @@ class CalculatorLinkApp:
                         font=("Segoe UI Semibold", 11), padding=7)
         style.map("Equals.TButton", background=[("active", ACCENT_ACTIVE)])
         style.configure("TNotebook", background=BG, borderwidth=0)
-        style.configure("TNotebook.Tab", font=("Segoe UI Semibold", 9),
-                        padding=(11, 9), background="#dfe3e8")
+        style.configure("TNotebook.Tab", font=("Segoe UI Semibold", 8),
+                        padding=(4, 8), background="#dfe3e8")
         style.map("TNotebook.Tab",
                   background=[("selected", PANEL)],
                   foreground=[("selected", ACCENT)])
@@ -247,8 +288,10 @@ class CalculatorLinkApp:
 
         self._build_calculator_tab()
         self._build_programmer_tab()
+        self._build_number_theory_tab()
         self._build_graph_tab()
         self._build_logic_tab()
+        self._build_circuit_tab()
         self._build_units_tab()
         self._build_complex_tab()
         self._build_statistics_tab()
@@ -289,7 +332,7 @@ class CalculatorLinkApp:
         panel.columnconfigure(0, weight=1)
 
         ttk.Label(panel, text="Gerät", style="Title.Panel.TLabel").grid(
-            row=0, column=0, sticky="w", padx=16, pady=(18, 4))
+            row=0, column=0, sticky="w", padx=16, pady=(14, 4))
         status_row = ttk.Frame(panel, style="Panel.TFrame")
         status_row.grid(row=1, column=0, sticky="ew", padx=16, pady=(0, 14))
         self.status_canvas = tk.Canvas(status_row, width=12, height=12,
@@ -303,13 +346,13 @@ class CalculatorLinkApp:
         row = 2
         for label, variable in self.device_vars.items():
             item = ttk.Frame(panel, style="Panel.TFrame")
-            item.grid(row=row, column=0, sticky="ew", padx=16, pady=4)
+            item.grid(row=row, column=0, sticky="ew", padx=16, pady=2)
             ttk.Label(item, text=label, style="Muted.Panel.TLabel").pack(side=tk.LEFT)
             ttk.Label(item, textvariable=variable,
                       style="Panel.TLabel").pack(side=tk.RIGHT)
             row += 1
 
-        ttk.Separator(panel).grid(row=row, column=0, sticky="ew", padx=16, pady=14)
+        ttk.Separator(panel).grid(row=row, column=0, sticky="ew", padx=16, pady=10)
         row += 1
         self.sync_button = ttk.Button(panel, text="Vom Rechner laden",
                                       style="Teal.TButton",
@@ -520,6 +563,51 @@ class CalculatorLinkApp:
         formats.rowconfigure(1, weight=1)
         self.format_output.configure(state=tk.DISABLED)
 
+    def _build_number_theory_tab(self) -> None:
+        self.number_tab = self._new_tab("Zahlen")
+        tab = self.number_tab
+        tab.columnconfigure(0, weight=1)
+        tab.rowconfigure(2, weight=1)
+
+        inputs = ttk.Frame(tab, style="Panel.TFrame")
+        inputs.grid(row=0, column=0, sticky="ew", padx=18, pady=(18, 10))
+        for label, variable in (
+                ("A", self.number_a_var), ("B", self.number_b_var),
+                ("M", self.number_modulus_var)):
+            ttk.Label(inputs, text=label, style="Panel.TLabel").pack(
+                side=tk.LEFT, padx=(0, 4))
+            ttk.Entry(inputs, textvariable=variable, width=22,
+                      font=("Consolas", 11)).pack(
+                          side=tk.LEFT, fill=tk.X, expand=True,
+                          padx=(0, 12))
+
+        operations = ttk.Frame(tab, style="Panel.TFrame")
+        operations.grid(row=1, column=0, sticky="ew", padx=18, pady=(0, 10))
+        for column in range(3):
+            operations.columnconfigure(column, weight=1, uniform="number")
+        buttons = (
+            ("ggT / GCD", "GCD"), ("kgV / LCM", "LCM"),
+            ("Primzahl?", "PRIME"), ("Nächste Primzahl", "NEXT"),
+            ("Vorherige Primzahl", "PREV"), ("Primfaktoren", "FACTOR"),
+            ("Euler Phi", "PHI"), ("A mod B", "MOD"),
+            ("A^B mod M", "POW"),
+        )
+        for index, (label, action) in enumerate(buttons):
+            ttk.Button(
+                operations, text=label,
+                style="Accent.TButton" if action == "PRIME" else "TButton",
+                command=lambda selected=action:
+                    self._run_number_theory(selected),
+            ).grid(row=index // 3, column=index % 3, sticky="ew",
+                   padx=3, pady=3)
+
+        display = tk.Label(
+            tab, textvariable=self.number_result_var, bg=DISPLAY, fg=AMBER,
+            anchor="nw", justify=tk.LEFT, wraplength=760,
+            font=("Consolas", 20, "bold"), padx=18, pady=18,
+        )
+        display.grid(row=2, column=0, sticky="nsew", padx=18, pady=(0, 18))
+
     def _build_graph_tab(self) -> None:
         self.graph_tab = self._new_tab("Graph")
         tab = self.graph_tab
@@ -604,8 +692,145 @@ class CalculatorLinkApp:
         self.logic_output.grid(row=2, column=0, sticky="nsew", padx=18, pady=(0, 18))
         self.logic_output.configure(state=tk.DISABLED)
 
+    def _build_circuit_tab(self) -> None:
+        self.circuit_tab = self._new_tab("Gatter")
+        tab = self.circuit_tab
+        tab.columnconfigure(0, weight=1)
+        tab.rowconfigure(1, weight=1)
+
+        toolbar = ttk.Frame(tab, style="Panel.TFrame")
+        toolbar.grid(row=0, column=0, sticky="ew", padx=14, pady=(14, 8))
+        ttk.Label(toolbar, text="Gatter", style="Panel.TLabel").pack(
+            side=tk.LEFT, padx=(0, 4))
+        ttk.Combobox(
+            toolbar, textvariable=self.circuit_gate_var,
+            values=CIRCUIT_GATE_TYPES, state="readonly", width=8,
+        ).pack(side=tk.LEFT)
+        ttk.Button(toolbar, text="Einfügen", style="Teal.TButton",
+                   command=self._circuit_arm_add).pack(side=tk.LEFT, padx=4)
+        ttk.Button(toolbar, text="Verbinden",
+                   command=self._circuit_arm_link).pack(side=tk.LEFT, padx=4)
+        ttk.Button(toolbar, text="Löschen",
+                   command=self._circuit_delete_selected).pack(side=tk.LEFT)
+
+        ttk.Separator(toolbar, orient=tk.VERTICAL).pack(
+            side=tk.LEFT, fill=tk.Y, padx=10)
+        ttk.Button(toolbar, text="-", width=3,
+                   command=lambda: self._circuit_zoom(-1)).pack(side=tk.LEFT)
+        ttk.Label(toolbar, textvariable=self.circuit_zoom_var,
+                  style="Panel.TLabel", width=5, anchor=tk.CENTER).pack(
+                      side=tk.LEFT, padx=3)
+        ttk.Button(toolbar, text="+", width=3,
+                   command=lambda: self._circuit_zoom(1)).pack(side=tk.LEFT)
+        plan_menu = tk.Menu(toolbar, tearoff=False)
+        plan_menu.add_command(
+            label="Neuer Schaltplan",
+            command=lambda: self._circuit_replace(False))
+        plan_menu.add_command(
+            label="Demo laden", command=lambda: self._circuit_replace(True))
+        ttk.Menubutton(toolbar, text="Plan", menu=plan_menu).pack(
+            side=tk.LEFT, padx=(10, 0))
+
+        workspace = ttk.Frame(tab, style="Panel.TFrame")
+        workspace.grid(row=1, column=0, sticky="nsew", padx=14, pady=(0, 14))
+        workspace.columnconfigure(0, weight=1)
+        workspace.rowconfigure(0, weight=1)
+
+        self.circuit_canvas = tk.Canvas(
+            workspace, bg="#f8fafb", highlightthickness=1,
+            highlightbackground=LINE, cursor="crosshair", takefocus=True,
+        )
+        self.circuit_canvas.grid(row=0, column=0, sticky="nsew")
+        self.circuit_canvas.bind("<Configure>", self._draw_circuit)
+        self.circuit_canvas.bind("<ButtonPress-1>",
+                                 self._circuit_pointer_down)
+        self.circuit_canvas.bind("<B1-Motion>", self._circuit_pointer_move)
+        self.circuit_canvas.bind("<ButtonRelease-1>",
+                                 self._circuit_pointer_up)
+        self.circuit_canvas.bind("<Double-Button-1>",
+                                 self._circuit_double_click)
+        self.circuit_canvas.bind("<ButtonPress-3>",
+                                 self._circuit_right_click)
+        self.circuit_canvas.bind("<MouseWheel>", self._circuit_mouse_wheel)
+        self.circuit_canvas.bind("<Button-4>", self._circuit_mouse_wheel)
+        self.circuit_canvas.bind("<Button-5>", self._circuit_mouse_wheel)
+
+        inspector = ttk.LabelFrame(workspace, text="Auswahl", width=218)
+        inspector.grid(row=0, column=1, sticky="ns", padx=(10, 0))
+        inspector.grid_propagate(False)
+        inspector.columnconfigure(0, weight=1)
+        ttk.Label(inspector, text="Bezeichnung",
+                  style="Panel.TLabel").grid(
+                      row=0, column=0, sticky="w", padx=12, pady=(14, 3))
+        self.circuit_label_entry = ttk.Entry(
+            inspector, textvariable=self.circuit_label_var,
+            font=("Consolas", 11))
+        self.circuit_label_entry.grid(
+            row=1, column=0, sticky="ew", padx=12, pady=(0, 9))
+        ttk.Label(inspector, text="Typ", style="Panel.TLabel").grid(
+            row=2, column=0, sticky="w", padx=12, pady=(0, 3))
+        self.circuit_type_combo = ttk.Combobox(
+            inspector, textvariable=self.circuit_selected_type_var,
+            values=CIRCUIT_GATE_TYPES, state="readonly")
+        self.circuit_type_combo.grid(
+            row=3, column=0, sticky="ew", padx=12, pady=(0, 8))
+        self.circuit_apply_button = ttk.Button(
+            inspector, text="Änderungen anwenden",
+            command=self._circuit_apply_selected)
+        self.circuit_apply_button.grid(
+            row=4, column=0, sticky="ew", padx=12, pady=(0, 8))
+        self.circuit_input_check = ttk.Checkbutton(
+            inspector, text="Eingang aktiv",
+            variable=self.circuit_input_var,
+            command=self._circuit_set_selected_input)
+        self.circuit_input_check.grid(
+            row=5, column=0, sticky="w", padx=12, pady=(0, 12))
+
+        ttk.Separator(inspector).grid(
+            row=6, column=0, sticky="ew", padx=12, pady=5)
+        disconnect_row = ttk.Frame(inspector, style="Panel.TFrame")
+        disconnect_row.grid(row=7, column=0, sticky="ew", padx=12, pady=3)
+        disconnect_row.columnconfigure(0, weight=1, uniform="disconnect")
+        disconnect_row.columnconfigure(1, weight=1, uniform="disconnect")
+        self.circuit_disconnect_buttons = []
+        for input_index in range(2):
+            button = ttk.Button(
+                disconnect_row, text=f"E{input_index + 1} frei",
+                command=lambda selected=input_index:
+                    self._circuit_disconnect_selected(selected),
+            )
+            button.grid(row=0, column=input_index, sticky="ew",
+                        padx=(0, 3) if input_index == 0 else (3, 0))
+            self.circuit_disconnect_buttons.append(button)
+
+        ttk.Separator(inspector).grid(
+            row=8, column=0, sticky="ew", padx=12, pady=7)
+        ttk.Label(inspector, text="Pico", style="Panel.TLabel").grid(
+            row=9, column=0, sticky="w", padx=12, pady=(0, 3))
+        sync_row = ttk.Frame(inspector, style="Panel.TFrame")
+        sync_row.grid(row=10, column=0, sticky="ew", padx=12)
+        sync_row.columnconfigure(0, weight=1, uniform="sync")
+        sync_row.columnconfigure(1, weight=1, uniform="sync")
+        self.circuit_pull_button = ttk.Button(
+            sync_row, text="Laden", command=self._pull_circuit)
+        self.circuit_pull_button.grid(
+            row=0, column=0, sticky="ew", padx=(0, 3))
+        self.circuit_push_button = ttk.Button(
+            sync_row, text="Sichern", style="Accent.TButton",
+            command=self._push_circuit)
+        self.circuit_push_button.grid(
+            row=0, column=1, sticky="ew", padx=(3, 0))
+        self.circuit_connection_buttons.extend(
+            (self.circuit_pull_button, self.circuit_push_button))
+        inspector.rowconfigure(11, weight=1)
+        ttk.Label(
+            inspector, textvariable=self.circuit_status_var,
+            style="Muted.Panel.TLabel", wraplength=188, justify=tk.LEFT,
+        ).grid(row=12, column=0, sticky="sw", padx=12, pady=12)
+        self._update_circuit_inspector()
+
     def _build_units_tab(self) -> None:
-        self.units_tab = self._new_tab("Einheiten")
+        self.units_tab = self._new_tab("Einheit")
         tab = self.units_tab
         tab.columnconfigure(0, weight=1)
         tab.rowconfigure(2, weight=1)
@@ -724,7 +949,7 @@ class CalculatorLinkApp:
                        side=tk.RIGHT)
 
     def _build_statistics_tab(self) -> None:
-        self.statistics_tab = self._new_tab("Statistik")
+        self.statistics_tab = self._new_tab("Stats")
         tab = self.statistics_tab
         tab.columnconfigure(0, weight=1)
         tab.rowconfigure(1, weight=1)
@@ -913,7 +1138,7 @@ class CalculatorLinkApp:
                    command=self._use_history_expression).pack(side=tk.RIGHT)
 
     def _build_console_tab(self) -> None:
-        self.console_tab = self._new_tab("Protokoll")
+        self.console_tab = self._new_tab("USB")
         tab = self.console_tab
         tab.columnconfigure(0, weight=1)
         tab.rowconfigure(1, weight=1)
@@ -1164,6 +1389,42 @@ class CalculatorLinkApp:
         self._submit("Prüfe IEEE-Bitmuster",
                      lambda: inspect_ieee(self.client, width, raw), success)
 
+    def _run_number_theory(self, action: str) -> None:
+        if not self._require_connection():
+            return
+        try:
+            a = parse_integer(self.number_a_var.get(), "DEC")
+            b = (parse_integer(self.number_b_var.get(), "DEC")
+                 if action in ("GCD", "LCM", "MOD", "POW") else None)
+            modulus = (parse_integer(self.number_modulus_var.get(), "DEC")
+                       if action == "POW" else None)
+        except ProtocolError as error:
+            messagebox.showerror(APP_NAME, str(error))
+            return
+
+        def success(result: dict[str, str]) -> None:
+            names = {
+                "GCD": "ggT(A, B)", "LCM": "kgV(A, B)",
+                "NEXT": "Nächste Primzahl", "PREV": "Vorherige Primzahl",
+                "PHI": "Euler Phi(A)", "MOD": "A mod B",
+                "POW": "A^B mod M",
+            }
+            if action == "PRIME":
+                text = (f"{a} ist eine Primzahl" if result["value"] == "1"
+                        else f"{a} ist zusammengesetzt")
+            elif action == "FACTOR":
+                text = f"{a} = {result['value'].replace('*', ' * ')}"
+                if result.get("complete") == "0":
+                    text += "\nFaktorisierung unvollständig"
+            else:
+                text = f"{names[action]} = {result['value']}"
+            self.number_result_var.set(text)
+
+        self._submit(
+            f"Berechne {action}",
+            lambda: number_theory_operation(
+                self.client, action, a, b, modulus), success)
+
     def _plot_graph(self) -> None:
         if not self._require_connection():
             return
@@ -1309,6 +1570,475 @@ class CalculatorLinkApp:
                 self.logic_output,
                 f"{kind} ({'vereinfacht' if simplified else 'kanonisch'})\n\n"
                 f"{result}"))
+
+    def _circuit_node(self, node_id: int | None) -> dict[str, Any] | None:
+        if node_id is None:
+            return None
+        return next((node for node in self.circuit["nodes"]
+                     if node["id"] == node_id), None)
+
+    def _circuit_scale(self) -> float:
+        return float(self.circuit.get("zoom", 150)) / 100.0
+
+    def _circuit_input_y(self, node: dict[str, Any], input_index: int) -> int:
+        count = CIRCUIT_GATE_INPUTS[node["type"]]
+        if count < 2:
+            return int(node["y"]) + CIRCUIT_NODE_HEIGHT // 2
+        return int(node["y"]) + (
+            CIRCUIT_NODE_HEIGHT // 3 if input_index == 0
+            else CIRCUIT_NODE_HEIGHT * 2 // 3)
+
+    def _circuit_screen_point(self, world_x: float,
+                              world_y: float) -> tuple[float, float]:
+        scale = self._circuit_scale()
+        return (
+            (world_x - int(self.circuit["viewport_x"])) * scale,
+            (world_y - int(self.circuit["viewport_y"])) * scale,
+        )
+
+    def _circuit_world_point(self, screen_x: float,
+                             screen_y: float) -> tuple[float, float]:
+        scale = self._circuit_scale()
+        return (
+            int(self.circuit["viewport_x"]) + screen_x / scale,
+            int(self.circuit["viewport_y"]) + screen_y / scale,
+        )
+
+    def _draw_circuit(self, _event: Any = None) -> None:
+        canvas = self.circuit_canvas
+        canvas.delete("all")
+        width = max(1, canvas.winfo_width())
+        height = max(1, canvas.winfo_height())
+        scale = self._circuit_scale()
+        viewport_x = int(self.circuit["viewport_x"])
+        viewport_y = int(self.circuit["viewport_y"])
+
+        spacing = 40
+        first_x = viewport_x - viewport_x % spacing
+        first_y = viewport_y - viewport_y % spacing
+        last_x = viewport_x + int(width / scale) + spacing
+        last_y = viewport_y + int(height / scale) + spacing
+        for world_x in range(first_x, last_x, spacing):
+            x, _ = self._circuit_screen_point(world_x, viewport_y)
+            canvas.create_line(x, 0, x, height, fill="#e7ebef")
+        for world_y in range(first_y, last_y, spacing):
+            _, y = self._circuit_screen_point(viewport_x, world_y)
+            canvas.create_line(0, y, width, y, fill="#e7ebef")
+
+        nodes = {node["id"]: node for node in self.circuit["nodes"]}
+        for wire in self.circuit["wires"]:
+            source = nodes.get(wire["source"])
+            destination = nodes.get(wire["destination"])
+            if source is None or destination is None:
+                continue
+            x0, y0 = self._circuit_screen_point(
+                source["x"] + CIRCUIT_NODE_WIDTH,
+                source["y"] + CIRCUIT_NODE_HEIGHT // 2)
+            x1, y1 = self._circuit_screen_point(
+                destination["x"],
+                self._circuit_input_y(destination, wire["input"]))
+            middle = x0 + (x1 - x0) / 2.0
+            canvas.create_line(
+                x0, y0, middle, y0, middle, y1, x1, y1,
+                fill=TEAL if source["output"] else "#8b959e",
+                width=max(2, round(2 * scale)), joinstyle=tk.ROUND,
+            )
+
+        connected_inputs = {
+            (wire["destination"], wire["input"]): nodes[wire["source"]]["output"]
+            for wire in self.circuit["wires"]
+            if wire["source"] in nodes
+        }
+        symbols = {
+            "INPUT": "IN", "OUTPUT": "OUT", "NOT": "1",
+            "AND": "&", "OR": ">=1", "XOR": "=1",
+            "NAND": "&", "NOR": ">=1", "XNOR": "=1",
+        }
+        for node in self.circuit["nodes"]:
+            x, y = self._circuit_screen_point(node["x"], node["y"])
+            node_width = CIRCUIT_NODE_WIDTH * scale
+            node_height = CIRCUIT_NODE_HEIGHT * scale
+            inset = 8 * scale
+            selected = node["id"] == self.circuit_selected
+            active_fill = "#e3f2ef" if node["output"] else "#ffffff"
+            canvas.create_rectangle(
+                x + inset, y, x + node_width - inset, y + node_height,
+                fill=active_fill,
+                outline=ACCENT if selected else "#333a40",
+                width=3 if selected else 2,
+            )
+            font_size = max(8, round(9 * scale))
+            symbol_size = max(10, round(13 * scale))
+            canvas.create_text(
+                x + 13 * scale, y + 8 * scale, text=node["label"],
+                anchor=tk.NW, fill=INK,
+                font=("Segoe UI Semibold", font_size),
+            )
+            canvas.create_text(
+                x + node_width / 2, y + node_height / 2 + 5 * scale,
+                text=symbols[node["type"]], fill=INK,
+                font=("Consolas", symbol_size, "bold"),
+            )
+            canvas.create_text(
+                x + node_width - 14 * scale, y + 7 * scale,
+                text="1" if node["output"] else "0", anchor=tk.NE,
+                fill=TEAL if node["output"] else MUTED,
+                font=("Consolas", font_size, "bold"),
+            )
+
+            radius = max(4, round(4 * scale))
+            for input_index in range(CIRCUIT_GATE_INPUTS[node["type"]]):
+                port_x, port_y = self._circuit_screen_point(
+                    node["x"], self._circuit_input_y(node, input_index))
+                active = connected_inputs.get((node["id"], input_index), False)
+                canvas.create_oval(
+                    port_x - radius, port_y - radius,
+                    port_x + radius, port_y + radius,
+                    fill=TEAL if active else "#ffffff", outline="#333a40",
+                    width=2,
+                )
+            if node["type"] != "OUTPUT":
+                port_x, port_y = self._circuit_screen_point(
+                    node["x"] + CIRCUIT_NODE_WIDTH,
+                    node["y"] + CIRCUIT_NODE_HEIGHT // 2)
+                canvas.create_oval(
+                    port_x - radius, port_y - radius,
+                    port_x + radius, port_y + radius,
+                    fill=TEAL if node["output"] else "#ffffff",
+                    outline=ACCENT if node["id"] == self.circuit_wire_source
+                    else "#333a40",
+                    width=3 if node["id"] == self.circuit_wire_source else 2,
+                )
+            if node["type"] in ("NOT", "NAND", "NOR", "XNOR"):
+                bubble_x = x + node_width - inset
+                bubble_y = y + node_height / 2
+                bubble_radius = max(3, round(3 * scale))
+                canvas.create_oval(
+                    bubble_x - bubble_radius, bubble_y - bubble_radius,
+                    bubble_x + bubble_radius, bubble_y + bubble_radius,
+                    fill="#ffffff", outline="#333a40", width=2,
+                )
+
+        if self.circuit_add_armed:
+            canvas.create_text(
+                12, 12, anchor=tk.NW,
+                text=f"+ {self.circuit_gate_var.get()}", fill=ACCENT,
+                font=("Segoe UI Semibold", 11),
+            )
+
+    def _circuit_hit_test(self, x: int, y: int) -> tuple[str, int, int] | None:
+        scale = self._circuit_scale()
+        radius = max(CIRCUIT_PORT_RADIUS, round(CIRCUIT_PORT_RADIUS * scale))
+        limit = radius * radius
+        for node in reversed(self.circuit["nodes"]):
+            for input_index in range(CIRCUIT_GATE_INPUTS[node["type"]]):
+                port_x, port_y = self._circuit_screen_point(
+                    node["x"], self._circuit_input_y(node, input_index))
+                if (x - port_x) ** 2 + (y - port_y) ** 2 <= limit:
+                    return "input", node["id"], input_index
+            if node["type"] != "OUTPUT":
+                port_x, port_y = self._circuit_screen_point(
+                    node["x"] + CIRCUIT_NODE_WIDTH,
+                    node["y"] + CIRCUIT_NODE_HEIGHT // 2)
+                if (x - port_x) ** 2 + (y - port_y) ** 2 <= limit:
+                    return "output", node["id"], 0
+            node_x, node_y = self._circuit_screen_point(node["x"], node["y"])
+            if (node_x <= x <= node_x + CIRCUIT_NODE_WIDTH * scale and
+                    node_y <= y <= node_y + CIRCUIT_NODE_HEIGHT * scale):
+                return "node", node["id"], 0
+        return None
+
+    def _refresh_circuit(self, message: str | None = None) -> None:
+        self.circuit_zoom_var.set(f"{self.circuit['zoom']}%")
+        if message is None:
+            message = "Schaltplan bereit"
+        self.circuit_status_var.set(
+            f"{message} | {len(self.circuit['nodes'])} Knoten, "
+            f"{len(self.circuit['wires'])} Leitungen")
+        self._update_circuit_inspector()
+        self._draw_circuit()
+
+    def _update_circuit_inspector(self) -> None:
+        node = self._circuit_node(self.circuit_selected)
+        selected_state = "normal" if node is not None else "disabled"
+        self.circuit_label_entry.configure(state=selected_state)
+        self.circuit_apply_button.configure(state=selected_state)
+        self.circuit_type_combo.configure(
+            state="readonly" if node is not None else "disabled")
+        if node is None:
+            self.circuit_label_var.set("")
+            self.circuit_input_var.set(False)
+            self.circuit_input_check.configure(state="disabled")
+            for button in self.circuit_disconnect_buttons:
+                button.configure(state="disabled")
+            return
+
+        self.circuit_label_var.set(str(node["label"]))
+        self.circuit_selected_type_var.set(str(node["type"]))
+        self.circuit_input_var.set(bool(node["input"]))
+        self.circuit_input_check.configure(
+            state="normal" if node["type"] == "INPUT" else "disabled")
+        connected = {
+            int(wire["input"]) for wire in self.circuit["wires"]
+            if wire["destination"] == node["id"]
+        }
+        input_count = CIRCUIT_GATE_INPUTS[node["type"]]
+        for index, button in enumerate(self.circuit_disconnect_buttons):
+            button.configure(
+                state="normal" if index < input_count and index in connected
+                else "disabled")
+
+    def _circuit_arm_add(self) -> None:
+        self.circuit_add_armed = True
+        self.circuit_wire_source = None
+        self._refresh_circuit(f"{self.circuit_gate_var.get()} platzieren")
+
+    def _circuit_arm_link(self) -> None:
+        node = self._circuit_node(self.circuit_selected)
+        self.circuit_add_armed = False
+        if node is None or node["type"] == "OUTPUT":
+            self.circuit_wire_source = None
+            self._refresh_circuit("Ausgang als Quelle wählen")
+            return
+        self.circuit_wire_source = int(node["id"])
+        self._refresh_circuit(f"Quelle {node['label']}: Eingang wählen")
+
+    def _circuit_delete_selected(self) -> None:
+        if self.circuit_selected is None:
+            self.root.bell()
+            return
+        self.circuit = remove_circuit_node(
+            self.circuit, self.circuit_selected)
+        self.circuit_selected = None
+        self.circuit_wire_source = None
+        self._refresh_circuit("Knoten gelöscht")
+
+    def _circuit_apply_selected(self) -> None:
+        if self.circuit_selected is None:
+            return
+        try:
+            updated = set_circuit_node_type(
+                self.circuit, self.circuit_selected,
+                self.circuit_selected_type_var.get())
+            self.circuit = set_circuit_label(
+                updated, self.circuit_selected, self.circuit_label_var.get())
+        except ProtocolError as error:
+            messagebox.showerror(APP_NAME, str(error))
+            return
+        self._refresh_circuit("Knoten aktualisiert")
+
+    def _circuit_set_selected_input(self) -> None:
+        if self.circuit_selected is None:
+            return
+        try:
+            self.circuit = set_circuit_input(
+                self.circuit, self.circuit_selected,
+                self.circuit_input_var.get())
+        except ProtocolError as error:
+            self._refresh_circuit(str(error))
+            return
+        self._refresh_circuit("Eingang geschaltet")
+
+    def _circuit_disconnect_selected(self, input_index: int) -> None:
+        if self.circuit_selected is None:
+            return
+        try:
+            self.circuit = disconnect_circuit_input(
+                self.circuit, self.circuit_selected, input_index)
+        except ProtocolError as error:
+            self._refresh_circuit(str(error))
+            return
+        self._refresh_circuit(f"Eingang {input_index + 1} getrennt")
+
+    def _circuit_replace(self, demo: bool) -> None:
+        self.circuit = create_circuit(demo=demo)
+        self.circuit_selected = None
+        self.circuit_wire_source = None
+        self.circuit_add_armed = False
+        self._refresh_circuit("Demo geladen" if demo else "Schaltplan geleert")
+
+    def _circuit_pointer_down(self, event: Any) -> None:
+        self.circuit_canvas.focus_set()
+        if self.circuit_add_armed:
+            world_x, world_y = self._circuit_world_point(event.x, event.y)
+            x = max(0, min(CIRCUIT_WORLD_WIDTH - CIRCUIT_NODE_WIDTH,
+                           round(world_x - CIRCUIT_NODE_WIDTH / 2)))
+            y = max(0, min(CIRCUIT_WORLD_HEIGHT - CIRCUIT_NODE_HEIGHT,
+                           round(world_y - CIRCUIT_NODE_HEIGHT / 2)))
+            try:
+                self.circuit, node_id = add_circuit_node(
+                    self.circuit, self.circuit_gate_var.get(), x, y)
+            except ProtocolError as error:
+                self._refresh_circuit(str(error))
+                return
+            self.circuit_selected = node_id
+            self.circuit_add_armed = False
+            self._refresh_circuit("Gatter eingefügt")
+            return
+
+        hit = self._circuit_hit_test(event.x, event.y)
+        if hit is None:
+            self.circuit_selected = None
+            self.circuit_wire_source = None
+            self.circuit_pan_origin = (
+                event.x, event.y,
+                int(self.circuit["viewport_x"]),
+                int(self.circuit["viewport_y"]),
+            )
+            self._refresh_circuit("Ansicht verschieben")
+            return
+
+        target, node_id, input_index = hit
+        self.circuit_selected = node_id
+        self.circuit_pan_origin = None
+        if target == "output":
+            self.circuit_wire_source = node_id
+            node = self._circuit_node(node_id)
+            self._refresh_circuit(
+                f"Quelle {node['label']}: Eingang wählen" if node else
+                "Eingang wählen")
+            return
+        if target == "input":
+            if self.circuit_wire_source is not None:
+                try:
+                    self.circuit = connect_circuit_nodes(
+                        self.circuit, self.circuit_wire_source,
+                        node_id, input_index)
+                except ProtocolError as error:
+                    self._refresh_circuit(str(error))
+                    return
+                self.circuit_wire_source = None
+                self._refresh_circuit("Gatter verbunden")
+            else:
+                self._refresh_circuit(f"Eingang {input_index + 1} ausgewählt")
+            return
+
+        node = self._circuit_node(node_id)
+        if node is not None:
+            self.circuit_drag_node = node_id
+            self.circuit_drag_origin = (event.x, event.y)
+            self.circuit_drag_node_origin = (int(node["x"]), int(node["y"]))
+        self._refresh_circuit("Knoten ausgewählt")
+
+    def _circuit_pointer_move(self, event: Any) -> None:
+        scale = self._circuit_scale()
+        if self.circuit_drag_node is not None:
+            delta_x = round((event.x - self.circuit_drag_origin[0]) / scale)
+            delta_y = round((event.y - self.circuit_drag_origin[1]) / scale)
+            self.circuit = move_circuit_node(
+                self.circuit, self.circuit_drag_node,
+                self.circuit_drag_node_origin[0] + delta_x,
+                self.circuit_drag_node_origin[1] + delta_y)
+            self._refresh_circuit("Knoten verschieben")
+            return
+        if self.circuit_pan_origin is not None:
+            start_x, start_y, viewport_x, viewport_y = self.circuit_pan_origin
+            requested_x = viewport_x - round((event.x - start_x) / scale)
+            requested_y = viewport_y - round((event.y - start_y) / scale)
+            self._circuit_set_view_clamped(requested_x, requested_y)
+            self._refresh_circuit("Ansicht verschieben")
+
+    def _circuit_pointer_up(self, _event: Any) -> None:
+        self.circuit_drag_node = None
+        self.circuit_pan_origin = None
+
+    def _circuit_double_click(self, event: Any) -> None:
+        hit = self._circuit_hit_test(event.x, event.y)
+        if hit is None:
+            return
+        node = self._circuit_node(hit[1])
+        if node is None or node["type"] != "INPUT":
+            return
+        self.circuit_selected = node["id"]
+        self.circuit = set_circuit_input(
+            self.circuit, node["id"], not bool(node["input"]))
+        self._refresh_circuit("Eingang geschaltet")
+
+    def _circuit_right_click(self, event: Any) -> None:
+        hit = self._circuit_hit_test(event.x, event.y)
+        if hit is None or hit[0] != "input":
+            return
+        try:
+            self.circuit = disconnect_circuit_input(
+                self.circuit, hit[1], hit[2])
+        except ProtocolError as error:
+            self._refresh_circuit(str(error))
+            return
+        self.circuit_selected = hit[1]
+        self._refresh_circuit(f"Eingang {hit[2] + 1} getrennt")
+
+    def _circuit_set_view_clamped(self, viewport_x: float,
+                                  viewport_y: float) -> None:
+        scale = self._circuit_scale()
+        visible_width = self.circuit_canvas.winfo_width() / scale
+        visible_height = self.circuit_canvas.winfo_height() / scale
+        maximum_x = max(0, round(CIRCUIT_WORLD_WIDTH - visible_width))
+        maximum_y = max(0, round(CIRCUIT_WORLD_HEIGHT - visible_height))
+        self.circuit = set_circuit_view(
+            self.circuit,
+            max(0, min(maximum_x, round(viewport_x))),
+            max(0, min(maximum_y, round(viewport_y))),
+            int(self.circuit["zoom"]),
+        )
+
+    def _circuit_zoom(self, direction: int,
+                      screen_x: int | None = None,
+                      screen_y: int | None = None) -> None:
+        levels = list(CIRCUIT_ZOOM_LEVELS)
+        current = levels.index(int(self.circuit["zoom"]))
+        requested = max(0, min(len(levels) - 1, current + direction))
+        if requested == current:
+            self._refresh_circuit("Zoomgrenze erreicht")
+            return
+        if screen_x is None:
+            screen_x = self.circuit_canvas.winfo_width() // 2
+        if screen_y is None:
+            screen_y = self.circuit_canvas.winfo_height() // 2
+        world_x, world_y = self._circuit_world_point(screen_x, screen_y)
+        self.circuit["zoom"] = levels[requested]
+        new_scale = self._circuit_scale()
+        self._circuit_set_view_clamped(
+            world_x - screen_x / new_scale,
+            world_y - screen_y / new_scale,
+        )
+        self._refresh_circuit(f"Zoom {levels[requested]}%")
+
+    def _circuit_mouse_wheel(self, event: Any) -> str:
+        direction = 1 if (getattr(event, "delta", 0) > 0 or
+                          getattr(event, "num", 0) == 4) else -1
+        self._circuit_zoom(direction, event.x, event.y)
+        return "break"
+
+    def _load_circuit(self, circuit: dict[str, Any],
+                      message: str = "Schaltplan geladen") -> None:
+        self.circuit = normalize_circuit(circuit)
+        self.circuit_selected = None
+        self.circuit_wire_source = None
+        self.circuit_add_armed = False
+        self._refresh_circuit(message)
+
+    def _pull_circuit(self) -> None:
+        if not self._require_connection():
+            return
+        self._submit("Lade Schaltplan", lambda: read_circuit(self.client),
+                     self._load_circuit)
+
+    def _push_circuit(self) -> None:
+        if not self._require_connection():
+            return
+        try:
+            circuit = normalize_circuit(self.circuit)
+        except ProtocolError as error:
+            messagebox.showerror(APP_NAME, str(error))
+            return
+
+        def operation() -> dict[str, Any]:
+            synchronize_circuit(self.client, circuit)
+            return read_circuit(self.client)
+
+        self._submit(
+            "Synchronisiere Schaltplan", operation,
+            lambda value: self._load_circuit(value, "Auf Pico gespeichert"))
 
     def _load_units(self) -> None:
         if not self._require_connection():
@@ -1763,6 +2493,8 @@ class CalculatorLinkApp:
         self._load_history(state.get("history", []))
         self._load_statistics(state.get("statistics", {}))
         self._set_basic_source(state.get("program", []))
+        if "circuit" in state:
+            self._load_circuit(state["circuit"])
 
     def _load_history(self, history: list[dict[str, Any]]) -> None:
         self.history_tree.delete(*self.history_tree.get_children())
@@ -1805,6 +2537,8 @@ class CalculatorLinkApp:
         for button in (self.sync_button, self.export_button, self.import_button):
             button.configure(state=state)
         for button in self.basic_connection_buttons:
+            button.configure(state=state)
+        for button in self.circuit_connection_buttons:
             button.configure(state=state)
         if not connected:
             for variable in self.device_vars.values():

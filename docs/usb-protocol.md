@@ -5,8 +5,8 @@ serielle CDC-Schnittstelle bereit. Pro Zeile wird genau ein ASCII-Befehl
 gesendet und genau eine Antwort empfangen. Das Protokoll ist ab
 Firmware `1.1.0` verfuegbar.
 
-Aktueller Stand ist Firmware `1.8.0` mit Protokollversion `4`,
-Pico Calculator Link `2.1` und JSON-Format `5`.
+Aktueller Stand ist Firmware `2.2.0` mit Protokollversion `5`,
+Pico Calculator Link `2.2` und JSON-Format `6`.
 
 Seit Firmware `1.3.0` erweitert Protokollversion 2 die Schnittstelle um
 BASIC-Programme, nicht blockierende Ausfuehrung, Ausgabe und `INPUT`.
@@ -20,6 +20,10 @@ bis zu 80 signifikanten Stellen ueber dasselbe Protokoll uebertragen.
 Seit Firmware `1.8.0` kann die Rechengenauigkeit mit `GET PRECISION` und
 `SET PRECISION` zwischen 40, 80 und 128 Stellen umgeschaltet werden. Exakte
 Werte bleiben bei Export und Import als Dezimaltext erhalten.
+Seit Firmware `2.2.0` stellt Protokollversion 5 die Zahlentheorie und den
+vollstaendigen grafischen Schaltplan bereit. Knoten, Leitungen, Eingangspegel,
+Viewport und Zoom koennen gelesen, bearbeitet und persistent gespeichert
+werden. Protokollversion 5 ist fuer Pico Calculator Link 2.2 erforderlich.
 
 ## Rahmenformat
 
@@ -103,10 +107,38 @@ die Desktop-App nimmt BIN-/HEX-Eingaben an und konvertiert sie verlustfrei.
 | `MODULE UNIT CATEGORY|ITEM|CONVERT ...` | Einheitenkatalog und Umrechnung |
 | `MODULE CONSTANT COUNT|index` | Physikalische Konstanten lesen |
 | `MODULE COMPLEX DEG|RAD ausdruck` | Komplexen Ausdruck kartesisch und polar berechnen |
+| `MODULE NUMBER GCD|LCM a b` | ggT oder kgV zweier 64-Bit-Werte berechnen |
+| `MODULE NUMBER PRIME|NEXT|PREV|FACTOR|PHI a` | Primzahlwerkzeuge und Euler-Phi ausfuehren |
+| `MODULE NUMBER MOD a b` | Rest von A modulo B berechnen |
+| `MODULE NUMBER POW a b modulus` | Modulare Potenz A^B modulo M berechnen |
+| `MODULE CIRCUIT INFO` | Schaltplangroesse, Kapazitaeten, Viewport, Zoom und Bezeichnungszaehler lesen |
+| `MODULE CIRCUIT NODE index` / `WIRE index` | Einen der 24 Knoten beziehungsweise 48 Leitungsplaetze lesen |
+| `MODULE CIRCUIT CLEAR` / `RESET` | Leeren Plan beziehungsweise AND-Demo herstellen |
+| `MODULE CIRCUIT ADD type x y value label` | Gate mit Position, INPUT-Pegel und Bezeichnung anfuegen |
+| `MODULE CIRCUIT REMOVE node` / `MOVE node x y` | Gate entfernen oder verschieben |
+| `MODULE CIRCUIT TYPE node type` / `VALUE node 0|1` | Gate-Typ oder INPUT-Pegel setzen |
+| `MODULE CIRCUIT CONNECT source destination input` | Ausgang mit Eingang 0 oder 1 verbinden; vorhandene Leitung ersetzen |
+| `MODULE CIRCUIT DISCONNECT destination input` | Leitung an einem Eingang trennen |
+| `MODULE CIRCUIT VIEW x y 100|150|200` | Scrollposition und Zoom setzen |
+| `MODULE CIRCUIT COUNTERS input output gate` | Fortlaufende Bezeichnungszaehler wiederherstellen |
 
 Lange KNF-/DNF-Ausgaben werden in maximal 112 Zeichen grossen Teilen gelesen.
 `total` und `offset` in `OK LOGIC_FORM` erlauben dem Client, die Antwort ohne
 Verlust zusammenzusetzen.
+
+### Schaltplan-Synchronisation
+
+`CIRCUIT INFO` nennt mit `node_capacity=24` und `wire_capacity=48` die festen
+Slotzahlen. Ein Client liest anschliessend alle `NODE`- und `WIRE`-Indizes;
+nicht belegte Plaetze antworten mit `used=0`. Belegte Knoten enthalten `type`,
+`x`, `y`, `input`, den berechneten `output` und `label`. Leitungen enthalten
+`source`, `destination` und `input`.
+
+Die Desktop-App validiert einen lokalen Plan vollstaendig, bevor sie ihn mit
+`CLEAR`, `ADD`, `CONNECT`, `COUNTERS` und `VIEW` ersetzt. Ungueltige Ports,
+doppelt belegte Eingaenge, Kapazitaetsueberschreitungen und Rueckkopplungen
+werden vor `CLEAR` abgewiesen. Jede erfolgreiche Aenderung wird wie eine
+Touch-Aenderung persistent gespeichert.
 
 `EVAL` verwendet den am Rechner aktiven Winkel- und Praezisionsmodus und
 aktualisiert `ANS`, den sichtbaren Editor und den Verlauf. Reine
@@ -120,7 +152,7 @@ bisherigen Zustand nicht.
 Typische Antworten:
 
 ```text
-OK INFO<TAB>protocol=4<TAB>firmware=1.8.0<TAB>model=scientific-calculator
+OK INFO<TAB>protocol=5<TAB>firmware=2.2.0<TAB>model=scientific-calculator
 OK DIAG<TAB>page=0<TAB>angle=DEG<TAB>precision=HIGH<TAB>history=2<TAB>stats=3<TAB>mode=1<TAB>basic=4<TAB>basic_state=STOPPED
 OK PRECISION<TAB>ULTRA<TAB>128
 OK VAR<TAB>A<TAB>3.5
@@ -157,21 +189,22 @@ python tools/pico_calc_cli.py --port COM5 export calculator-state.json
 python tools/pico_calc_cli.py --port COM5 import calculator-state.json
 ```
 
-Der JSON-Export im aktuellen Format 5 enthaelt Ausdruck, Ergebnis, A-F,
+Der JSON-Export im aktuellen Format 6 enthaelt Ausdruck, Ergebnis, A-F,
 F1-F3, M, Favoriten, Winkel- und Praezisionsmodus, Programmer- und
-Zahlenformatzustand, Graphbereich, Verlauf, BASIC-Programm und Statistikliste.
+Zahlenformatzustand, Graphbereich, Verlauf, BASIC-Programm, Statistikliste und
+den vollstaendigen Schaltplan einschliesslich Viewport und Zoom.
 `result_text`, A-F und M enthalten die autoritativen Dezimaltexte; `result`
 ist zusaetzlich als angenaherte Gleitkommazahl fuer einfache externe Werkzeuge
 vorhanden. Beim Import werden Ausdruck, Einstellungen, Symbole, M,
-Programmer-, Zahlenformat- und Graphzustand, Statistik sowie BASIC-Programm
-wieder uebertragen. `ANS` und Verlauf werden nicht importiert. Abhaengige
-Benutzerfunktionen werden automatisch in einer gueltigen Reihenfolge
-wiederholt; Rekursionen werden abgelehnt.
+Programmer-, Zahlenformat- und Graphzustand, Statistik, BASIC-Programm und
+Schaltplan wieder uebertragen. `ANS` und Verlauf werden nicht importiert.
+Abhaengige Benutzerfunktionen werden automatisch in einer gueltigen
+Reihenfolge wiederholt; Rekursionen werden abgelehnt.
 
 ## Desktop-Anwendung
 
-`Pico Calculator Link` `2.1` stellt das gleiche Protokoll als grafischen
-Geraetemanager bereit und erwartet Firmware `1.8.0`:
+`Pico Calculator Link` `2.2` stellt das gleiche Protokoll als grafischen
+Geraetemanager bereit und erwartet Firmware `2.2.0` mit Protokoll 5:
 
 ```sh
 python -m pip install -r tools/requirements.txt
@@ -186,21 +219,26 @@ damit Fenster und Eingaben auch bei einem Timeout bedienbar bleiben.
   sowie NORMAL/HIGH/ULTRA.
 - `Code` bietet Programmer-, Bit-, 2er-Komplement-, Fixpunkt- und
   IEEE-Gleitkommafunktionen.
+- `Zahlen` bietet GGT/KGV, Primzahltest, benachbarte Primzahlen,
+  Primfaktorzerlegung, Euler-Phi, Modulo und modulare Potenz.
 - `Graph` plottet F1-F3 und fuehrt Nullstellen-, Schnittpunkt-, Ableitungs-,
   Integral- und Extremwertanalyse auf dem Pico aus.
 - `Logik` simuliert Gatter und erzeugt Wahrheitstabelle, DNF und KNF.
-- `Einheiten` verwendet den vollstaendigen Einheiten- und Konstantenkatalog.
+- `Gatter` ist ein grafischer Schaltplaneditor mit Drag, direkter
+  Portverdrahtung, INPUT-Schaltern, 100/150/200-Prozent-Zoom sowie getrennten
+  Aktionen zum Laden vom und Speichern auf den Pico.
+- `Einheit` verwendet den vollstaendigen Einheiten- und Konstantenkatalog.
 - `Komplex` wertet komplexe Ausdruecke kartesisch und polar aus.
-- `Statistik` verwaltet Datensaetze und zeigt Summary, Regression und
+- `Stats` verwaltet Datensaetze und zeigt Summary, Regression und
   Histogramm.
 - `Speicher` bearbeitet A-F, F1-F3, M und sechs Favoritentasten gemeinsam.
 - `BASIC` laedt und speichert `.bas`-Dateien, synchronisiert den Programmspeicher,
   startet oder stoppt Programme und zeigt Ausgabe sowie `INPUT`-Zustand.
 - `Verlauf` liest die acht persistenten Eintraege und uebernimmt Ausdruecke
   wieder in den Rechner.
-- `Protokoll` sendet einzelne Rohbefehle und protokolliert Antworten.
-- Die Geraeteleiste liest Firmware, Protokoll, Winkel- und Praezisionsmodus, Seite und
-  Datenzaehler und bietet JSON-Import/-Export.
+- `USB` sendet einzelne Rohbefehle und protokolliert Antworten.
+- Die Geraeteleiste liest Firmware, Protokoll, Winkel- und Praezisionsmodus,
+  Seite und Datenzaehler und bietet JSON-Import/-Export.
 
 Die App verwendet nur Python, Tkinter und PySerial. Tkinter ist in den
 offiziellen Python-Paketen fuer Windows und macOS enthalten. Unter Linux muss

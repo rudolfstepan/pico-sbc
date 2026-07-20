@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <stdio.h>
+#include <string.h>
 
 #define CHECK(condition) do { \
     if (!(condition)) { \
@@ -49,6 +50,33 @@ int main(void) {
 
     press(&units, "RESET", 0.0, &output, message);
     CHECK(units.category == UNIT_CATEGORY_LENGTH && !units.has_input);
+
+    press(&units, "1", 0.0, &output, message);
+    press(&units, "2", 0.0, &output, message);
+    press(&units, "3", 0.0, &output, message);
+    press(&units, ".", 0.0, &output, message);
+    press(&units, "4", 0.0, &output, message);
+    CHECK(strcmp(units.input_text, "123.4") == 0);
+    CHECK(units.has_input && units.has_result);
+    CHECK(fabs(units.input - 123.4) < 1e-12);
+    CHECK(fabs(units.result - 0.1234) < 1e-12);
+
+    press(&units, "SIGN", 0.0, &output, message);
+    CHECK(strcmp(units.input_text, "-123.4") == 0);
+    CHECK(fabs(units.result + 0.1234) < 1e-12);
+    press(&units, "SIGN", 0.0, &output, message);
+    CHECK(strcmp(units.input_text, "123.4") == 0);
+
+    press(&units, "AC", 0.0, &output, message);
+    press(&units, "1", 0.0, &output, message);
+    press(&units, "EXP", 0.0, &output, message);
+    CHECK(!units.has_input && strcmp(message, "ENTER EXPONENT") == 0);
+    press(&units, "SIGN", 0.0, &output, message);
+    press(&units, "3", 0.0, &output, message);
+    CHECK(strcmp(units.input_text, "1e-3") == 0);
+    CHECK(units.has_result && fabs(units.result - 1e-6) < 1e-18);
+    press(&units, "DEL", 0.0, &output, message);
+    CHECK(!units.has_input && strcmp(units.input_text, "1e-") == 0);
 
     puts("calculator units tests passed");
     return 0;

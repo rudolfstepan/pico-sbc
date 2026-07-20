@@ -4,6 +4,7 @@
 #include "complex_engine.h"
 #include "graph_model.h"
 #include "logic_engine.h"
+#include "number_theory.h"
 #include "number_formats.h"
 #include "numerical_analysis.h"
 #include "programmer_engine.h"
@@ -19,7 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CALCULATOR_FIRMWARE_VERSION "1.8.0"
+#define CALCULATOR_FIRMWARE_VERSION "2.2.0"
 #define LOGIC_USB_CHUNK_CAPACITY 112u
 
 static void respond(char *response, size_t size, const char *format, ...) {
@@ -113,6 +114,18 @@ static bool parse_uint(const char *text, unsigned int *value) {
     return true;
 }
 
+static bool parse_int_value(const char *text, int *value) {
+    if (!text || !*text || !value) return false;
+    errno = 0;
+    char *end = NULL;
+    long parsed = strtol(text, &end, 10);
+    if (*end || errno == ERANGE || parsed < INT_MIN || parsed > INT_MAX) {
+        return false;
+    }
+    *value = (int)parsed;
+    return true;
+}
+
 static bool valid_word_bits(unsigned int bits) {
     return bits == 8u || bits == 16u || bits == 32u || bits == 64u;
 }
@@ -132,6 +145,31 @@ static bool function_index(const char *word, size_t *index) {
         return false;
     }
     *index = (size_t)(word[1] - '1');
+    return true;
+}
+
+static bool circuit_gate_type(const char *word, circuit_gate_type_t *type) {
+    if (!word || !type) return false;
+    for (unsigned int candidate = 0;
+         candidate < (unsigned int)CIRCUIT_GATE_COUNT; ++candidate) {
+        if (word_is(word, circuit_gate_name((circuit_gate_type_t)candidate))) {
+            *type = (circuit_gate_type_t)candidate;
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool circuit_label_valid(const char *label) {
+    if (!label || !*label || strlen(label) >= sizeof((circuit_node_t *)0)->label) {
+        return false;
+    }
+    while (*label) {
+        unsigned char character = (unsigned char)*label++;
+        if (!isalnum(character) && character != '_' && character != '-') {
+            return false;
+        }
+    }
     return true;
 }
 
@@ -1373,8 +1411,529 @@ static void execute_graph(calculator_usb_context_t *context, char *cursor,
     }
 }
 
+static void mark_circuit_changed(calculator_usb_effect_t *effect) {
+    effect->changed = true;
+    effect->persistent_changed = true;
+}
+
+static void execute_number_theory(char *cursor, char *response,
+                                  size_t response_size) {
+    char *action = next_word(&cursor);
+    char *a_word = next_word(&cursor);
+    uint64_t a = 0;
+    if (!action || !parse_u64(a_word, &a)) {
+        respond(response, response_size, "ERR ARGUMENT NUMBER action a");
+        return;
+    }
+
+    if (word_is(action, "PRIME")) {
+        if (*remaining_text(cursor)) {
+            respond(response, response_size, "ERR ARGUMENT NUMBER PRIME a");
+            return;
+        }
+        respond(response, response_size,
+                "OK NUMBER\taction=PRIME\tinput=%llu\tvalue=%u",
+                (unsigned long long)a,
+                number_theory_is_prime(a) ? 1u : 0u);
+        return;
+    }
+    if (word_is(action, "NEXT") || word_is(action, "PREV")) {
+        if (*remaining_text(cursor)) {
+            respond(response, response_size, "ERR ARGUMENT NUMBER %s a",
+                    action);
+            return;
+        }
+        uint64_t value = 0;
+        bool found = word_is(action, "NEXT")
+            ? number_theory_next_prime(a, &value)
+            : number_theory_previous_prime(a, &value);
+        if (!found) {
+            respond(response, response_size, "ERR RANGE NUMBER %s", action);
+            return;
+        }
+        respond(response, response_size,
+                "OK NUMBER\taction=%s\tinput=%llu\tvalue=%llu",
+                action, (unsigned long long)a, (unsigned long long)value);
+        return;
+    }
+    if (word_is(action, "FACTOR")) {
+        if (*remaining_text(cursor) || a < 2u) {
+            respond(response, response_size,
+                    "ERR ARGUMENT NUMBER FACTOR a>=2");
+            return;
+        }
+        uint64_t factors[64];
+        bool complete = true;
+        size_t count = number_theory_factor(a, factors, 64u, &complete);
+        char factor_text[192] = "";
+        size_t used = 0;
+        for (size_t i = 0; i < count && used < sizeof factor_text; ++i) {
+            int written = snprintf(
+                factor_text + used, sizeof factor_text - used,
+                "%s%llu", i ? "*" : "",
+                (unsigned long long)factors[i]);
+            if (written < 0 || (size_t)written >= sizeof factor_text - used) {
+                complete = false;
+                break;
+            }
+            used += (size_t)written;
+        }
+        respond(response, response_size,
+                "OK NUMBER\taction=FACTOR\tinput=%llu\tcount=%u"
+                "\tcomplete=%u\tvalue=%s",
+                (unsigned long long)a, (unsigned int)count,
+                complete ? 1u : 0u, factor_text);
+        return;
+    }
+    if (word_is(action, "PHI")) {
+        if (*remaining_text(cursor)) {
+            respond(response, response_size, "ERR ARGUMENT NUMBER PHI a");
+            return;
+        }
+        uint64_t value = 0;
+        if (!number_theory_totient(a, &value)) {
+            respond(response, response_size, "ERR RANGE NUMBER PHI");
+            return;
+        }
+        respond(response, response_size,
+                "OK NUMBER\taction=PHI\tinput=%llu\tvalue=%llu",
+                (unsigned long long)a, (unsigned long long)value);
+        return;
+    }
+
+    char *b_word = next_word(&cursor);
+    uint64_t b = 0;
+    if (!parse_u64(b_word, &b)) {
+        respond(response, response_size, "ERR ARGUMENT NUMBER %s a b",
+                action);
+        return;
+    }
+    if (word_is(action, "GCD") || word_is(action, "LCM") ||
+        word_is(action, "MOD")) {
+        if (*remaining_text(cursor)) {
+            respond(response, response_size, "ERR ARGUMENT NUMBER %s a b",
+                    action);
+            return;
+        }
+        uint64_t value = 0;
+        if (word_is(action, "GCD")) {
+            value = number_theory_gcd(a, b);
+        } else if (word_is(action, "LCM")) {
+            if (!number_theory_lcm(a, b, &value)) {
+                respond(response, response_size, "ERR OVERFLOW NUMBER LCM");
+                return;
+            }
+        } else {
+            if (!b) {
+                respond(response, response_size, "ERR DIV_ZERO NUMBER MOD");
+                return;
+            }
+            value = a % b;
+        }
+        respond(response, response_size,
+                "OK NUMBER\taction=%s\ta=%llu\tb=%llu\tvalue=%llu",
+                action, (unsigned long long)a, (unsigned long long)b,
+                (unsigned long long)value);
+        return;
+    }
+    if (word_is(action, "POW")) {
+        char *modulus_word = next_word(&cursor);
+        uint64_t modulus = 0;
+        if (!parse_u64(modulus_word, &modulus) || !modulus ||
+            *remaining_text(cursor)) {
+            respond(response, response_size,
+                    "ERR ARGUMENT NUMBER POW a b modulus");
+            return;
+        }
+        respond(response, response_size,
+                "OK NUMBER\taction=POW\ta=%llu\tb=%llu\tmodulus=%llu"
+                "\tvalue=%llu",
+                (unsigned long long)a, (unsigned long long)b,
+                (unsigned long long)modulus,
+                (unsigned long long)number_theory_mod_pow(a, b, modulus));
+        return;
+    }
+    respond(response, response_size, "ERR UNKNOWN_ACTION %s", action);
+}
+
+static void execute_circuit(calculator_usb_context_t *context, char *cursor,
+                            char *response, size_t response_size,
+                            calculator_usb_effect_t *effect) {
+    calculator_persisted_state_t *state = context->state;
+    circuit_model_t *model = &state->circuit;
+    char *action = next_word(&cursor);
+    if (!action) {
+        respond(response, response_size, "ERR ARGUMENT CIRCUIT action");
+        return;
+    }
+
+    if (word_is(action, "INFO")) {
+        if (*remaining_text(cursor)) {
+            respond(response, response_size, "ERR ARGUMENT CIRCUIT INFO");
+            return;
+        }
+        size_t node_count = 0;
+        size_t wire_count = 0;
+        for (size_t i = 0; i < CIRCUIT_NODE_CAPACITY; ++i) {
+            if (model->nodes[i].used) node_count++;
+        }
+        for (size_t i = 0; i < CIRCUIT_WIRE_CAPACITY; ++i) {
+            if (model->wires[i].used) wire_count++;
+        }
+        (void)circuit_model_evaluate(model);
+        static const unsigned int zoom_percent[] = {100u, 150u, 200u};
+        unsigned int zoom = state->circuit_zoom_index < 3u
+            ? zoom_percent[state->circuit_zoom_index] : zoom_percent[0];
+        respond(response, response_size,
+                "OK CIRCUIT_INFO\tnodes=%u\twires=%u\tnode_capacity=%u"
+                "\twire_capacity=%u\tworld_width=%d\tworld_height=%d"
+                "\tviewport_x=%u\tviewport_y=%u\tzoom=%u\tcycle=%u"
+                "\tnext_input=%u\tnext_output=%u\tnext_gate=%u",
+                (unsigned int)node_count, (unsigned int)wire_count,
+                (unsigned int)CIRCUIT_NODE_CAPACITY,
+                (unsigned int)CIRCUIT_WIRE_CAPACITY,
+                CIRCUIT_WORLD_WIDTH, CIRCUIT_WORLD_HEIGHT,
+                (unsigned int)state->circuit_viewport_x,
+                (unsigned int)state->circuit_viewport_y, zoom,
+                model->cycle_detected ? 1u : 0u,
+                (unsigned int)model->next_input_label,
+                (unsigned int)model->next_output_label,
+                (unsigned int)model->next_gate_label);
+        return;
+    }
+
+    if (word_is(action, "NODE")) {
+        char *index_word = next_word(&cursor);
+        size_t index = 0;
+        if (!parse_index(index_word, &index) ||
+            index >= CIRCUIT_NODE_CAPACITY || *remaining_text(cursor)) {
+            respond(response, response_size,
+                    "ERR ARGUMENT CIRCUIT NODE index");
+            return;
+        }
+        (void)circuit_model_evaluate(model);
+        const circuit_node_t *node = &model->nodes[index];
+        if (!node->used) {
+            respond(response, response_size,
+                    "OK CIRCUIT_NODE\tindex=%u\tused=0",
+                    (unsigned int)index);
+            return;
+        }
+        respond(response, response_size,
+                "OK CIRCUIT_NODE\tindex=%u\tused=1\ttype=%s\tx=%d\ty=%d"
+                "\tinput=%u\toutput=%u\tlabel=%s",
+                (unsigned int)index, circuit_gate_name(node->type),
+                (int)node->x, (int)node->y,
+                node->input_value ? 1u : 0u,
+                node->output_value ? 1u : 0u, node->label);
+        return;
+    }
+
+    if (word_is(action, "WIRE")) {
+        char *index_word = next_word(&cursor);
+        size_t index = 0;
+        if (!parse_index(index_word, &index) ||
+            index >= CIRCUIT_WIRE_CAPACITY || *remaining_text(cursor)) {
+            respond(response, response_size,
+                    "ERR ARGUMENT CIRCUIT WIRE index");
+            return;
+        }
+        const circuit_wire_t *wire = &model->wires[index];
+        if (!wire->used) {
+            respond(response, response_size,
+                    "OK CIRCUIT_WIRE\tindex=%u\tused=0",
+                    (unsigned int)index);
+            return;
+        }
+        respond(response, response_size,
+                "OK CIRCUIT_WIRE\tindex=%u\tused=1\tsource=%u"
+                "\tdestination=%u\tinput=%u",
+                (unsigned int)index, (unsigned int)wire->source,
+                (unsigned int)wire->destination,
+                (unsigned int)wire->destination_input);
+        return;
+    }
+
+    if (word_is(action, "CLEAR") || word_is(action, "RESET")) {
+        if (*remaining_text(cursor)) {
+            respond(response, response_size, "ERR ARGUMENT CIRCUIT %s",
+                    action);
+            return;
+        }
+        if (word_is(action, "RESET")) {
+            circuit_model_init(model);
+        } else {
+            circuit_model_clear(model);
+        }
+        state->circuit_viewport_x = 0u;
+        state->circuit_viewport_y = 0u;
+        state->circuit_zoom_index = 1u;
+        mark_circuit_changed(effect);
+        respond(response, response_size, "OK CIRCUIT\t%s", action);
+        return;
+    }
+
+    if (word_is(action, "ADD")) {
+        char *type_word = next_word(&cursor);
+        char *x_word = next_word(&cursor);
+        char *y_word = next_word(&cursor);
+        char *value_word = next_word(&cursor);
+        char *label = next_word(&cursor);
+        circuit_gate_type_t type;
+        int x = 0;
+        int y = 0;
+        unsigned int value = 0;
+        if (!circuit_gate_type(type_word, &type) ||
+            !parse_int_value(x_word, &x) || !parse_int_value(y_word, &y) ||
+            !parse_uint(value_word, &value) || value > 1u ||
+            !circuit_label_valid(label) || *remaining_text(cursor) ||
+            x < 0 || x > CIRCUIT_WORLD_WIDTH ||
+            y < 0 || y > CIRCUIT_WORLD_HEIGHT) {
+            respond(response, response_size,
+                    "ERR ARGUMENT CIRCUIT ADD type x y value label");
+            return;
+        }
+        int node_index = circuit_model_add(model, type, x, y);
+        if (node_index < 0) {
+            respond(response, response_size, "ERR LIMIT CIRCUIT NODES");
+            return;
+        }
+        circuit_node_t *node = &model->nodes[node_index];
+        node->input_value = value != 0u;
+        snprintf(node->label, sizeof node->label, "%s", label);
+        (void)circuit_model_evaluate(model);
+        mark_circuit_changed(effect);
+        respond(response, response_size,
+                "OK CIRCUIT_NODE\tindex=%u\tused=1\ttype=%s\tx=%d\ty=%d"
+                "\tinput=%u\toutput=%u\tlabel=%s",
+                (unsigned int)node_index, circuit_gate_name(node->type),
+                (int)node->x, (int)node->y,
+                node->input_value ? 1u : 0u,
+                node->output_value ? 1u : 0u, node->label);
+        return;
+    }
+
+    if (word_is(action, "REMOVE")) {
+        char *node_word = next_word(&cursor);
+        size_t node = 0;
+        if (!parse_index(node_word, &node) ||
+            node >= CIRCUIT_NODE_CAPACITY || *remaining_text(cursor)) {
+            respond(response, response_size,
+                    "ERR ARGUMENT CIRCUIT REMOVE node");
+            return;
+        }
+        if (!circuit_model_remove(model, (uint8_t)node)) {
+            respond(response, response_size, "ERR INDEX CIRCUIT NODE");
+            return;
+        }
+        mark_circuit_changed(effect);
+        respond(response, response_size, "OK CIRCUIT\tREMOVE\t%u",
+                (unsigned int)node);
+        return;
+    }
+
+    if (word_is(action, "MOVE")) {
+        char *node_word = next_word(&cursor);
+        char *x_word = next_word(&cursor);
+        char *y_word = next_word(&cursor);
+        size_t node = 0;
+        int x = 0;
+        int y = 0;
+        if (!parse_index(node_word, &node) ||
+            !parse_int_value(x_word, &x) || !parse_int_value(y_word, &y) ||
+            node >= CIRCUIT_NODE_CAPACITY || *remaining_text(cursor) ||
+            x < 0 || x > CIRCUIT_WORLD_WIDTH ||
+            y < 0 || y > CIRCUIT_WORLD_HEIGHT) {
+            respond(response, response_size,
+                    "ERR ARGUMENT CIRCUIT MOVE node x y");
+            return;
+        }
+        if (!circuit_model_move(model, (uint8_t)node, x, y)) {
+            respond(response, response_size, "ERR INDEX CIRCUIT NODE");
+            return;
+        }
+        mark_circuit_changed(effect);
+        respond(response, response_size, "OK CIRCUIT\tMOVE\t%u",
+                (unsigned int)node);
+        return;
+    }
+
+    if (word_is(action, "TYPE")) {
+        char *node_word = next_word(&cursor);
+        char *type_word = next_word(&cursor);
+        size_t node = 0;
+        circuit_gate_type_t type;
+        if (!parse_index(node_word, &node) ||
+            !circuit_gate_type(type_word, &type) ||
+            node >= CIRCUIT_NODE_CAPACITY || *remaining_text(cursor)) {
+            respond(response, response_size,
+                    "ERR ARGUMENT CIRCUIT TYPE node type");
+            return;
+        }
+        if (!circuit_model_set_type(model, (uint8_t)node, type)) {
+            respond(response, response_size, "ERR INDEX CIRCUIT NODE");
+            return;
+        }
+        mark_circuit_changed(effect);
+        respond(response, response_size, "OK CIRCUIT\tTYPE\t%u\t%s",
+                (unsigned int)node, circuit_gate_name(type));
+        return;
+    }
+
+    if (word_is(action, "VALUE")) {
+        char *node_word = next_word(&cursor);
+        char *value_word = next_word(&cursor);
+        size_t node = 0;
+        unsigned int value = 0;
+        if (!parse_index(node_word, &node) ||
+            !parse_uint(value_word, &value) || value > 1u ||
+            node >= CIRCUIT_NODE_CAPACITY || *remaining_text(cursor)) {
+            respond(response, response_size,
+                    "ERR ARGUMENT CIRCUIT VALUE node value");
+            return;
+        }
+        if (!model->nodes[node].used ||
+            model->nodes[node].type != CIRCUIT_GATE_INPUT) {
+            respond(response, response_size, "ERR TYPE CIRCUIT INPUT");
+            return;
+        }
+        model->nodes[node].input_value = value != 0u;
+        (void)circuit_model_evaluate(model);
+        mark_circuit_changed(effect);
+        respond(response, response_size, "OK CIRCUIT\tVALUE\t%u\t%u",
+                (unsigned int)node, value);
+        return;
+    }
+
+    if (word_is(action, "CONNECT")) {
+        char *source_word = next_word(&cursor);
+        char *destination_word = next_word(&cursor);
+        char *input_word = next_word(&cursor);
+        size_t source = 0;
+        size_t destination = 0;
+        size_t input = 0;
+        if (!parse_index(source_word, &source) ||
+            !parse_index(destination_word, &destination) ||
+            !parse_index(input_word, &input) ||
+            source >= CIRCUIT_NODE_CAPACITY ||
+            destination >= CIRCUIT_NODE_CAPACITY || input > 1u ||
+            *remaining_text(cursor)) {
+            respond(response, response_size,
+                    "ERR ARGUMENT CIRCUIT CONNECT source destination input");
+            return;
+        }
+        if (!circuit_model_connect(model, (uint8_t)source,
+                                   (uint8_t)destination, (uint8_t)input)) {
+            respond(response, response_size, "ERR CIRCUIT CONNECT");
+            return;
+        }
+        mark_circuit_changed(effect);
+        respond(response, response_size,
+                "OK CIRCUIT_WIRE\tsource=%u\tdestination=%u\tinput=%u",
+                (unsigned int)source, (unsigned int)destination,
+                (unsigned int)input);
+        return;
+    }
+
+    if (word_is(action, "DISCONNECT")) {
+        char *destination_word = next_word(&cursor);
+        char *input_word = next_word(&cursor);
+        size_t destination = 0;
+        size_t input = 0;
+        if (!parse_index(destination_word, &destination) ||
+            !parse_index(input_word, &input) ||
+            destination >= CIRCUIT_NODE_CAPACITY || input > 1u ||
+            *remaining_text(cursor)) {
+            respond(response, response_size,
+                    "ERR ARGUMENT CIRCUIT DISCONNECT destination input");
+            return;
+        }
+        if (!circuit_model_disconnect_input(model, (uint8_t)destination,
+                                            (uint8_t)input)) {
+            respond(response, response_size, "ERR INDEX CIRCUIT WIRE");
+            return;
+        }
+        mark_circuit_changed(effect);
+        respond(response, response_size,
+                "OK CIRCUIT\tDISCONNECT\t%u\t%u",
+                (unsigned int)destination, (unsigned int)input);
+        return;
+    }
+
+    if (word_is(action, "VIEW")) {
+        char *x_word = next_word(&cursor);
+        char *y_word = next_word(&cursor);
+        char *zoom_word = next_word(&cursor);
+        unsigned int x = 0;
+        unsigned int y = 0;
+        unsigned int zoom = 0;
+        if (!parse_uint(x_word, &x) || !parse_uint(y_word, &y) ||
+            !parse_uint(zoom_word, &zoom) ||
+            x > CIRCUIT_WORLD_WIDTH || y > CIRCUIT_WORLD_HEIGHT ||
+            (zoom != 100u && zoom != 150u && zoom != 200u) ||
+            *remaining_text(cursor)) {
+            respond(response, response_size,
+                    "ERR ARGUMENT CIRCUIT VIEW x y zoom");
+            return;
+        }
+        state->circuit_viewport_x = (uint16_t)x;
+        state->circuit_viewport_y = (uint16_t)y;
+        state->circuit_zoom_index = zoom == 100u ? 0u :
+            (zoom == 150u ? 1u : 2u);
+        mark_circuit_changed(effect);
+        respond(response, response_size,
+                "OK CIRCUIT_VIEW\tx=%u\ty=%u\tzoom=%u", x, y, zoom);
+        return;
+    }
+
+    if (word_is(action, "COUNTERS")) {
+        char *input_word = next_word(&cursor);
+        char *output_word = next_word(&cursor);
+        char *gate_word = next_word(&cursor);
+        unsigned int input = 0;
+        unsigned int output = 0;
+        unsigned int gate = 0;
+        if (!parse_uint(input_word, &input) ||
+            !parse_uint(output_word, &output) ||
+            !parse_uint(gate_word, &gate) || input > UINT8_MAX ||
+            output > UINT8_MAX || gate > UINT8_MAX ||
+            *remaining_text(cursor)) {
+            respond(response, response_size,
+                    "ERR ARGUMENT CIRCUIT COUNTERS input output gate");
+            return;
+        }
+        unsigned int minimum_input = 0;
+        unsigned int minimum_output = 0;
+        unsigned int minimum_gate = 0;
+        for (size_t i = 0; i < CIRCUIT_NODE_CAPACITY; ++i) {
+            if (!model->nodes[i].used) continue;
+            if (model->nodes[i].type == CIRCUIT_GATE_INPUT) minimum_input++;
+            else if (model->nodes[i].type == CIRCUIT_GATE_OUTPUT) {
+                minimum_output++;
+            } else minimum_gate++;
+        }
+        if (input < minimum_input || output < minimum_output ||
+            gate < minimum_gate) {
+            respond(response, response_size,
+                    "ERR RANGE CIRCUIT COUNTERS");
+            return;
+        }
+        model->next_input_label = (uint8_t)input;
+        model->next_output_label = (uint8_t)output;
+        model->next_gate_label = (uint8_t)gate;
+        mark_circuit_changed(effect);
+        respond(response, response_size,
+                "OK CIRCUIT_COUNTERS\tinput=%u\toutput=%u\tgate=%u",
+                input, output, gate);
+        return;
+    }
+
+    respond(response, response_size, "ERR UNKNOWN_ACTION %s", action);
+}
+
 static void execute_module(calculator_usb_context_t *context, char *cursor,
-                           char *response, size_t response_size) {
+                           char *response, size_t response_size,
+                           calculator_usb_effect_t *effect) {
     char *module = next_word(&cursor);
     if (!module) {
         respond(response, response_size, "ERR ARGUMENT MODULE name");
@@ -1394,6 +1953,10 @@ static void execute_module(calculator_usb_context_t *context, char *cursor,
         execute_constant(cursor, response, response_size);
     } else if (word_is(module, "COMPLEX")) {
         execute_complex(cursor, response, response_size);
+    } else if (word_is(module, "CIRCUIT")) {
+        execute_circuit(context, cursor, response, response_size, effect);
+    } else if (word_is(module, "NUMBER")) {
+        execute_number_theory(cursor, response, response_size);
     } else {
         respond(response, response_size, "ERR UNKNOWN_MODULE %s", module);
     }
@@ -1559,7 +2122,8 @@ void calculator_usb_execute(calculator_usb_context_t *context,
     } else if (word_is(command, "STAT")) {
         execute_stat(context, cursor, response, response_size, &local_effect);
     } else if (word_is(command, "MODULE")) {
-        execute_module(context, cursor, response, response_size);
+        execute_module(context, cursor, response, response_size,
+                       &local_effect);
     } else if (word_is(command, "BASIC")) {
         execute_basic(context, cursor, response, response_size, &local_effect);
     } else {

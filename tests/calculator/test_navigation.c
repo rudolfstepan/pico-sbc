@@ -12,18 +12,17 @@
 } while (0)
 
 int main(void) {
-    CHECK(calculator_navigation_next(PAGE_BASIC) == PAGE_SCIENTIFIC);
-    CHECK(calculator_navigation_next(PAGE_SCIENTIFIC) == PAGE_PROGRAMMER);
-    CHECK(calculator_navigation_next(PAGE_PROGRAMMER) == PAGE_FORMAT);
-    CHECK(calculator_navigation_next(PAGE_FORMAT) == PAGE_TOOLS);
-    CHECK(calculator_navigation_next(PAGE_TOOLS) == PAGE_SYMBOLS);
-    CHECK(calculator_navigation_next(PAGE_SYMBOLS) == PAGE_LOGIC);
-    CHECK(calculator_navigation_next(PAGE_LOGIC) == PAGE_UNITS);
-    CHECK(calculator_navigation_next(PAGE_UNITS) == PAGE_COMPLEX);
-    CHECK(calculator_navigation_next(PAGE_COMPLEX) == PAGE_STATISTICS);
-    CHECK(calculator_navigation_next(PAGE_STATISTICS) == PAGE_BASIC_PROGRAM);
-    CHECK(calculator_navigation_next(PAGE_BASIC_PROGRAM) == PAGE_BASIC);
-    CHECK(calculator_navigation_next(PAGE_GRAPH) == PAGE_BASIC);
+    for (calc_page_t page = PAGE_BASIC; page <= PAGE_CIRCUIT;
+         page = (calc_page_t)(page + 1)) {
+        CHECK(calculator_navigation_next(page) == PAGE_LAUNCHER);
+    }
+    CHECK(calculator_navigation_target("CALC") == PAGE_BASIC);
+    CHECK(calculator_navigation_target("GRAPH") == PAGE_GRAPH);
+    CHECK(calculator_navigation_target("BASIC") == PAGE_BASIC_PROGRAM);
+    CHECK(calculator_navigation_target("NUMBER") == PAGE_NUMBER_THEORY);
+    CHECK(calculator_navigation_target("CIRCUIT") == PAGE_CIRCUIT);
+    CHECK(calculator_navigation_target("SETTINGS") == PAGE_SETTINGS);
+    CHECK(calculator_navigation_target("UNKNOWN") == PAGE_LAUNCHER);
 
     CHECK(calculator_page_accepts_expression(PAGE_BASIC));
     CHECK(calculator_page_accepts_expression(PAGE_SCIENTIFIC));
@@ -37,6 +36,9 @@ int main(void) {
     CHECK(!calculator_page_accepts_expression(PAGE_COMPLEX));
     CHECK(!calculator_page_accepts_expression(PAGE_STATISTICS));
     CHECK(!calculator_page_accepts_expression(PAGE_BASIC_PROGRAM));
+    CHECK(!calculator_page_accepts_expression(PAGE_LAUNCHER));
+    CHECK(!calculator_page_accepts_expression(PAGE_NUMBER_THEORY));
+    CHECK(!calculator_page_accepts_expression(PAGE_CIRCUIT));
 
     CHECK(calculator_page_accepts_evaluate(PAGE_PROGRAMMER));
     CHECK(calculator_page_accepts_evaluate(PAGE_BASIC));
@@ -47,6 +49,10 @@ int main(void) {
     CHECK(!calculator_page_accepts_evaluate(PAGE_STATISTICS));
     CHECK(!calculator_page_accepts_evaluate(PAGE_BASIC_PROGRAM));
     CHECK(strcmp(calculator_page_message(PAGE_FORMAT), "NUMBER FORMATS") == 0);
+    CHECK(strcmp(calculator_page_message(PAGE_NUMBER_THEORY),
+                 "NUMBER THEORY") == 0);
+    CHECK(strcmp(calculator_page_message(PAGE_CIRCUIT),
+                 "CIRCUIT EDITOR") == 0);
 
     puts("navigation tests passed");
     return 0;

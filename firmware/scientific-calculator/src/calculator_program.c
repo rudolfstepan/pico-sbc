@@ -1,5 +1,6 @@
 #include "calculator_program.h"
 
+#include "calculator_ui_theme.h"
 #include "lcd_st7796.h"
 #include "pico/stdlib.h"
 
@@ -7,12 +8,12 @@
 #include <stdio.h>
 #include <string.h>
 
-#define COL_BG       RGB565(0, 0, 0)
-#define COL_TEXT     RGB565(255, 255, 255)
-#define COL_MUTED    RGB565(170, 170, 170)
-#define COL_KEY      RGB565(238, 238, 238)
-#define COL_FUNCTION RGB565(170, 170, 170)
-#define COL_COMMAND  RGB565(60, 60, 60)
+#define COL_BG       UI_COLOR_BACKGROUND
+#define COL_TEXT     UI_COLOR_TEXT
+#define COL_MUTED    UI_COLOR_MUTED
+#define COL_KEY      UI_COLOR_KEY
+#define COL_FUNCTION UI_COLOR_FUNCTION
+#define COL_COMMAND  UI_COLOR_SURFACE
 
 #define PROGRAM_KEYBOARD_Y 136
 #define PROGRAM_COMPACT_KEYBOARD_Y 188
@@ -205,9 +206,60 @@ static program_key_t program_key_geometry(
     program_key_t key = *source;
     int target_top = program_keyboard_top(program);
     int target_height = lcd_height() - target_top;
+    const program_key_t *base = program->symbol_layer
+        ? symbol_keys : alphabet_keys;
+    size_t index = (size_t)(source - base);
+
+    if (program->layout == CALCULATOR_LAYOUT_DATA_FOCUS) {
+        int slot = index == 38u ? 0 : (index == 39u ? 1 :
+            (index == 41u ? 2 : (index == 40u ? 3 :
+             (index == 37u ? 4 : 5))));
+        int gap = UI_GAP;
+        int width = (lcd_width() - 2 * UI_MARGIN - 2 * gap) / 3;
+        int height = (target_height - UI_MARGIN - gap) / 2;
+        key.x = UI_MARGIN + (slot % 3) * (width + gap);
+        key.y = target_top + (slot / 3) * (height + gap);
+        key.w = width;
+        key.h = height;
+        return key;
+    }
+
     if (lcd_orientation() == LCD_ORIENTATION_PORTRAIT) {
-        key.x = source->x * lcd_width() / LCD_LANDSCAPE_WIDTH;
-        key.w = source->w * lcd_width() / LCD_LANDSCAPE_WIDTH;
+        int row = 0;
+        int col = 0;
+        int span = 1;
+        if (index <= 27u) {
+            row = (int)(index / 7u);
+            col = (int)(index % 7u);
+        } else if (index == 28u) {
+            row = 4; col = 0;
+        } else if (index >= 30u && index <= 35u) {
+            row = 4; col = (int)(index - 29u);
+        } else if (index == 36u) {
+            row = 5; col = 0;
+        } else if (index == 29u) {
+            row = 5; col = 1;
+        } else if (index == 40u) {
+            row = 5; col = 2; span = 3;
+        } else if (index == 37u) {
+            row = 5; col = 5; span = 2;
+        } else if (index == 38u) {
+            row = 6; col = 0; span = 2;
+        } else if (index == 39u) {
+            row = 6; col = 2; span = 2;
+        } else if (index == 41u) {
+            row = 6; col = 4;
+        } else {
+            row = 6; col = 5; span = 2;
+        }
+        int gap = 3;
+        int width = (lcd_width() - 2 * UI_MARGIN - 6 * gap) / 7;
+        int height = (target_height - UI_MARGIN - 6 * gap) / 7;
+        key.x = UI_MARGIN + col * (width + gap);
+        key.y = target_top + row * (height + gap);
+        key.w = span * width + (span - 1) * gap;
+        key.h = height;
+        return key;
     }
     if (target_top != PROGRAM_KEYBOARD_Y ||
         target_height != PROGRAM_KEYBOARD_HEIGHT) {
@@ -218,6 +270,16 @@ static program_key_t program_key_geometry(
         if (key.h < 16) key.h = 16;
     }
     return key;
+}
+
+static bool program_key_visible(const calculator_program_t *program,
+                                const program_key_t *key) {
+    if (program->layout != CALCULATOR_LAYOUT_DATA_FOCUS) return true;
+    const program_key_t *base = program->symbol_layer
+        ? symbol_keys : alphabet_keys;
+    size_t index = (size_t)(key - base);
+    return index == 37u || index == 38u || index == 39u ||
+           index == 40u || index == 41u || index == 42u;
 }
 
 static void keymap(const calculator_program_t *program,
@@ -250,6 +312,7 @@ static uint16_t key_fill(const program_key_t *key, bool pressed) {
 static void draw_key(const calculator_program_t *program,
                      const program_key_t *key, bool pressed) {
     if (program->layout == CALCULATOR_LAYOUT_FULLSCREEN) return;
+    if (!program_key_visible(program, key)) return;
     program_key_t geometry = program_key_geometry(program, key);
     const program_key_t *visible_key = &geometry;
     const char *label = visible_key->label;
@@ -266,7 +329,7 @@ static void draw_key(const calculator_program_t *program,
     }
     uint16_t fill = key_fill(visible_key, pressed);
     bool dark = fill == COL_BG || fill == COL_COMMAND;
-    uint16_t foreground = dark ? COL_TEXT : COL_BG;
+    uint16_t foreground = dark ? COL_TEXT : UI_COLOR_TEXT_DARK;
     size_t length = strlen(label);
     int scale_x = (visible_key->w - 6) / ((int)length * 6);
     int scale_y = (visible_key->h - 6) / 8;
@@ -624,11 +687,10 @@ unsigned int calculator_program_touch(calculator_program_t *program,
     keymap(program, &keys, &count);
     for (size_t i = 0; i < count; ++i) {
         const program_key_t *key = &keys[i];
+        if (!program_key_visible(program, key)) continue;
         program_key_t geometry = program_key_geometry(program, key);
         if (x >= geometry.x && x < geometry.x + geometry.w &&
             y >= geometry.y && y < geometry.y + geometry.h) {
-            draw_key(program, key, true);
-            sleep_ms(25);
             return activate_key(program, key);
         }
     }

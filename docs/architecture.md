@@ -1,7 +1,7 @@
 # Firmware-Architektur
 
-Stand: Scientific-Calculator-Firmware `1.8.0`, USB-Protokoll `4` und
-Flashformat `6`.
+Stand: Scientific-Calculator-Firmware `2.2.0`, USB-Protokoll `5` und
+Flashformat `8`.
 
 ## Anwendungen
 
@@ -59,6 +59,10 @@ Der Rechner trennt Darstellung und Rechenlogik:
   waehlbarer 192-, 320- oder 512-Bit-Arbeitsgenauigkeit und LibBF-Funktionen
 - `calculator_logic` und `logic_engine`: Logikeditor, Wahrheitstabelle,
   KNF/DNF und Gatter-Simulation
+- `circuit_model`: hardwareunabhaengiges Netzmodell mit stabilen Gate-Slots,
+  Portverbindungen, Zyklenerkennung und boolescher Simulation
+- `calculator_circuit`: Vollbildrenderer, Touch-Drag, Portverdrahtung,
+  Werkzeugleiste sowie skalierter und gescrollter Weltkoordinaten-Viewport
 - `calculator_units` und `unit_engine`: Einheitenkatalog, Umrechnung und
   physikalische Konstanten
 - `calculator_complex` und `complex_engine`: komplexer Editor, kartesische
@@ -69,22 +73,27 @@ Der Rechner trennt Darstellung und Rechenlogik:
   sowie nicht blockierende USB-CDC-Anbindung
 - `programmer_engine`: wortbreitenabhaengige Zahlenbasen, Einzelbitoperationen,
   Rotationen sowie Carry- und Overflowstatus
+- `calculator_number_theory` und `number_theory`: 64-Bit-GGT/KGV,
+  deterministischer Primzahltest, Pollard-Rho-Faktorisierung, Euler-Phi und
+  modulare Potenz
 - `number_formats`: Zweierkomplement, Festkomma, Byte-Reihenfolge und
   IEEE-754-Zerlegung
 
 ## PC-Werkzeuge
 
 - `pico_calc_cli`: serielle Verbindung, Rohbefehle sowie JSON-Import und
-  -Export im Format 5
+  -Export im Format 6 einschliesslich Schaltplan
 - `pico_calc_gui_model`: hardwareunabhaengige Ablaufe fuer alle
-  Rechnermodule und die Datensynchronisation
-- `pico_calc_gui`: Tkinter-Oberflaeche Pico Calculator Link 2.1 mit elf Tabs
-  fuer Rechner, Code, Graph, Logik, Einheiten, Komplex, Statistik, Speicher,
-  BASIC, Verlauf und Protokoll
+  Rechnermodule, Schaltplanvalidierung und Datensynchronisation
+- `pico_calc_gui`: Tkinter-Oberflaeche Pico Calculator Link 2.2 mit 13 Tabs
+  fuer Rechner, Code, Zahlentheorie, Graph, Logik, Gattereditor, Einheiten,
+  Komplex, Statistik, Speicher, BASIC, Verlauf und USB-Konsole
 
-Die PC-Anwendung fuehrt Modulberechnungen nicht lokal nach, sondern nutzt die
-jeweiligen USB-Befehle der Firmware. Exakte Werte werden fuer Anzeige und
-Synchronisation als Dezimaltext behandelt.
+Die PC-Anwendung nutzt fuer Modulberechnungen die jeweiligen USB-Befehle der
+Firmware. Nur die boolesche Schaltplanauswertung wird zusaetzlich lokal
+gespiegelt, damit Pegel waehrend der grafischen Bearbeitung sofort sichtbar
+sind. Vor dem Schreiben werden Ports, Kapazitaeten und Zyklen validiert.
+Exakte Werte werden fuer Anzeige und Synchronisation als Dezimaltext behandelt.
 
 Alle Module ohne LCD-, Touch- oder Boardabhaengigkeit werden unter `tests/`
 direkt auf dem Host mit aktivierten Compilerwarnungen getestet. Dadurch kann
@@ -106,7 +115,8 @@ Firmware getrennt und bilden zwei redundante 8-KiB-Slots. Ein neuer Zustand
 wird immer in den jeweils anderen Slot geschrieben und erst nach erfolgreicher
 CRC-Pruefung aktiviert. Bei defekten oder unbekannten Daten startet der Rechner
 mit sicheren Werkseinstellungen.
-Flashformat 6 speichert den Praezisionsmodus sowie `ANS`, M, A-F und die acht
-Verlaufsergebnisse mit bis zu 128 Stellen BCD-komprimiert. Der Decoder
-akzeptiert ausschliesslich Format 6. Aeltere oder unbekannte Datensaetze werden
+Flashformat 8 speichert den Praezisionsmodus, `ANS`, M, A-F, die acht
+Verlaufsergebnisse mit bis zu 128 Stellen BCD-komprimiert sowie Gates,
+Leitungen, Eingangspegel und Viewport des Schaltplaneditors. Der Decoder
+akzeptiert ausschliesslich Format 8. Aeltere oder unbekannte Datensaetze werden
 nicht migriert, sondern durch Werkseinstellungen ersetzt.

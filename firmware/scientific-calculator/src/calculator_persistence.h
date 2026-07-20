@@ -5,6 +5,7 @@
 #include "calculator_symbols.h"
 #include "calculator_precision.h"
 #include "calculator_ui_types.h"
+#include "circuit_model.h"
 #include "decimal_engine.h"
 #include "expression_editor.h"
 #include "graph_model.h"
@@ -15,7 +16,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#define CALCULATOR_PERSISTENCE_VERSION 6u
+#define CALCULATOR_PERSISTENCE_VERSION 8u
 #define CALCULATOR_PERSISTENCE_RECORD_CAPACITY 8192u
 #define CALCULATOR_PERSISTENCE_HISTORY_CAPACITY 8u
 #define CALCULATOR_PERSISTENCE_RESULT_CAPACITY DECIMAL_ENGINE_TEXT_CAPACITY
@@ -29,6 +30,10 @@ typedef struct {
 typedef struct {
     bool degrees;
     calculator_precision_t precision;
+    uint8_t brightness_percent;
+    bool beep_enabled;
+    bool portrait;
+    calculator_layout_t default_layout;
     calc_page_t page;
     unsigned int format_bits;
     unsigned int fixed_fraction_bits;
@@ -48,6 +53,10 @@ typedef struct {
     graph_model_t graph;
     statistics_dataset_t statistics;
     basic_program_t basic_program;
+    circuit_model_t circuit;
+    uint16_t circuit_viewport_x;
+    uint16_t circuit_viewport_y;
+    uint8_t circuit_zoom_index;
 } calculator_persisted_state_t;
 
 typedef enum {

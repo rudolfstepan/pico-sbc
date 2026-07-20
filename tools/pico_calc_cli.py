@@ -15,6 +15,25 @@ from typing import Any
 LINE_CAPACITY = 192
 BASIC_MAX_LINES = 20
 BASIC_LINE_TEXT_CAPACITY = 64
+CIRCUIT_NODE_CAPACITY = 24
+CIRCUIT_WIRE_CAPACITY = 48
+CIRCUIT_WORLD_WIDTH = 1600
+CIRCUIT_WORLD_HEIGHT = 1200
+CIRCUIT_ZOOM_LEVELS = (100, 150, 200)
+CIRCUIT_GATE_TYPES = (
+    "INPUT", "OUTPUT", "NOT", "AND", "OR", "XOR", "NAND", "NOR", "XNOR",
+)
+CIRCUIT_GATE_INPUTS = {
+    "INPUT": 0,
+    "OUTPUT": 1,
+    "NOT": 1,
+    "AND": 2,
+    "OR": 2,
+    "XOR": 2,
+    "NAND": 2,
+    "NOR": 2,
+    "XNOR": 2,
+}
 
 
 class ProtocolError(RuntimeError):
@@ -99,6 +118,281 @@ def property_fields(response: str, expected: str) -> dict[str, str]:
             raise ProtocolError(f"Ungueltiges {expected}-Feld: {field}")
         properties[name] = value
     return properties
+
+
+def _circuit_boolean(value: Any, field: str) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value in (0, "0"):
+        return False
+    if value in (1, "1"):
+        return True
+    raise ProtocolError(f"{field} muss 0 oder 1 sein")
+
+
+def _circuit_integer(value: Any, field: str) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as error:
+        raise ProtocolError(f"{field} muss eine Ganzzahl sein") from error
+    if isinstance(value, float) and not value.is_integer():
+        raise ProtocolError(f"{field} muss eine Ganzzahl sein")
+    return parsed
+
+
+def normalize_circuit(data: Any) -> dict[str, Any]:
+    """Validate a circuit and return a canonical, evaluated representation."""
+    if not isinstance(data, dict):
+        raise ProtocolError("circuit muss ein Objekt sein")
+
+    world_width = _circuit_integer(
+        data.get("world_width", CIRCUIT_WORLD_WIDTH), "world_width")
+    world_height = _circuit_integer(
+        data.get("world_height", CIRCUIT_WORLD_HEIGHT), "world_height")
+    if world_width != CIRCUIT_WORLD_WIDTH or world_height != CIRCUIT_WORLD_HEIGHT:
+        raise ProtocolError("Ungueltige Schaltplanflaeche")
+
+    raw_nodes = data.get("nodes", [])
+    if not isinstance(raw_nodes, list) or len(raw_nodes) > CIRCUIT_NODE_CAPACITY:
+        raise ProtocolError("Schaltplan darf maximal 24 Knoten enthalten")
+    nodes: list[dict[str, Any]] = []
+    node_ids: set[int] = set()
+    for fallback_id, raw_node in enumerate(raw_nodes):
+        if not isinstance(raw_node, dict):
+            raise ProtocolError("Jeder Schaltplanknoten muss ein Objekt sein")
+        node_id = _circuit_integer(raw_node.get("id", fallback_id), "node.id")
+        gate_type = str(raw_node.get("type", "")).upper()
+        x = _circuit_integer(raw_node.get("x", 0), "node.x")
+        y = _circuit_integer(raw_node.get("y", 0), "node.y")
+        input_value = _circuit_boolean(raw_node.get("input", 0), "node.input")
+        label = str(raw_node.get("label", ""))
+        if node_id < 0 or node_id >= CIRCUIT_NODE_CAPACITY or node_id in node_ids:
+            raise ProtocolError("Ungueltige oder doppelte Schaltplan-Knoten-ID")
+        if gate_type not in CIRCUIT_GATE_TYPES:
+            raise ProtocolError(f"Unbekannter Gattertyp: {gate_type}")
+        if not 0 <= x <= world_width or not 0 <= y <= world_height:
+            raise ProtocolError("Schaltplanknoten liegt ausserhalb der Flaeche")
+        try:
+            encoded_label = label.encode("ascii")
+        except UnicodeEncodeError as error:
+            raise ProtocolError("Gatterbezeichnung muss ASCII sein") from error
+        if (not re.fullmatch(r"[A-Za-z0-9_-]{1,7}", label) or
+                len(encoded_label) > 7):
+            raise ProtocolError("Ungueltige Gatterbezeichnung")
+        node_ids.add(node_id)
+        nodes.append({
+            "id": node_id,
+            "type": gate_type,
+            "x": x,
+            "y": y,
+            "input": input_value,
+            "output": False,
+            "label": label,
+        })
+    nodes.sort(key=lambda node: node["id"])
+    nodes_by_id = {node["id"]: node for node in nodes}
+
+    raw_wires = data.get("wires", [])
+    if not isinstance(raw_wires, list) or len(raw_wires) > CIRCUIT_WIRE_CAPACITY:
+        raise ProtocolError("Schaltplan darf maximal 48 Leitungen enthalten")
+    wires: list[dict[str, int]] = []
+    wire_ids: set[int] = set()
+    occupied_inputs: set[tuple[int, int]] = set()
+    for fallback_id, raw_wire in enumerate(raw_wires):
+        if not isinstance(raw_wire, dict):
+            raise ProtocolError("Jede Schaltplanleitung muss ein Objekt sein")
+        wire_id = _circuit_integer(raw_wire.get("id", fallback_id), "wire.id")
+        source = _circuit_integer(raw_wire.get("source"), "wire.source")
+        destination = _circuit_integer(
+            raw_wire.get("destination"), "wire.destination")
+        destination_input = _circuit_integer(
+            raw_wire.get("input", 0), "wire.input")
+        if wire_id < 0 or wire_id >= CIRCUIT_WIRE_CAPACITY or wire_id in wire_ids:
+            raise ProtocolError("Ungueltige oder doppelte Leitungs-ID")
+        if source not in nodes_by_id or destination not in nodes_by_id:
+            raise ProtocolError("Leitung verweist auf unbekannten Knoten")
+        if source == destination or nodes_by_id[source]["type"] == "OUTPUT":
+            raise ProtocolError("Ungueltige Leitungsquelle")
+        input_count = CIRCUIT_GATE_INPUTS[nodes_by_id[destination]["type"]]
+        input_key = (destination, destination_input)
+        if not 0 <= destination_input < input_count:
+            raise ProtocolError("Leitung verweist auf ungueltigen Eingang")
+        if input_key in occupied_inputs:
+            raise ProtocolError("Ein Gattereingang darf nur eine Leitung haben")
+        wire_ids.add(wire_id)
+        occupied_inputs.add(input_key)
+        wires.append({
+            "id": wire_id,
+            "source": source,
+            "destination": destination,
+            "input": destination_input,
+        })
+    wires.sort(key=lambda wire: wire["id"])
+
+    wires_by_input = {
+        (wire["destination"], wire["input"]): wire for wire in wires
+    }
+    visit_state: dict[int, int] = {}
+
+    def evaluate(node_id: int) -> bool:
+        state = visit_state.get(node_id, 0)
+        if state == 1:
+            raise ProtocolError("Schaltplan enthaelt einen Zyklus")
+        if state == 2:
+            return bool(nodes_by_id[node_id]["output"])
+        visit_state[node_id] = 1
+        node = nodes_by_id[node_id]
+        inputs = [False, False]
+        for input_index in range(CIRCUIT_GATE_INPUTS[node["type"]]):
+            wire = wires_by_input.get((node_id, input_index))
+            if wire is not None:
+                inputs[input_index] = evaluate(wire["source"])
+        gate_type = node["type"]
+        if gate_type == "INPUT":
+            output = node["input"]
+        elif gate_type == "OUTPUT":
+            output = inputs[0]
+        elif gate_type == "NOT":
+            output = not inputs[0]
+        elif gate_type == "AND":
+            output = inputs[0] and inputs[1]
+        elif gate_type == "OR":
+            output = inputs[0] or inputs[1]
+        elif gate_type == "XOR":
+            output = inputs[0] != inputs[1]
+        elif gate_type == "NAND":
+            output = not (inputs[0] and inputs[1])
+        elif gate_type == "NOR":
+            output = not (inputs[0] or inputs[1])
+        else:
+            output = inputs[0] == inputs[1]
+        node["output"] = bool(output)
+        visit_state[node_id] = 2
+        return bool(output)
+
+    for node in nodes:
+        evaluate(node["id"])
+
+    viewport_x = _circuit_integer(data.get("viewport_x", 0), "viewport_x")
+    viewport_y = _circuit_integer(data.get("viewport_y", 0), "viewport_y")
+    zoom = _circuit_integer(data.get("zoom", 150), "zoom")
+    if not 0 <= viewport_x <= world_width or not 0 <= viewport_y <= world_height:
+        raise ProtocolError("Ungueltiger Schaltplan-Ausschnitt")
+    if zoom not in CIRCUIT_ZOOM_LEVELS:
+        raise ProtocolError("Schaltplan-Zoom muss 100, 150 oder 200 sein")
+
+    default_counters = {
+        "next_input": sum(node["type"] == "INPUT" for node in nodes),
+        "next_output": sum(node["type"] == "OUTPUT" for node in nodes),
+        "next_gate": sum(node["type"] not in ("INPUT", "OUTPUT")
+                         for node in nodes),
+    }
+    counters = {}
+    for name, default in default_counters.items():
+        counters[name] = _circuit_integer(data.get(name, default), name)
+        if not default <= counters[name] <= 255:
+            raise ProtocolError("Ungueltiger Schaltplan-Zaehler")
+
+    return {
+        "world_width": world_width,
+        "world_height": world_height,
+        "viewport_x": viewport_x,
+        "viewport_y": viewport_y,
+        "zoom": zoom,
+        "next_input": counters["next_input"],
+        "next_output": counters["next_output"],
+        "next_gate": counters["next_gate"],
+        "nodes": nodes,
+        "wires": wires,
+    }
+
+
+def read_circuit(client: Any) -> dict[str, Any]:
+    metadata = property_fields(
+        client.command("MODULE CIRCUIT INFO"), "CIRCUIT_INFO")
+    node_capacity = _circuit_integer(
+        metadata.get("node_capacity"), "node_capacity")
+    wire_capacity = _circuit_integer(
+        metadata.get("wire_capacity"), "wire_capacity")
+    if (node_capacity != CIRCUIT_NODE_CAPACITY or
+            wire_capacity != CIRCUIT_WIRE_CAPACITY):
+        raise ProtocolError("Nicht unterstuetzte Schaltplankapazitaet")
+
+    nodes = []
+    for index in range(node_capacity):
+        item = property_fields(
+            client.command(f"MODULE CIRCUIT NODE {index}"), "CIRCUIT_NODE")
+        if _circuit_integer(item.get("index"), "node.index") != index:
+            raise ProtocolError("Ungueltige CIRCUIT_NODE-Antwort")
+        if not _circuit_boolean(item.get("used"), "node.used"):
+            continue
+        nodes.append({
+            "id": index,
+            "type": item.get("type", ""),
+            "x": item.get("x"),
+            "y": item.get("y"),
+            "input": item.get("input"),
+            "output": item.get("output"),
+            "label": item.get("label", ""),
+        })
+
+    wires = []
+    for index in range(wire_capacity):
+        item = property_fields(
+            client.command(f"MODULE CIRCUIT WIRE {index}"), "CIRCUIT_WIRE")
+        if _circuit_integer(item.get("index"), "wire.index") != index:
+            raise ProtocolError("Ungueltige CIRCUIT_WIRE-Antwort")
+        if not _circuit_boolean(item.get("used"), "wire.used"):
+            continue
+        wires.append({
+            "id": index,
+            "source": item.get("source"),
+            "destination": item.get("destination"),
+            "input": item.get("input"),
+        })
+
+    return normalize_circuit({
+        "world_width": metadata.get("world_width"),
+        "world_height": metadata.get("world_height"),
+        "viewport_x": metadata.get("viewport_x"),
+        "viewport_y": metadata.get("viewport_y"),
+        "zoom": metadata.get("zoom"),
+        "next_input": metadata.get("next_input"),
+        "next_output": metadata.get("next_output"),
+        "next_gate": metadata.get("next_gate"),
+        "nodes": nodes,
+        "wires": wires,
+    })
+
+
+def synchronize_circuit(client: Any, data: Any) -> dict[str, Any]:
+    circuit = normalize_circuit(data)
+    client.command("MODULE CIRCUIT CLEAR")
+    device_ids: dict[int, int] = {}
+    for node in circuit["nodes"]:
+        result = property_fields(client.command(
+            "MODULE CIRCUIT ADD "
+            f"{node['type']} {node['x']} {node['y']} "
+            f"{1 if node['input'] else 0} {node['label']}"
+        ), "CIRCUIT_NODE")
+        device_ids[node["id"]] = _circuit_integer(
+            result.get("index"), "node.index")
+    for wire in circuit["wires"]:
+        client.command(
+            "MODULE CIRCUIT CONNECT "
+            f"{device_ids[wire['source']]} {device_ids[wire['destination']]} "
+            f"{wire['input']}"
+        )
+    client.command(
+        "MODULE CIRCUIT COUNTERS "
+        f"{circuit['next_input']} {circuit['next_output']} "
+        f"{circuit['next_gate']}"
+    )
+    client.command(
+        "MODULE CIRCUIT VIEW "
+        f"{circuit['viewport_x']} {circuit['viewport_y']} {circuit['zoom']}"
+    )
+    return circuit
 
 
 def normalize_basic_program(source: str | list[Any]) -> list[str]:
@@ -213,6 +507,7 @@ def export_state(client: Any) -> dict[str, Any]:
         values.append(row)
 
     program = read_basic_program(client)
+    circuit = read_circuit(client)
 
     angle_fields = fields(client.command("GET ANGLE"), "ANGLE")
     precision_fields = fields(client.command("GET PRECISION"), "PRECISION")
@@ -231,7 +526,7 @@ def export_state(client: Any) -> dict[str, Any]:
 
     return {
         "format": "pico-sbc-calculator-state",
-        "version": 5,
+        "version": 6,
         "result": float(result_fields[0]),
         "result_text": result_fields[0],
         "expression": expression_fields[0] if expression_fields else "",
@@ -255,12 +550,16 @@ def export_state(client: Any) -> dict[str, Any]:
             "fraction": int(number_format["fraction"]),
         },
         "graph": {name: float(value) for name, value in graph.items()},
+        "circuit": circuit,
     }
 
 
 def import_state(client: Any, data: dict[str, Any]) -> None:
     if data.get("format") not in (None, "pico-sbc-calculator-state"):
         raise ProtocolError("Unbekanntes JSON-Format")
+    normalized_circuit = None
+    if "circuit" in data:
+        normalized_circuit = normalize_circuit(data["circuit"])
     if "expression" in data:
         expression = str(data["expression"])
         client.command(f"SET EXPR {expression}")
@@ -408,6 +707,9 @@ def import_state(client: Any, data: dict[str, Any]) -> None:
 
     if "program" in data:
         synchronize_basic_program(client, data["program"])
+
+    if normalized_circuit is not None:
+        synchronize_circuit(client, normalized_circuit)
 
 
 def list_ports() -> int:

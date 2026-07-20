@@ -93,6 +93,8 @@ bool touch_read(touch_point_t *point) {
     uint8_t status = 0;
     point->touched = false;
     point->updated = false;
+    point->x = 0;
+    point->y = 0;
     if (!initialized) {
         return false;
     }

@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#define CALCULATOR_UNITS_INPUT_CAPACITY 32u
+
 typedef enum {
     UNITS_VIEW_CONVERTER,
     UNITS_VIEW_CONSTANTS
@@ -17,16 +19,25 @@ typedef enum {
     UNITS_OUTPUT_EDITOR
 } calculator_units_output_t;
 
+typedef enum {
+    UNITS_SELECTOR_NONE,
+    UNITS_SELECTOR_FROM,
+    UNITS_SELECTOR_TO
+} calculator_units_selector_t;
+
 typedef struct {
     unit_category_t category;
     size_t from_index;
     size_t to_index;
+    char input_text[CALCULATOR_UNITS_INPUT_CAPACITY];
     double input;
     double result;
     bool has_input;
     bool has_result;
     calculator_units_view_t view;
     size_t constant_index;
+    calculator_units_selector_t selector;
+    size_t selector_offset;
 } calculator_units_t;
 
 void calculator_units_init(calculator_units_t *units);

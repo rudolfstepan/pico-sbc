@@ -76,9 +76,9 @@ int main(void) {
     mock_lcd_reset();
     calculator_program_render(&layout_program);
     CHECK(!mock_lcd_had_out_of_bounds_draw());
-    CHECK(calculator_program_touch(&layout_program, 12, 192) &
+    CHECK(calculator_program_touch(&layout_program, 170, 192) &
           CALCULATOR_PROGRAM_RENDER);
-    CHECK(strcmp(layout_program.editor.text, "1") == 0);
+    CHECK(layout_program.symbol_layer);
 
     calculator_program_set_layout(&layout_program,
                                   CALCULATOR_LAYOUT_FULLSCREEN);
@@ -130,9 +130,9 @@ int main(void) {
     mock_lcd_reset();
     calculator_program_render(&portrait_program);
     CHECK(!mock_lcd_had_out_of_bounds_draw());
-    CHECK(calculator_program_touch(&portrait_program, 8, 332) &
+    CHECK(calculator_program_touch(&portrait_program, 120, 332) &
           CALCULATOR_PROGRAM_RENDER);
-    CHECK(strcmp(portrait_program.editor.text, "11") == 0);
+    CHECK(portrait_program.symbol_layer);
 
     calculator_program_set_layout(&portrait_program,
                                   CALCULATOR_LAYOUT_FULLSCREEN);

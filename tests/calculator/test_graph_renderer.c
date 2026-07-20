@@ -111,6 +111,27 @@ int main(void) {
                maximum_y - minimum_y, occupied_columns);
         failures++;
     }
+    int lower_plot_pixels = 0;
+    for (int x = 0; x < LCD_WIDTH; ++x) {
+        for (int y = 84; y < PLOT_BOTTOM; ++y) {
+            if (mock_lcd_pixel(x, y) == COL_GRAPH_F1) lower_plot_pixels++;
+        }
+    }
+    calculator_widget_render_keypad(PAGE_GRAPH, &state);
+    int lower_plot_pixels_after_keypad = 0;
+    for (int x = 0; x < LCD_WIDTH; ++x) {
+        for (int y = 84; y < PLOT_BOTTOM; ++y) {
+            if (mock_lcd_pixel(x, y) == COL_GRAPH_F1) {
+                lower_plot_pixels_after_keypad++;
+            }
+        }
+    }
+    if (!lower_plot_pixels ||
+        lower_plot_pixels_after_keypad != lower_plot_pixels) {
+        printf("FAIL: keypad erased graph (%d -> %d pixels)\n",
+               lower_plot_pixels, lower_plot_pixels_after_keypad);
+        failures++;
+    }
     if (mock_lcd_had_out_of_bounds_draw()) {
         printf("FAIL: out-of-bounds plot drawing\n");
         failures++;
@@ -180,7 +201,7 @@ int main(void) {
     expect_render_in_bounds(&graph, &symbols, GRAPH_VIEW_RANGE);
 
     calculator_widget_set_data_focus(true);
-    if (calculator_widget_key_top(4) != 280) {
+    if (calculator_widget_key_top(4) != 188) {
         printf("FAIL: data-focus graph keypad geometry\n");
         failures++;
     }
@@ -201,7 +222,7 @@ int main(void) {
 
     lcd_set_orientation(LCD_ORIENTATION_PORTRAIT);
     if (lcd_width() != 320 || lcd_height() != 480 ||
-        calculator_widget_key_top(4) != 404) {
+        calculator_widget_key_top(4) != 408) {
         printf("FAIL: portrait graph geometry\n");
         failures++;
     }

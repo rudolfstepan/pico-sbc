@@ -1,17 +1,18 @@
 #include "calculator_widgets.h"
 
 #include "calculator_keymaps.h"
+#include "calculator_ui_theme.h"
 #include "lcd_st7796.h"
 
 #include <stdio.h>
 #include <string.h>
 
-#define COL_BG       RGB565(0, 0, 0)
-#define COL_TEXT     RGB565(255, 255, 255)
-#define COL_MUTED    RGB565(170, 170, 170)
-#define COL_KEY      RGB565(238, 238, 238)
-#define COL_FUNCTION RGB565(170, 170, 170)
-#define COL_COMMAND  RGB565(60, 60, 60)
+#define COL_BG       UI_COLOR_BACKGROUND
+#define COL_TEXT     UI_COLOR_TEXT
+#define COL_MUTED    UI_COLOR_MUTED
+#define COL_KEY      UI_COLOR_KEY
+#define COL_FUNCTION UI_COLOR_FUNCTION
+#define COL_COMMAND  UI_COLOR_SURFACE
 #define COL_GRAPH_F1 RGB565(0, 220, 255)
 #define COL_GRAPH_F2 RGB565(255, 220, 0)
 #define COL_GRAPH_F3 RGB565(255, 80, 190)
@@ -26,6 +27,30 @@
 #define PORTRAIT_DATA_FOCUS_KEY_GAP_Y 3
 
 static calculator_layout_t layout;
+static calc_page_t widget_page = PAGE_BASIC;
+
+static bool page_is_calculator(calc_page_t page) {
+    return page == PAGE_BASIC || page == PAGE_SCIENTIFIC;
+}
+
+static bool page_is_app_grid(calc_page_t page) {
+    return page == PAGE_LAUNCHER || page == PAGE_SETTINGS;
+}
+
+static unsigned int page_columns(calc_page_t page) {
+    if (page_is_app_grid(page)) return 3u;
+    return page_is_calculator(page) ? 5u : 6u;
+}
+
+static unsigned int page_rows(calc_page_t page) {
+    if (page == PAGE_LAUNCHER) return 5u;
+    if (page == PAGE_SETTINGS) return 4u;
+    return page_is_calculator(page) ? 6u : 5u;
+}
+
+void calculator_widget_set_page(calc_page_t page) {
+    widget_page = page;
+}
 
 void calculator_widget_set_layout(calculator_layout_t next_layout) {
     layout = next_layout < CALCULATOR_LAYOUT_COUNT
@@ -60,6 +85,7 @@ bool calculator_widget_keypad_visible(void) {
 
 int calculator_widget_display_height(void) {
     if (layout == CALCULATOR_LAYOUT_FULLSCREEN) return lcd_height();
+    if (page_is_app_grid(widget_page)) return 20;
     if (lcd_orientation() == LCD_ORIENTATION_PORTRAIT) {
         return layout == CALCULATOR_LAYOUT_DATA_FOCUS
             ? PORTRAIT_DATA_FOCUS_DISPLAY_HEIGHT : PORTRAIT_DISPLAY_HEIGHT;
@@ -70,35 +96,51 @@ int calculator_widget_display_height(void) {
 
 int calculator_widget_key_top(unsigned int row) {
     if (layout == CALCULATOR_LAYOUT_FULLSCREEN) return lcd_height();
+    if (page_is_app_grid(widget_page)) {
+        int top = 24;
+        int rows = (int)page_rows(widget_page);
+        int height = (lcd_height() - top - UI_MARGIN -
+                      (rows - 1) * UI_GAP) / rows;
+        return top + (int)row * (height + UI_GAP);
+    }
     bool compact = layout == CALCULATOR_LAYOUT_DATA_FOCUS;
+    if (compact) {
+        unsigned int final_row = page_rows(widget_page) - 1u;
+        if (widget_page == PAGE_GRAPH && row == 4u) row = 0u;
+        else if (row == final_row) row = 1u;
+    }
     bool portrait = lcd_orientation() == LCD_ORIENTATION_PORTRAIT;
     int top = portrait
         ? (compact ? PORTRAIT_DATA_FOCUS_KEY_Y : PORTRAIT_KEY_Y)
         : (compact ? CALCULATOR_DATA_FOCUS_KEY_Y : CALCULATOR_KEY_Y);
-    int height = portrait
-        ? (compact ? PORTRAIT_DATA_FOCUS_KEY_HEIGHT : PORTRAIT_KEY_HEIGHT)
-        : (compact ? CALCULATOR_DATA_FOCUS_KEY_HEIGHT
-                   : CALCULATOR_KEY_HEIGHT);
-    int gap = portrait
-        ? (compact ? PORTRAIT_DATA_FOCUS_KEY_GAP_Y : PORTRAIT_KEY_GAP_Y)
-        : (compact ? CALCULATOR_DATA_FOCUS_KEY_GAP_Y
-                   : CALCULATOR_KEY_GAP_Y);
+    int rows = compact ? 2 : (int)page_rows(widget_page);
+    int gap = UI_GAP;
+    int height = (lcd_height() - top - UI_MARGIN -
+                  (rows - 1) * gap) / rows;
     return top + (int)row * (height + gap);
 }
 
 int calculator_widget_key_width(void) {
+    int columns = (int)page_columns(widget_page);
     return (lcd_width() - 2 * CALCULATOR_KEY_X -
-            5 * CALCULATOR_KEY_GAP_X) / 6;
+            (columns - 1) * CALCULATOR_KEY_GAP_X) / columns;
 }
 
 int calculator_widget_key_height(void) {
     if (layout == CALCULATOR_LAYOUT_FULLSCREEN) return 0;
-    if (lcd_orientation() == LCD_ORIENTATION_PORTRAIT) {
-        return layout == CALCULATOR_LAYOUT_DATA_FOCUS
-            ? PORTRAIT_DATA_FOCUS_KEY_HEIGHT : PORTRAIT_KEY_HEIGHT;
+    if (page_is_app_grid(widget_page)) {
+        int rows = (int)page_rows(widget_page);
+        return (lcd_height() - 24 - UI_MARGIN -
+                (rows - 1) * UI_GAP) / rows;
     }
-    return layout == CALCULATOR_LAYOUT_DATA_FOCUS
-        ? CALCULATOR_DATA_FOCUS_KEY_HEIGHT : CALCULATOR_KEY_HEIGHT;
+    int top = lcd_orientation() == LCD_ORIENTATION_PORTRAIT
+        ? (layout == CALCULATOR_LAYOUT_DATA_FOCUS
+            ? PORTRAIT_DATA_FOCUS_KEY_Y : PORTRAIT_KEY_Y)
+        : (layout == CALCULATOR_LAYOUT_DATA_FOCUS
+            ? CALCULATOR_DATA_FOCUS_KEY_Y : CALCULATOR_KEY_Y);
+    int rows = layout == CALCULATOR_LAYOUT_DATA_FOCUS
+        ? 2 : (int)page_rows(widget_page);
+    return (lcd_height() - top - UI_MARGIN - (rows - 1) * UI_GAP) / rows;
 }
 
 static int key_x(const calc_key_t *key) {
@@ -107,7 +149,22 @@ static int key_x(const calc_key_t *key) {
 }
 
 static int key_y(const calc_key_t *key) {
-    return calculator_widget_key_top(key->row);
+    unsigned int row = key->row;
+    if (layout == CALCULATOR_LAYOUT_DATA_FOCUS &&
+        !page_is_app_grid(widget_page)) {
+        unsigned int final_row = page_rows(widget_page) - 1u;
+        if (widget_page == PAGE_GRAPH) row = 0u;
+        else if (row == final_row) row = 1u;
+    }
+    return calculator_widget_key_top(row);
+}
+
+static bool key_is_visible(const calc_key_t *key) {
+    if (layout != CALCULATOR_LAYOUT_DATA_FOCUS ||
+        page_is_app_grid(widget_page)) return true;
+    if (widget_page == PAGE_GRAPH) return key->row == 4u;
+    unsigned int final_row = page_rows(widget_page) - 1u;
+    return key->row == 0u || key->row == final_row;
 }
 
 static const char *unit_category_token(unit_category_t category) {
@@ -170,6 +227,17 @@ static uint16_t key_fill(const calc_key_t *key, bool pressed,
             (strcmp(key->token, "CONST") == 0 &&
              state->units_view == UNITS_VIEW_CONSTANTS);
         if (selected_category || selected_view) return COL_TEXT;
+        if (key->token[0] == 'U' && key->token[1] >= '0' &&
+            key->token[1] <= '5') {
+            size_t index = state->units_selector_offset +
+                           (size_t)(key->token[1] - '0');
+            bool selected = state->units_view == UNITS_VIEW_CONSTANTS
+                ? index == state->units_constant_index
+                : (state->units_selector == UNITS_SELECTOR_TO
+                    ? index == state->units_to_index
+                    : index == state->units_from_index);
+            if (selected) return UI_COLOR_PRIMARY;
+        }
     }
     if (state->page == PAGE_STATISTICS && key->action == ACT_STATISTICS) {
         bool selected_mode =
@@ -188,6 +256,27 @@ static uint16_t key_fill(const calc_key_t *key, bool pressed,
              state->statistics_view == STATISTICS_VIEW_PLOT);
         if (selected_mode || selected_view) return COL_TEXT;
     }
+    if (state->page == PAGE_SETTINGS && key->action == ACT_SETTINGS) {
+        bool selected = (strcmp(key->token, "BEEP") == 0 &&
+                         state->beep_enabled) ||
+            (strcmp(key->token, "LAND") == 0 &&
+             lcd_orientation() == LCD_ORIENTATION_LANDSCAPE) ||
+            (strcmp(key->token, "PORT") == 0 &&
+             lcd_orientation() == LCD_ORIENTATION_PORTRAIT) ||
+            (strcmp(key->token, "STANDARD") == 0 &&
+             state->default_layout == CALCULATOR_LAYOUT_STANDARD) ||
+            (strcmp(key->token, "FOCUS") == 0 &&
+             state->default_layout == CALCULATOR_LAYOUT_DATA_FOCUS) ||
+            (strcmp(key->token, "FULL") == 0 &&
+             state->default_layout == CALCULATOR_LAYOUT_FULLSCREEN);
+        if (selected) return UI_COLOR_PRIMARY;
+    }
+    if (state->page == PAGE_NUMBER_THEORY &&
+        key->action == ACT_NUMBER_THEORY && key->token[1] == '\0' &&
+        key->token[0] >= 'A' && key->token[0] <= 'C' &&
+        state->number_theory_input == (uint8_t)(key->token[0] - 'A')) {
+        return UI_COLOR_PRIMARY;
+    }
     switch (key->style) {
         case STYLE_NUMBER: return COL_KEY;
         case STYLE_FUNCTION: return COL_FUNCTION;
@@ -200,6 +289,7 @@ static uint16_t key_fill(const calc_key_t *key, bool pressed,
 void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
                                 const calculator_widget_state_t *state) {
     if (!calculator_widget_keypad_visible()) return;
+    if (!key_is_visible(key)) return;
     int x = key_x(key);
     int y = key_y(key);
     char favorite_label[12];
@@ -225,6 +315,21 @@ void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
         strcmp(key->token, "VIEW") == 0) {
         label = state->complex_polar ? "POLAR" : "CART";
     }
+    if (state->page == PAGE_UNITS && key->action == ACT_UNITS &&
+        key->token[0] == 'U' && key->token[1] >= '0' &&
+        key->token[1] <= '5') {
+        size_t index = state->units_selector_offset +
+                       (size_t)(key->token[1] - '0');
+        if (state->units_view == UNITS_VIEW_CONSTANTS) {
+            const physical_constant_t *constant =
+                unit_engine_constant(index);
+            label = constant ? constant->symbol : "--";
+        } else {
+            const unit_definition_t *unit =
+                unit_engine_unit(state->unit_category, index);
+            label = unit ? unit->symbol : "--";
+        }
+    }
     if (state->page == PAGE_STATISTICS && key->action == ACT_STATISTICS &&
         strcmp(key->token, "XY") == 0) {
         label = state->statistics_active_y ? "Y" : "X";
@@ -247,7 +352,8 @@ void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
         if (disabled && !pressed) fill = COL_COMMAND;
     }
     bool dark = fill == COL_BG || fill == COL_COMMAND;
-    uint16_t foreground = disabled ? COL_MUTED : (dark ? COL_TEXT : COL_BG);
+    uint16_t foreground = disabled ? COL_MUTED :
+        (dark ? COL_TEXT : UI_COLOR_TEXT_DARK);
     bool selected_graph_function = state->page == PAGE_GRAPH &&
         key->action == ACT_GRAPH && key->token[0] == 'F' &&
         key->token[1] == (char)('1' + state->graph_selected_function) &&
@@ -275,18 +381,27 @@ void calculator_widget_draw_key(const calc_key_t *key, bool pressed,
 
 void calculator_widget_render_keypad(calc_page_t page,
                                      const calculator_widget_state_t *state) {
+    calculator_widget_set_page(page);
     if (!calculator_widget_keypad_visible()) return;
     size_t count;
-    const calc_key_t *keys = page == PAGE_GRAPH
+    const calc_key_t *keys = page == PAGE_UNITS
+        ? calculator_units_keymap(state->units_view, state->units_selector,
+                                  &count)
+        : (page == PAGE_GRAPH
         ? calculator_graph_keymap(state->graph_view, &count)
         : (page == PAGE_COMPLEX
            ? calculator_complex_keymap(state->complex_history, &count)
         : (page == PAGE_FORMAT
            ? calculator_format_keymap(state->format_view, &count)
-           : calculator_keymap(page, &count)));
-    int display_height = calculator_widget_display_height();
-    lcd_fill_rect(0, display_height, lcd_width(),
-                  lcd_height() - display_height, COL_BG);
+           : calculator_keymap(page, &count))));
+    /* The graph renderer owns the complete frame up to its one-row toolbar.
+     * Clearing from the generic 84-pixel display boundary would erase most
+     * of the plot immediately after it was drawn. */
+    if (page != PAGE_GRAPH) {
+        int display_height = calculator_widget_display_height();
+        lcd_fill_rect(0, display_height, lcd_width(),
+                      lcd_height() - display_height, COL_BG);
+    }
     for (size_t i = 0; i < count; ++i) {
         calculator_widget_draw_key(&keys[i], false, state);
     }
@@ -295,22 +410,29 @@ void calculator_widget_render_keypad(calc_page_t page,
 const calc_key_t *calculator_widget_hit_key(calc_page_t page,
                                             const calculator_widget_state_t *state,
                                             uint16_t x, uint16_t y) {
+    calculator_widget_set_page(page);
     if (!calculator_widget_keypad_visible()) return NULL;
     size_t count;
-    const calc_key_t *keys = page == PAGE_GRAPH
+    const calc_key_t *keys = page == PAGE_UNITS
+        ? calculator_units_keymap(state->units_view, state->units_selector,
+                                  &count)
+        : (page == PAGE_GRAPH
         ? calculator_graph_keymap(state->graph_view, &count)
         : (page == PAGE_COMPLEX
            ? calculator_complex_keymap(state->complex_history, &count)
         : (page == PAGE_FORMAT
            ? calculator_format_keymap(state->format_view, &count)
-           : calculator_keymap(page, &count)));
+           : calculator_keymap(page, &count))));
     for (size_t i = 0; i < count; ++i) {
+        if (!key_is_visible(&keys[i])) continue;
         int left = key_x(&keys[i]);
         int top = key_y(&keys[i]);
         int key_width = calculator_widget_key_width();
         int key_height = calculator_widget_key_height();
-        if (x >= left && x < left + key_width &&
-            y >= top && y < top + key_height) {
+        int touch_left = left - UI_GAP / 2;
+        int touch_top = top - UI_GAP / 2;
+        if (x >= touch_left && x < left + key_width + UI_GAP / 2 &&
+            y >= touch_top && y < top + key_height + UI_GAP / 2) {
             return &keys[i];
         }
     }

@@ -129,6 +129,45 @@ target_include_directories(navigation_tests PRIVATE ${CALCULATOR_SRC})
 enable_project_warnings(navigation_tests)
 add_test(NAME navigation COMMAND navigation_tests)
 
+add_executable(calculator_ui_input_tests
+    calculator/test_calculator_ui_input.c
+    ${CALCULATOR_SRC}/calculator_ui_input.c
+)
+target_include_directories(calculator_ui_input_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(calculator_ui_input_tests)
+add_test(NAME calculator_ui_input COMMAND calculator_ui_input_tests)
+
+add_executable(circuit_model_tests
+    calculator/test_circuit_model.c
+    ${CALCULATOR_SRC}/circuit_model.c
+)
+target_include_directories(circuit_model_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(circuit_model_tests)
+add_test(NAME circuit_model COMMAND circuit_model_tests)
+
+add_executable(calculator_circuit_tests
+    calculator/test_calculator_circuit.c
+    calculator/mock_lcd.c
+    ${CALCULATOR_SRC}/calculator_circuit.c
+    ${CALCULATOR_SRC}/circuit_model.c
+)
+target_include_directories(calculator_circuit_tests PRIVATE
+    ${CALCULATOR_SRC}
+    ${PROJECT_ROOT}/lib/board/include
+    calculator
+)
+enable_project_warnings(calculator_circuit_tests)
+add_test(NAME calculator_circuit COMMAND calculator_circuit_tests)
+
+add_executable(number_theory_tests
+    calculator/test_number_theory.c
+    ${CALCULATOR_SRC}/calculator_number_theory.c
+    ${CALCULATOR_SRC}/number_theory.c
+)
+target_include_directories(number_theory_tests PRIVATE ${CALCULATOR_SRC})
+enable_project_warnings(number_theory_tests)
+add_test(NAME number_theory COMMAND number_theory_tests)
+
 add_executable(keymap_tests
     calculator/test_keymaps.c
     ${CALCULATOR_SRC}/calculator_keymaps.c
@@ -184,6 +223,7 @@ add_executable(graph_renderer_tests
     ${CALCULATOR_SRC}/calculator_widgets.c
     ${CALCULATOR_SRC}/graph_model.c
     ${CALCULATOR_SRC}/numerical_analysis.c
+    ${CALCULATOR_SRC}/unit_engine.c
     ${TINYEXPR_SRC}/tinyexpr.c
 )
 target_include_directories(graph_renderer_tests PRIVATE
@@ -247,6 +287,7 @@ add_executable(calculator_persistence_tests
     ${CALCULATOR_SRC}/basic_engine.c
     ${CALCULATOR_SRC}/calculator_persistence.c
     ${CALCULATOR_SRC}/calculator_symbols.c
+    ${CALCULATOR_SRC}/circuit_model.c
     ${CALCULATOR_SRC}/calculation_status.c
     ${CALCULATOR_SRC}/decimal_engine.c
     ${CALCULATOR_SRC}/graph_model.c
@@ -341,12 +382,14 @@ add_executable(calculator_usb_protocol_tests
     ${CALCULATOR_SRC}/calculator_precision.c
     ${CALCULATOR_SRC}/calculator_symbols.c
     ${CALCULATOR_SRC}/calculator_usb_protocol.c
+    ${CALCULATOR_SRC}/circuit_model.c
     ${CALCULATOR_SRC}/complex_engine.c
     ${CALCULATOR_SRC}/decimal_engine.c
     ${CALCULATOR_SRC}/expression_editor.c
     ${CALCULATOR_SRC}/graph_model.c
     ${CALCULATOR_SRC}/high_precision_engine.c
     ${CALCULATOR_SRC}/logic_engine.c
+    ${CALCULATOR_SRC}/number_theory.c
     ${CALCULATOR_SRC}/number_formats.c
     ${CALCULATOR_SRC}/numerical_analysis.c
     ${CALCULATOR_SRC}/programmer_engine.c

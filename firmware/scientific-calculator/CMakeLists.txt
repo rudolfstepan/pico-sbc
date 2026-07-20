@@ -2,6 +2,7 @@ add_executable(lafvin_scientific_calculator
     src/main.c
     src/basic_engine.c
     src/calculation_status.c
+    src/calculator_circuit.c
     src/calculator_dialog.c
     src/calculator_engine.c
     src/decimal_engine.c
@@ -13,6 +14,7 @@ add_executable(lafvin_scientific_calculator
     src/calculator_logic.c
     src/calculator_units.c
     src/calculator_navigation.c
+    src/calculator_number_theory.c
     src/calculator_pages.c
     src/calculator_persistence.c
     src/calculator_precision.c
@@ -22,6 +24,7 @@ add_executable(lafvin_scientific_calculator
     src/calculator_statistics.c
     src/calculator_usb_cdc.c
     src/calculator_usb_protocol.c
+    src/calculator_ui_input.c
     src/calculator_widgets.c
     src/number_formats.c
     src/programmer_engine.c
@@ -30,9 +33,11 @@ add_executable(lafvin_scientific_calculator
     src/high_precision_engine.c
     src/logic_engine.c
     src/numerical_analysis.c
+    src/number_theory.c
     src/statistics_engine.c
     src/unit_engine.c
     src/calculator_ui.c
+    src/circuit_model.c
     ${PROJECT_SOURCE_DIR}/third_party/tinyexpr/tinyexpr.c
 )
 
@@ -64,7 +69,7 @@ pico_add_linker_script_override_path(
 pico_enable_stdio_usb(lafvin_scientific_calculator 1)
 pico_enable_stdio_uart(lafvin_scientific_calculator 0)
 pico_set_program_name(lafvin_scientific_calculator "LAFVIN Scientific Calculator")
-pico_set_program_version(lafvin_scientific_calculator "1.8.0")
+pico_set_program_version(lafvin_scientific_calculator "2.2.0")
 set_target_properties(lafvin_scientific_calculator PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )

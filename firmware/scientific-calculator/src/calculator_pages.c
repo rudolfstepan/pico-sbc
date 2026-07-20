@@ -1,6 +1,7 @@
 #include "calculator_pages.h"
 
 #include "calculator_engine.h"
+#include "calculator_ui_theme.h"
 #include "calculator_widgets.h"
 #include "lcd_st7796.h"
 #include "number_formats.h"
@@ -9,9 +10,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#define COL_BG    RGB565(0, 0, 0)
-#define COL_TEXT  RGB565(255, 255, 255)
-#define COL_MUTED RGB565(170, 170, 170)
+#define COL_BG    UI_COLOR_BACKGROUND
+#define COL_TEXT  UI_COLOR_TEXT
+#define COL_MUTED UI_COLOR_MUTED
 
 static int display_y(int logical_y) {
     if (calculator_widget_fullscreen()) {
@@ -356,12 +357,14 @@ void calculator_page_render_symbols(const calculator_symbols_t *symbols,
 
     snprintf(status, sizeof status, "SYMBOLS  F%u  %s",
              (unsigned int)(selected_function + 1), message);
-    snprintf(variables[0], sizeof variables[0], "A %.5g   B %.5g   C %.5g",
-             symbols->variables[0], symbols->variables[1],
-             symbols->variables[2]);
-    snprintf(variables[1], sizeof variables[1], "D %.5g   E %.5g   F %.5g",
-             symbols->variables[3], symbols->variables[4],
-             symbols->variables[5]);
+    snprintf(variables[0], sizeof variables[0],
+             "A=%.22s  B=%.22s  C=%.22s",
+             symbols->variable_text[0], symbols->variable_text[1],
+             symbols->variable_text[2]);
+    snprintf(variables[1], sizeof variables[1],
+             "D=%.22s  E=%.22s  F=%.22s",
+             symbols->variable_text[3], symbols->variable_text[4],
+             symbols->variable_text[5]);
     for (size_t i = 0; i < CALCULATOR_USER_FUNCTION_COUNT; ++i) {
         snprintf(function[i], sizeof function[i], "F%u(x)=%.71s",
                  (unsigned int)(i + 1),
@@ -538,6 +541,38 @@ static void render_logic_gates(const calculator_logic_t *logic) {
     lcd_draw_text(6, 32, inputs, COL_TEXT, COL_BG, 1);
     lcd_draw_text(6, 47, output, COL_TEXT, COL_BG, 2);
     lcd_draw_text(6, 70, gates, COL_MUTED, COL_BG, 1);
+
+    if (calculator_widget_data_focus() || calculator_widget_fullscreen()) {
+        static const char *const names[] = {
+            "CONST", "INPUT", "NOT", "AND", "OR", "XOR", "NAND",
+            "NOR", "XNOR"
+        };
+        size_t shown = logic->program.node_count < 7u
+            ? logic->program.node_count : 7u;
+        for (size_t line = 0; line < shown; ++line) {
+            size_t index = logic->program.node_count - shown + line;
+            const logic_node_t *node = &logic->program.nodes[index];
+            char text[48];
+            if (node->kind == LOGIC_NODE_VARIABLE) {
+                snprintf(text, sizeof text, "N%u  INPUT %c",
+                         (unsigned int)index, (char)('A' + node->value));
+            } else if (node->kind == LOGIC_NODE_CONSTANT) {
+                snprintf(text, sizeof text, "N%u  CONST %u",
+                         (unsigned int)index, node->value);
+            } else if (node->kind == LOGIC_NODE_NOT) {
+                snprintf(text, sizeof text, "N%u  NOT <- N%u",
+                         (unsigned int)index, node->left);
+            } else {
+                snprintf(text, sizeof text, "N%u  %s <- N%u,N%u",
+                         (unsigned int)index, names[node->kind],
+                         node->left, node->right);
+            }
+            page_draw_text_absolute(6, 96 + (int)line * 20, text,
+                                    line + 1u == shown
+                                        ? UI_COLOR_PRIMARY : COL_MUTED,
+                                    COL_BG, 2);
+        }
+    }
 }
 
 void calculator_page_render_logic(const calculator_logic_t *logic,
@@ -615,17 +650,40 @@ void calculator_page_render_units(const calculator_units_t *units,
     char output[48];
     snprintf(status, sizeof status, "UNITS %s  %.55s",
              unit_engine_category_name(units->category), message);
+    if (units->selector != UNITS_SELECTOR_NONE) {
+        snprintf(status, sizeof status, "SELECT %s  %s",
+                 units->selector == UNITS_SELECTOR_FROM ? "FROM" : "TO",
+                 unit_engine_category_name(units->category));
+        lcd_draw_text(6, 3, status, COL_MUTED, COL_BG, 1);
+        for (size_t row = 0; row < 3u; ++row) {
+            size_t first = units->selector_offset + row * 2u;
+            const unit_definition_t *left =
+                unit_engine_unit(units->category, first);
+            const unit_definition_t *right =
+                unit_engine_unit(units->category, first + 1u);
+            char choices[79];
+            snprintf(choices, sizeof choices, "%u %-12.12s %-7.7s | %u %-12.12s %-7.7s",
+                     (unsigned int)(row * 2u + 1u),
+                     left ? left->name : "--", left ? left->symbol : "",
+                     (unsigned int)(row * 2u + 2u),
+                     right ? right->name : "--", right ? right->symbol : "");
+            lcd_draw_text(6, 18 + (int)row * 20, choices,
+                          COL_TEXT, COL_BG, 1);
+        }
+        finish_display();
+        return;
+    }
     snprintf(names, sizeof names, "%s [%s]  ->  %s [%s]",
              from ? from->name : "?", from ? from->symbol : "?",
              to ? to->name : "?", to ? to->symbol : "?");
-    if (units->has_input && from) {
-        snprintf(input, sizeof input, "IN  %.12g %s",
-                 units->input, from->symbol);
+    if (units->input_text[0] && from) {
+        snprintf(input, sizeof input, "IN  %.32s %s",
+                 units->input_text, from->symbol);
     } else {
         snprintf(input, sizeof input, "IN  --");
     }
     if (units->has_result && to) {
-        snprintf(output, sizeof output, "OUT %.12g %s",
+        snprintf(output, sizeof output, "OUT %.15g %s",
                  units->result, to->symbol);
     } else {
         snprintf(output, sizeof output, "OUT --");
@@ -644,7 +702,8 @@ void calculator_page_render_complex(const calculator_complex_t *complex,
                                     bool degrees, const char *message) {
     char status[79];
     char editor_text[EXPRESSION_EDITOR_CAPACITY + 2];
-    char result[64] = "--";
+    char cartesian[64] = "--";
+    char polar[64] = "--";
     const char *expression = complex->editor.text;
     complex_value_t shown = complex->result;
     bool has_result = complex->has_result;
@@ -664,8 +723,10 @@ void calculator_page_render_complex(const calculator_complex_t *complex,
                  degrees ? "DEG" : "RAD", message);
     }
     if (has_result) {
-        complex_engine_format(shown, complex->polar_view, degrees,
-                              result, sizeof result);
+        complex_engine_format(shown, false, degrees,
+                              cartesian, sizeof cartesian);
+        complex_engine_format(shown, true, degrees,
+                              polar, sizeof polar);
     }
 
     clear_display();
@@ -680,8 +741,10 @@ void calculator_page_render_complex(const calculator_complex_t *complex,
                                              sizeof editor_text, 38),
                       COL_TEXT, COL_BG, 2);
     }
-    lcd_draw_text(6, 53, calculator_widget_tail(result, 38),
+    lcd_draw_text(6, 48, calculator_widget_tail(cartesian, 38),
                   has_result ? COL_TEXT : COL_MUTED, COL_BG, 2);
+    lcd_draw_text(6, 70, calculator_widget_tail(polar, 72),
+                  has_result ? UI_COLOR_PRIMARY : COL_MUTED, COL_BG, 1);
     finish_display();
 }
 
@@ -732,6 +795,29 @@ static void render_statistics_data(const calculator_statistics_t *stats) {
         lcd_draw_text(6, 70, selected, COL_MUTED, COL_BG, 1);
     } else {
         lcd_draw_text(6, 51, selected, COL_MUTED, COL_BG, 2);
+    }
+    if ((calculator_widget_data_focus() || calculator_widget_fullscreen()) &&
+        stats->dataset.count) {
+        size_t first = stats->selected > 2u ? stats->selected - 2u : 0u;
+        size_t capacity = calculator_widget_fullscreen() ? 12u : 6u;
+        for (size_t line = 0;
+             line < capacity && first + line < stats->dataset.count; ++line) {
+            size_t index = first + line;
+            char row[64];
+            if (stats->dataset.two_variable) {
+                snprintf(row, sizeof row, "%02u  X=%-12.7g Y=%-12.7g",
+                         (unsigned int)(index + 1u),
+                         stats->dataset.x[index], stats->dataset.y[index]);
+            } else {
+                snprintf(row, sizeof row, "%02u  X=%-16.10g",
+                         (unsigned int)(index + 1u),
+                         stats->dataset.x[index]);
+            }
+            page_draw_text_absolute(6, 96 + (int)line * 20, row,
+                                    index == stats->selected
+                                        ? UI_COLOR_PRIMARY : COL_MUTED,
+                                    COL_BG, 2);
+        }
     }
 }
 
@@ -894,6 +980,68 @@ void calculator_page_render_statistics(const calculator_statistics_t *stats,
         default:
             render_statistics_data(stats);
             break;
+    }
+    finish_display();
+}
+
+void calculator_page_render_launcher(const char *message) {
+    clear_display();
+    char status[79];
+    snprintf(status, sizeof status, "PICO CALCULATOR 2.0  %s", message);
+    page_draw_text_absolute(6, 4, status, COL_TEXT, COL_BG, 1);
+    finish_display();
+}
+
+void calculator_page_render_settings(uint8_t brightness_percent,
+                                     bool beep_enabled, bool portrait,
+                                     calculator_layout_t default_layout,
+                                     calculator_precision_t precision,
+                                     const char *message) {
+    (void)brightness_percent;
+    clear_display();
+    char status[79];
+    const char *layout = default_layout == CALCULATOR_LAYOUT_DATA_FOCUS
+        ? "FOCUS" : (default_layout == CALCULATOR_LAYOUT_FULLSCREEN
+            ? "FULL" : "STANDARD");
+    snprintf(status, sizeof status,
+             "SETTINGS  LCD FIXED  BEEP %s  %s  %s  %s  %.20s",
+             beep_enabled ? "ON" : "OFF",
+             portrait ? "PORT" : "LAND", layout,
+             calculator_precision_label(precision), message);
+    page_draw_text_absolute(6, 4, status, COL_TEXT, COL_BG, 1);
+    finish_display();
+}
+
+void calculator_page_render_number_theory(
+    const calculator_number_theory_t *tool, const char *message) {
+    char status[79];
+    char lines[3][48];
+    snprintf(status, sizeof status, "NUMBER THEORY  %.23s  %.23s",
+             tool->operation, message);
+    snprintf(lines[0], sizeof lines[0], "A = %.40s", tool->inputs[0]);
+    snprintf(lines[1], sizeof lines[1], "B = %.40s", tool->inputs[1]);
+    snprintf(lines[2], sizeof lines[2], "M = %.40s", tool->inputs[2]);
+    clear_display();
+    lcd_draw_text(6, 3, status, COL_MUTED, COL_BG, 1);
+    for (size_t i = 0; i < 3u; ++i) {
+        lcd_draw_text(6, 16 + (int)i * 13, lines[i],
+                      i == tool->active_input ? UI_COLOR_PRIMARY : COL_TEXT,
+                      COL_BG, 1);
+    }
+
+    size_t chars = (size_t)(lcd_width() - 12) / 6u;
+    size_t length = strlen(tool->result);
+    size_t rows = (size_t)(calculator_widget_display_height() - 58) / 10u;
+    if (!rows) rows = 1u;
+    for (size_t row = 0; row < rows && row * chars < length; ++row) {
+        char text[80];
+        size_t count = length - row * chars;
+        if (count > chars) count = chars;
+        if (count >= sizeof text) count = sizeof text - 1u;
+        memcpy(text, tool->result + row * chars, count);
+        text[count] = '\0';
+        page_draw_text_absolute(6, 58 + (int)row * 10, text,
+                                row ? COL_MUTED : COL_TEXT, COL_BG, 1);
     }
     finish_display();
 }

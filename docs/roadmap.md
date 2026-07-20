@@ -5,10 +5,10 @@ Taschenrechners in ihrer empfohlenen Umsetzungsreihenfolge. Eine Phase gilt
 erst als abgeschlossen, wenn Implementierung, Host-Tests, Firmware-Build und
 ein Test auf dem echten LCD erfolgreich sind.
 
-Die Abschnitte 0 bis 13 dokumentieren den jeweiligen historischen
+Die Abschnitte 0 bis 15 dokumentieren den jeweiligen historischen
 Meilenstein. Dort genannte fruehere Versionsnummern und Kapazitaeten sind
-nicht mehr der aktuelle Kompatibilitaetsstand. Massgeblich ist Phase 14 mit
-Firmware 1.8.0, USB-Protokoll 4 und Flashformat 6.
+nicht mehr der aktuelle Kompatibilitaetsstand. Massgeblich ist Phase 16 mit
+Firmware 2.2.0, USB-Protokoll 5, JSON-Format 6 und Flashformat 8.
 
 ## Uebersicht
 
@@ -29,6 +29,8 @@ Firmware 1.8.0, USB-Protokoll 4 und Flashformat 6.
 | 12 | Exakte Dezimalarithmetik | Phase 0 | abgeschlossen |
 | 13 | Hochpraezise Wissenschaftsmathematik | Phase 12 | Hardwaretest offen |
 | 14 | Waehlbare Praezision | Phase 13 | Hardwaretest offen |
+| 15 | Grafischer Schaltplaneditor | Phasen 4 und 6 | abgeschlossen |
+| 16 | Desktop-Schaltplan und Zahlentheorie | Phasen 10 und 15 | USB-Hardwaretest offen |
 
 ## Phase 0: Technische Grundlage
 
@@ -341,6 +343,59 @@ Softwarestand: Firmware 1.8.0 verwendet 40 Stellen bei 192 Bit, 80 Stellen bei
 RP2040-Release-Build belegt 314280 Byte Flashcode und 99752 Byte statischen
 RAM laut `arm-none-eabi-size`. Flashformat 6 ersetzt alle aelteren Formate
 ohne Migration; unbekannte Datensaetze fuehren zu Werkseinstellungen.
+
+## Phase 15: Grafischer Schaltplaneditor
+
+- [x] Hardwareunabhaengiges Modell fuer 24 Gates und 48 Leitungen entwickeln.
+- [x] INPUT, OUTPUT, NOT, AND, OR, XOR, NAND, NOR und XNOR simulieren.
+- [x] Portverbindungen ersetzen und trennen sowie Rueckkopplungen abweisen.
+- [x] Grafische Gates, aktive Leitungen und Raster im Vollbild zeichnen.
+- [x] Gates per Touch auswaehlen, ziehen, bearbeiten und an Ports einfuegen.
+- [x] Gemeinsamen 100-, 150- und 200-Prozent-Zoom fuer Grafik und Touchziele
+  mit 150 Prozent Standardvergroesserung integrieren.
+- [x] Kontinuierliches Joystick-Scrolling auf einer 1600-x-1200-Arbeitsflaeche
+  integrieren.
+- [x] Landscape und Portrait ohne Zeichenoperationen ausserhalb des LCD testen.
+- [x] Gates, Leitungen, Pegel, Viewport und Zoom in Flashformat 8 speichern.
+- [x] Koordinatenlose GT911-Release-Ereignisse fuer alle Toolbar-Tasten testen.
+- [x] Host-Tests und RP2040-Release-Build ausfuehren.
+- [x] Touch-Drag, Toolbar, Zoom, Joystick und Darstellung auf dem echten Board
+  pruefen.
+
+**Fertig, wenn:** Ein Schaltplan vollstaendig per Touch aufgebaut und simuliert
+werden kann, der Joystick den Ausschnitt bewegt und der Zustand einen Neustart
+ueberlebt.
+
+Abschlussstand: Firmware 2.1.0 bindet `CIRCUIT` als eigene Launcher-App ein.
+Alle 34 Host-Tests und der RP2040-Release-Build laufen erfolgreich. Der erste
+Hardwaretest zeigte ungueltige Koordinaten im GT911-Release-Frame; der
+Toolbar-Pfad verwendet nun wie das normale Tastenfeld das gespeicherte
+Press-Ziel. Der erneute Boardtest bestaetigte Touch, Verdrahtung und den
+gemeinsam skalierten 100-/150-/200-Prozent-Zoom.
+
+## Phase 16: Desktop-Schaltplan und Zahlentheorie
+
+- [x] USB-Protokoll 5 fuer Schaltplan-Metadaten, 24 Knoten und 48 Leitungen
+  sowie alle persistenten Bearbeitungsoperationen definieren.
+- [x] Schaltplaene vor dem Schreiben lokal auf Typen, Ports, Kapazitaeten,
+  doppelte Eingaenge und Zyklen pruefen.
+- [x] JSON-Format 6 um Gates, Leitungen, Pegel, Viewport, Zoom und
+  Bezeichnungszaehler erweitern.
+- [x] Grafischen Desktop-Editor mit Drag, Portverdrahtung, INPUT-Schaltern,
+  Eigenschaften, Pan und 100-/150-/200-Prozent-Zoom implementieren.
+- [x] Zahlentheorie ueber USB und den neuen Desktop-Tab bereitstellen.
+- [x] Alle Host-Tests und den RP2040-Release-Build ausfuehren.
+- [ ] Laden und Speichern eines Schaltplans mit dem echten Pico pruefen.
+
+**Fertig, wenn:** Ein Plan ohne Datenverlust zwischen Pico, Desktop-Editor und
+JSON-Datei uebertragen werden kann und Zahlentheorie-Ergebnisse auf LCD und PC
+identisch sind.
+
+Softwarestand: Firmware 2.2.0 und Pico Calculator Link 2.2 verwenden
+USB-Protokoll 5. Der PC-Editor spiegelt die boolesche Simulation lokal fuer
+sofortige Pegelanzeige; die Zahlentheorie wird weiterhin ausschliesslich vom
+Pico-Rechenkern berechnet. Alle 34 Host-Tests und der RP2040-Release-Build
+laufen erfolgreich; der Schaltplan-Roundtrip am echten USB-Geraet steht aus.
 
 ## Arbeitsweise pro Phase
 
